@@ -1,0 +1,13 @@
+[package]
+name = "klondike-rs"
+version = "0.1.0"
+authors = ["Chris Bouchard <chris@upliftinglemma.net>"]
+edition = "2018"
+
+[dependencies]
+failure = "*"
+failure_derive = "*"
+
+[dependencies.ncurses]
+version = "*"
+features = ["wide"]
