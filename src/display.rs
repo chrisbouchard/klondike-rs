@@ -4,6 +4,14 @@ use ncurses::*;
 
 use crate::game::*;
 
+
+#[derive(Copy, Clone, Debug)]
+pub struct Coords {
+    pub x: i32,
+    pub y: i32,
+}
+
+
 /* Color pairs; foreground && background. */
 static COLOR_PAIR_DEFAULT: i16 = 1;
 static COLOR_PAIR_CARD_BLACK: i16 = 2;
@@ -45,13 +53,25 @@ impl KlondikeDisplay {
         KlondikeDisplay { _secret: () }
     }
 
-    pub fn display_full_card(&mut self, y: i32, x: i32, card: &Card) {
+    pub fn refresh(&mut self) {
+        refresh();
+    }
+
+    pub fn draw_card_frame(&mut self, coords: Coords) {
+        let Coords { x, y } = coords;
+
         attron(COLOR_PAIR(COLOR_PAIR_DEFAULT));
         mvprintw(y + 0, x + 0, "╭────────╮");
         mvprintw(y + 1, x + 0, "│        │");
         mvprintw(y + 2, x + 0, "│        │");
         mvprintw(y + 3, x + 0, "╰────────╯");
         attroff(COLOR_PAIR(COLOR_PAIR_DEFAULT));
+    }
+
+    pub fn draw_card(&mut self, coords: Coords, card: &Card) {
+        self.draw_card_frame(coords);
+
+        let Coords { x, y } = coords;
 
         if card.face_up {
             let rank_str = card.rank.label();
@@ -59,7 +79,7 @@ impl KlondikeDisplay {
 
             let offset: i32 = 2 - card.rank.label().len() as i32;
 
-            let color_pair = self.card_color_pair(card);
+            let color_pair = card_color_pair(card);
 
             attron(COLOR_PAIR(color_pair));
             mvprintw(y + 1, x + 2, &rank_str);
@@ -73,14 +93,53 @@ impl KlondikeDisplay {
             mvprintw(y + 2, x + 2, "░░░░░░");
             attroff(COLOR_PAIR(COLOR_PAIR_CARD_BACK));
         }
-
-        refresh();
     }
 
-    fn card_color_pair(&self, card: &Card) -> i16 {
-        match card.suit.color() {
-            Color::BLACK => COLOR_PAIR_CARD_BLACK,
-            Color::RED => COLOR_PAIR_CARD_RED
+    pub fn draw_horizontal_card_stack(
+        &mut self,
+        coords: Coords,
+        stack: &CardStack,
+    ) {
+        let mut x = coords.x;
+        let y = coords.y;
+
+        if !stack.fanned.is_empty() {
+            if !stack.pile.is_empty() {
+                self.draw_card_frame(Coords { x, y });
+                x += 1;
+            }
+
+            for card in stack.fanned.iter() {
+                self.draw_card(Coords { x, y }, card);
+                x += 4;
+            }
+        }
+        else if let Some((top_card, rest)) = stack.pile.split_last() {
+            if !rest.is_empty() {
+                self.draw_card_frame(Coords { x, y });
+                x += 1;
+            }
+
+            self.draw_card(Coords { x, y }, top_card);
+        }
+    }
+
+    pub fn draw_vertical_card_stack(
+        &mut self,
+        coords: Coords,
+        stack: &CardStack,
+    ) {
+        let x = coords.x;
+        let mut y = coords.y;
+
+        if !stack.fanned.is_empty() {
+            for card in stack.fanned.iter() {
+                self.draw_card(Coords { x, y }, card);
+                y += 2;
+            }
+        }
+        else if let Some(top_card) = stack.pile.last() {
+            self.draw_card(Coords { x, y }, top_card);
         }
     }
 }
@@ -90,5 +149,13 @@ impl Drop for KlondikeDisplay {
         /* Wait for one more character before exiting. */
         getch();
         endwin();
+    }
+}
+
+
+fn card_color_pair(card: &Card) -> i16 {
+    match card.suit.color() {
+        Color::BLACK => COLOR_PAIR_CARD_BLACK,
+        Color::RED => COLOR_PAIR_CARD_RED
     }
 }

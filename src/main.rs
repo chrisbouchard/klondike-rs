@@ -10,27 +10,57 @@ use game::*;
 fn main() -> Result<()> {
     let mut display = KlondikeDisplay::init();
 
-    let card1 = Card {
-        face_up: true,
-        rank: Rank::new(3)?,
-        suit: Suit::DIAMONDS
+    let deck = CardStack {
+        pile: vec![
+            Card {
+                face_up: false,
+                rank: Rank::new(1)?,
+                suit: Suit::HEARTS,
+            },
+            Card {
+                face_up: false,
+                rank: Rank::new(1)?,
+                suit: Suit::HEARTS,
+            },
+            Card {
+                face_up: false,
+                rank: Rank::new(1)?,
+                suit: Suit::HEARTS,
+            },
+        ],
+        fanned: vec![],
     };
 
-    let card2 = Card {
-        face_up: true,
-        rank: Rank::new(10)?,
-        suit: Suit::CLUBS
+    let stack = CardStack {
+        pile: vec![
+            Card {
+                face_up: true,
+                rank: Rank::new(1)?,
+                suit: Suit::HEARTS,
+            },
+        ],
+        fanned: vec![
+            Card {
+                face_up: true,
+                rank: Rank::new(1)?,
+                suit: Suit::SPADES,
+            },
+            Card {
+                face_up: true,
+                rank: Rank::new(3)?,
+                suit: Suit::DIAMONDS,
+            },
+            Card {
+                face_up: true,
+                rank: Rank::new(10)?,
+                suit: Suit::CLUBS,
+            }
+        ],
     };
 
-    let card3 = Card {
-        face_up: false,
-        rank: Rank::new(1)?,
-        suit: Suit::SPADES
-    };
-
-    display.display_full_card(0, 0, &card1);
-    display.display_full_card(0, 12, &card2);
-    display.display_full_card(0, 24, &card3);
+    display.draw_horizontal_card_stack(Coords { x: 1, y: 0 }, &deck);
+    display.draw_horizontal_card_stack(Coords { x: 14, y: 0 }, &stack);
+    display.refresh();
 
     Ok(())
 }

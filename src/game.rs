@@ -87,3 +87,10 @@ impl PartialOrd<Card> for Card {
         }
     }
 }
+
+
+#[derive(Debug)]
+pub struct CardStack {
+    pub pile: Vec<Card>,
+    pub fanned: Vec<Card>
+}
