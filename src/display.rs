@@ -53,6 +53,10 @@ impl KlondikeDisplay {
         KlondikeDisplay { _secret: () }
     }
 
+    pub fn clear(&mut self) {
+        clear();
+    }
+
     pub fn refresh(&mut self) {
         refresh();
     }
