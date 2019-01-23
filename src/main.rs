@@ -11,56 +11,84 @@ fn main() -> Result<()> {
     let mut display = KlondikeDisplay::init();
 
     let deck = CardStack {
-        pile: vec![
+        pile: &[
             Card {
                 face_up: false,
                 rank: Rank::new(1)?,
-                suit: Suit::HEARTS,
+                suit: Suit::Hearts,
             },
             Card {
                 face_up: false,
                 rank: Rank::new(1)?,
-                suit: Suit::HEARTS,
+                suit: Suit::Hearts,
             },
             Card {
                 face_up: false,
                 rank: Rank::new(1)?,
-                suit: Suit::HEARTS,
+                suit: Suit::Hearts,
             },
         ],
-        fanned: vec![],
+        fanned: &[],
     };
 
     let stack = CardStack {
-        pile: vec![
+        pile: &[
             Card {
                 face_up: true,
                 rank: Rank::new(1)?,
-                suit: Suit::HEARTS,
+                suit: Suit::Hearts,
             },
         ],
-        fanned: vec![
+        fanned: &[
             Card {
                 face_up: true,
                 rank: Rank::new(1)?,
-                suit: Suit::SPADES,
+                suit: Suit::Spades,
             },
             Card {
                 face_up: true,
                 rank: Rank::new(3)?,
-                suit: Suit::DIAMONDS,
+                suit: Suit::Diamonds,
             },
             Card {
                 face_up: true,
                 rank: Rank::new(10)?,
-                suit: Suit::CLUBS,
+                suit: Suit::Clubs,
             }
         ],
     };
 
     display.draw_horizontal_card_stack(Coords { x: 1, y: 0 }, &deck);
-    display.draw_horizontal_card_stack(Coords { x: 14, y: 0 }, &stack);
+    display.draw_horizontal_card_stack(Coords { x: 12, y: 0 }, &stack);
+
     display.refresh();
+    display.getch();
+    display.clear();
+
+    let mut y = 0;
+
+    for &suit in Suit::iterator() {
+        let mut x = 1;
+
+        for rank in 1..13 {
+            display.draw_card(
+                Coords { x, y },
+                &Card {
+                    face_up: true,
+                    rank: Rank::new(rank)?,
+                    suit,
+                },
+            );
+
+            x += 10;
+        }
+
+        y += 2;
+    }
+
+    display.refresh();
+    display.getch();
+    display.clear();
 
     Ok(())
 }

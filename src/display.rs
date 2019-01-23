@@ -53,6 +53,11 @@ impl KlondikeDisplay {
         KlondikeDisplay { _secret: () }
     }
 
+    pub fn getch(&mut self) -> i32 {
+        /* Wait for one more character before exiting. */
+        getch()
+    }
+
     pub fn clear(&mut self) {
         clear();
     }
@@ -65,10 +70,10 @@ impl KlondikeDisplay {
         let Coords { x, y } = coords;
 
         attron(COLOR_PAIR(COLOR_PAIR_DEFAULT));
-        mvprintw(y + 0, x + 0, "╭────────╮");
-        mvprintw(y + 1, x + 0, "│        │");
-        mvprintw(y + 2, x + 0, "│        │");
-        mvprintw(y + 3, x + 0, "╰────────╯");
+        mvprintw(y + 0, x + 0, "╭──────╮");
+        mvprintw(y + 1, x + 0, "│      │");
+        mvprintw(y + 2, x + 0, "│      │");
+        mvprintw(y + 3, x + 0, "╰──────╯");
         attroff(COLOR_PAIR(COLOR_PAIR_DEFAULT));
     }
 
@@ -87,14 +92,14 @@ impl KlondikeDisplay {
 
             attron(COLOR_PAIR(color_pair));
             mvprintw(y + 1, x + 2, &rank_str);
-            mvprintw(y + 1, x + 7, &suit_str);
+            mvprintw(y + 1, x + 5, &suit_str);
             mvprintw(y + 2, x + 2, &suit_str);
-            mvprintw(y + 2, x + 6 + offset, &rank_str);
+            mvprintw(y + 2, x + 4 + offset, &rank_str);
             attroff(COLOR_PAIR(color_pair));
         } else {
             attron(COLOR_PAIR(COLOR_PAIR_CARD_BACK));
-            mvprintw(y + 1, x + 2, "░░░░░░");
-            mvprintw(y + 2, x + 2, "░░░░░░");
+            mvprintw(y + 1, x + 2, "░░░░");
+            mvprintw(y + 2, x + 2, "░░░░");
             attroff(COLOR_PAIR(COLOR_PAIR_CARD_BACK));
         }
     }
@@ -146,12 +151,19 @@ impl KlondikeDisplay {
             self.draw_card(Coords { x, y }, top_card);
         }
     }
+
+    pub fn draw_game(
+        &mut self,
+        coords: Coords,
+        game: &KlondikeGame
+    ) {
+
+    }
 }
 
 impl Drop for KlondikeDisplay {
     fn drop(&mut self) {
-        /* Wait for one more character before exiting. */
-        getch();
+        nocbreak();
         endwin();
     }
 }
@@ -159,7 +171,7 @@ impl Drop for KlondikeDisplay {
 
 fn card_color_pair(card: &Card) -> i16 {
     match card.suit.color() {
-        Color::BLACK => COLOR_PAIR_CARD_BLACK,
-        Color::RED => COLOR_PAIR_CARD_RED
+        Color::Black => COLOR_PAIR_CARD_BLACK,
+        Color::Red => COLOR_PAIR_CARD_RED
     }
 }
