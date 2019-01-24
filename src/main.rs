@@ -5,6 +5,8 @@ mod display;
 mod game;
 
 use display::*;
+use display::card::*;
+use display::stack::*;
 use game::*;
 
 fn main() -> Result<()> {
@@ -58,8 +60,8 @@ fn main() -> Result<()> {
         ],
     };
 
-    display.draw_horizontal_card_stack(Coords { x: 1, y: 0 }, &deck);
-    display.draw_horizontal_card_stack(Coords { x: 12, y: 0 }, &stack);
+    draw_horizontal_card_stack(&mut display, Coords { x: 1, y: 0 }, &deck);
+    draw_horizontal_card_stack(&mut display, Coords { x: 12, y: 0 }, &stack);
 
     display.refresh();
     display.getch();
@@ -67,11 +69,12 @@ fn main() -> Result<()> {
 
     let mut y = 0;
 
-    for &suit in Suit::iterator() {
+    for &suit in Suit::values() {
         let mut x = 1;
 
         for rank in 1..13 {
-            display.draw_card(
+            draw_card(
+                &mut display,
                 Coords { x, y },
                 &Card {
                     face_up: true,
