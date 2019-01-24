@@ -1,4 +1,4 @@
-pub use crate::game::card::*;
+use crate::game::card::*;
 
 #[derive(Clone, Debug)]
 pub struct Deck {

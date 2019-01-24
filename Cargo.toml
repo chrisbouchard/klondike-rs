@@ -7,7 +7,6 @@ edition = "2018"
 [dependencies]
 failure = "*"
 failure_derive = "*"
-itertools = "*"
 rand = "*"
 
 [dependencies.ncurses]

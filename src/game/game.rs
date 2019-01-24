@@ -1,17 +1,29 @@
+use crate::game::card::*;
 use crate::game::deck::*;
+use crate::game::stack::*;
 
 #[derive(Copy, Clone, Debug)]
-pub struct CardStack<'a> {
-    pub pile: &'a [Card],
-    pub fanned: &'a [Card],
-}
+pub enum GameSelection {
+    Stock,
+    Talon,
 
+    Foundation(Suit),
+
+    TableauxCards {
+        index: usize,
+        len: usize,
+    },
+    TableauxStack {
+        index: usize
+    },
+}
 
 #[derive(Debug)]
 pub struct KlondikeGame {
     stock: Vec<Card>,
-    talon_pile: Vec<Card>,
-    talon_fanned: Vec<Card>,
+
+    talon: Vec<Card>,
+    talon_len: usize,
 
     foundation_clubs: Vec<Card>,
     foundation_diamonds: Vec<Card>,
@@ -19,6 +31,8 @@ pub struct KlondikeGame {
     foundation_spades: Vec<Card>,
 
     tableaux: Vec<Vec<Card>>,
+
+    selection: GameSelection,
 }
 
 impl KlondikeGame {
@@ -33,7 +47,7 @@ impl KlondikeGame {
             );
         }
 
-        let talon_fanned =
+        let talon =
             deck.deal(3).into_iter()
                 .map(Card::face_up)
                 .collect();
@@ -41,45 +55,60 @@ impl KlondikeGame {
 
         KlondikeGame {
             stock,
-            talon_pile: vec![],
-            talon_fanned,
 
-            foundation_clubs: vec![],
-            foundation_diamonds: vec![],
-            foundation_hearts: vec![],
-            foundation_spades: vec![],
+            talon,
+            talon_len: 3,
 
-            tableaux
+            foundation_clubs: Vec::new(),
+            foundation_diamonds: Vec::new(),
+            foundation_hearts: Vec::new(),
+            foundation_spades: Vec::new(),
+
+            tableaux,
+
+            selection: GameSelection::Stock,
         }
     }
 
-    pub fn stock(&self) -> CardStack {
-        CardStack {
-            pile: &self.stock,
-            fanned: &[],
+    pub fn stock(&self) -> Stack {
+        Stack {
+            cards: &self.stock,
+            visible_len: 1,
+            selection: match self.selection {
+                GameSelection::Stock => StackSelection::Cards(1),
+                _ => StackSelection::None
+            },
         }
     }
 
-    pub fn talon(&self) -> CardStack {
-        CardStack {
-            pile: &self.talon_pile,
-            fanned: &self.talon_fanned,
+    pub fn talon(&self) -> Stack {
+        Stack {
+            cards: &self.talon,
+            visible_len: self.talon_len,
+            selection: match self.selection {
+                GameSelection::Talon => StackSelection::Cards(1),
+                _ => StackSelection::None
+            },
         }
     }
 
-    pub fn foundation_for_suit(&self, suit: Suit) -> CardStack {
-        CardStack {
-            pile: match suit {
+    pub fn foundation_for_suit(&self, suit: Suit) -> Stack {
+        Stack {
+            cards: match suit {
                 Suit::Clubs => &self.foundation_clubs,
                 Suit::Diamonds => &self.foundation_diamonds,
                 Suit::Hearts => &self.foundation_hearts,
                 Suit::Spades => &self.foundation_spades
             },
-            fanned: &[],
+            visible_len: 1,
+            selection: match self.selection {
+                GameSelection::Foundation(selected_suit) if suit == selected_suit => StackSelection::Stack,
+                _ => StackSelection::None
+            },
         }
     }
 
-    pub fn foundation(&self) -> impl Iterator<Item=(Suit, CardStack)> {
+    pub fn foundation(&self) -> impl Iterator<Item=(Suit, Stack)> {
         Suit::values()
             .map(|suit| (suit.clone(), self.foundation_for_suit(suit)))
             /* Collect into a temporary vector to force the map(...) to be evaluated *now*,
@@ -88,19 +117,29 @@ impl KlondikeGame {
             .into_iter()
     }
 
-    pub fn tableaux_stack(&self, index: usize) -> Option<CardStack> {
+    pub fn tableaux_stack(&self, index: usize) -> Option<Stack> {
         self.tableaux.get(index)
-            .map(|tableaux| CardStack {
-                pile: &[],
-                fanned: tableaux,
-            })
+            .map(|cards| self.tableaux_stack_helper(index, cards))
     }
 
-    pub fn tableaux(&self) -> impl Iterator<Item=CardStack> {
-        self.tableaux.iter()
-            .map(|tableaux| CardStack {
-                pile: &[],
-                fanned: tableaux,
-            })
+    pub fn tableaux(&self) -> impl Iterator<Item=Stack> {
+        self.tableaux.iter().enumerate()
+            .map(|(index, cards)| self.tableaux_stack_helper(index, cards))
+            /* Collect into a temporary vector to force the map(...) to be evaluated *now*,
+             * ending the borrow on self. */
+            .collect::<Vec<_>>()
+            .into_iter()
+    }
+
+    fn tableaux_stack_helper<'a>(&'a self, index: usize, cards: &'a Vec<Card>) -> Stack<'a> {
+        Stack {
+            cards,
+            visible_len: cards.len(),
+            selection: match self.selection {
+                GameSelection::TableauxCards { index: selected_index, len } if index == selected_index => StackSelection::Cards(len),
+                GameSelection::TableauxStack { index: selected_index } if index == selected_index => StackSelection::Stack,
+                _ => StackSelection::None
+            },
+        }
     }
 }

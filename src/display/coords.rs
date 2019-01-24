@@ -6,6 +6,24 @@ pub struct Coords {
     pub y: i32,
 }
 
+impl Coords {
+    pub const fn x(x: i32) -> Coords {
+        Coords { x, y : 0 }
+    }
+
+    pub const fn y(y: i32) -> Coords {
+        Coords { x: 0, y }
+    }
+
+    pub const fn to_x(&self) -> Coords {
+        Coords { x: self.x, y: 0 }
+    }
+
+    pub const fn to_y(&self) -> Coords {
+        Coords { x: 0, y: self.y }
+    }
+}
+
 impl ops::Add<Coords> for Coords {
     type Output = Coords;
 
