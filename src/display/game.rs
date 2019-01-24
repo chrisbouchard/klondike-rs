@@ -7,15 +7,14 @@ use crate::display::stack::*;
 use crate::game::*;
 
 static STOCK_COORDS: Coords = Coords { x: 0, y: 0 };
-static TALON_COORDS: Coords = Coords { x: 12, y: 0 };
-static FOUNDATION_COORDS: Coords = Coords { x: 34, y: 0 };
+static TALON_COORDS: Coords = Coords { x: 11, y: 0 };
+static FOUNDATION_COORDS: Coords = Coords { x: 33, y: 0 };
 static TABLEAUX_COORDS: Coords = Coords { x: 0, y: 5 };
 
 static COLUMN_OFFSET: Coords = Coords { x: 3 + CARD_WIDTH, y: 0 };
 
 pub fn draw_game(
     display: &mut KlondikeDisplay,
-    coords: Coords,
     game: &KlondikeGame,
 ) {
     draw_horizontal_card_stack(display, STOCK_COORDS, &game.stock());
@@ -28,6 +27,6 @@ pub fn draw_game(
 
     for (i, stack) in game.tableaux().enumerate() {
         let coords = TABLEAUX_COORDS + (i as i32) * COLUMN_OFFSET;
-        draw_horizontal_card_stack(display, coords, &stack);
+        draw_vertical_card_stack(display, coords, &stack);
     }
 }

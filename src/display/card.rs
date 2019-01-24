@@ -6,8 +6,8 @@ use crate::display::*;
 use crate::display::coords::*;
 use crate::game::*;
 
-pub static CARD_HEIGHT: i32 = 8;
-pub static CARD_WIDTH: i32 = 4;
+pub static CARD_HEIGHT: i32 = 4;
+pub static CARD_WIDTH: i32 = 8;
 
 pub fn draw_card_frame(display: &mut KlondikeDisplay, coords: Coords) {
     let Coords { x, y } = coords;

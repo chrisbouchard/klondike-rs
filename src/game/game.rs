@@ -1,4 +1,4 @@
-use crate::game::card::*;
+use crate::game::deck::*;
 
 #[derive(Copy, Clone, Debug)]
 pub struct CardStack<'a> {
@@ -22,6 +22,37 @@ pub struct KlondikeGame {
 }
 
 impl KlondikeGame {
+    pub fn new(deck: &mut Deck) -> KlondikeGame {
+        let mut tableaux: Vec<Vec<Card>> = Vec::new();
+
+        for i in 0..7 {
+            tableaux.push(
+                deck.deal(i as usize).into_iter()
+                    .chain(deck.deal_one().map(Card::face_up))
+                    .collect()
+            );
+        }
+
+        let talon_fanned =
+            deck.deal(3).into_iter()
+                .map(Card::face_up)
+                .collect();
+        let stock = deck.deal_rest();
+
+        KlondikeGame {
+            stock,
+            talon_pile: vec![],
+            talon_fanned,
+
+            foundation_clubs: vec![],
+            foundation_diamonds: vec![],
+            foundation_hearts: vec![],
+            foundation_spades: vec![],
+
+            tableaux
+        }
+    }
+
     pub fn stock(&self) -> CardStack {
         CardStack {
             pile: &self.stock,
@@ -36,7 +67,7 @@ impl KlondikeGame {
         }
     }
 
-    pub fn foundation_for_suit(&self, suit: &Suit) -> CardStack {
+    pub fn foundation_for_suit(&self, suit: Suit) -> CardStack {
         CardStack {
             pile: match suit {
                 Suit::Clubs => &self.foundation_clubs,
