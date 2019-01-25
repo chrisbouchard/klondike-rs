@@ -1,4 +1,5 @@
 /.idea
 /target
-**/*.rs.bk
 **/*.iml
+**/*.log
+**/*.rs.bk

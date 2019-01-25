@@ -15,6 +15,8 @@ pub fn draw_horizontal_selector(_display: &mut KlondikeDisplay, coords: Coords, 
 
     // TODO: If len == 1, this will overwrite the opening character.
     mvprintw(y, x + len - 1, "╛");
+
+    debug!("coords: {:?}, len: {}", coords, len);
 }
 
 pub fn draw_vertical_selector(_display: &mut KlondikeDisplay, coords: Coords, len: i32) {
@@ -28,4 +30,6 @@ pub fn draw_vertical_selector(_display: &mut KlondikeDisplay, coords: Coords, le
 
     // TODO: If len == 1, this will overwrite the opening character.
     mvprintw(y + len - 1, x, "╙");
+
+    debug!("coords: {:?}, len: {}", coords, len);
 }
