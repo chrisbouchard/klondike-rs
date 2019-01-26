@@ -10,7 +10,7 @@ static SHIFT_OFFSET: Coords = Coords::x(1);
 static SELECTOR_OFFSET: Coords = Coords::y(0);
 
 pub fn draw_horizontal_card_stack(display: &mut KlondikeDisplay, coords: Coords, stack: &Stack) {
-    for (i, card) in stack.cards.iter().enumerate() {
+    for (i, card) in stack.iter().enumerate() {
         if let Some(coords) = visible_card_coords(coords, i, stack) {
             draw_card(display, coords, card);
         }
@@ -23,7 +23,7 @@ pub fn draw_horizontal_card_stack(display: &mut KlondikeDisplay, coords: Coords,
 
         /* Be careful about getting the last index. It's possible for the stack to actually be empty,
          * in which case we can't subtract from a 0 usize. */
-        let stack_len = stack.cards.len();
+        let stack_len = stack.len();
         let end_index =
             if stack_len > 0 {
                 stack_len - 1

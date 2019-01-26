@@ -1,3 +1,5 @@
+use std::ops;
+
 use crate::game::card::*;
 use crate::utils;
 
@@ -28,5 +30,22 @@ impl<'a> Stack<'a> {
                 StackSelection::FullStack => None,
             }
         )
+    }
+}
+
+impl<'a> ops::Deref for Stack<'a> {
+    type Target = [Card];
+
+    fn deref(&self) -> &Self::Target {
+        self.cards
+    }
+}
+
+impl<'a> IntoIterator for &'a Stack<'a> {
+    type Item = &'a Card;
+    type IntoIter = ::std::slice::Iter<'a, Card>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.cards.iter()
     }
 }
