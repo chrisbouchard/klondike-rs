@@ -10,11 +10,9 @@ pub enum GameSelection {
     Foundation(Suit),
 
     TableauxCards {
+        locked_in: bool,
         index: usize,
         len: usize,
-    },
-    TableauxStack {
-        index: usize
     },
 }
 
@@ -75,8 +73,8 @@ impl KlondikeGame {
             cards: &self.stock,
             visible_len: 1,
             selection: match self.selection {
-                GameSelection::Stock => StackSelection::Cards(1),
-                _ => StackSelection::None
+                GameSelection::Stock => Some(StackSelection::Cards(1)),
+                _ => None
             },
         }
     }
@@ -86,8 +84,8 @@ impl KlondikeGame {
             cards: &self.talon,
             visible_len: self.talon_len,
             selection: match self.selection {
-                GameSelection::Talon => StackSelection::Cards(1),
-                _ => StackSelection::None
+                GameSelection::Talon => Some(StackSelection::Cards(1)),
+                _ => None
             },
         }
     }
@@ -102,8 +100,8 @@ impl KlondikeGame {
             },
             visible_len: 1,
             selection: match self.selection {
-                GameSelection::Foundation(selected_suit) if suit == selected_suit => StackSelection::Stack,
-                _ => StackSelection::None
+                GameSelection::Foundation(selected_suit) if suit == selected_suit => Some(StackSelection::FullStack),
+                _ => None
             },
         }
     }
@@ -136,9 +134,13 @@ impl KlondikeGame {
             cards,
             visible_len: cards.len(),
             selection: match self.selection {
-                GameSelection::TableauxCards { index: selected_index, len } if index == selected_index => StackSelection::Cards(len),
-                GameSelection::TableauxStack { index: selected_index } if index == selected_index => StackSelection::Stack,
-                _ => StackSelection::None
+                GameSelection::TableauxCards { locked_in, index: selected_index, len } if index == selected_index =>
+                    if locked_in {
+                        Some(StackSelection::Stack(len))
+                    } else {
+                        Some(StackSelection::Cards(len))
+                    },
+                _ => None
             },
         }
     }
