@@ -3,6 +3,7 @@
 extern crate failure;
 #[macro_use]
 extern crate failure_derive;
+extern crate klondike_lib;
 #[macro_use]
 extern crate log;
 extern crate rand;
@@ -16,12 +17,7 @@ use rand::seq::SliceRandom;
 use rand::thread_rng;
 use simplelog::*;
 
-use crate::display::*;
-use crate::game::*;
-
-mod display;
-mod game;
-mod utils;
+use klondike_lib::*;
 
 static LOG_FILE: &'static str = "klondike.log";
 

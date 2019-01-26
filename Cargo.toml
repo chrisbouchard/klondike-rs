@@ -14,3 +14,11 @@ simplelog = "*"
 [dependencies.ncurses]
 version = "*"
 features = ["wide"]
+
+[lib]
+name = "klondike_lib"
+path = "src/lib.rs"
+
+[[bin]]
+name = "klondike"
+path = "src/main.rs"
