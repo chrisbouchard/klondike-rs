@@ -15,6 +15,7 @@ use std::result::Result;
 use failure::Error;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
+use rustty::Terminal;
 use simplelog::*;
 
 use klondike_lib::*;
@@ -30,17 +31,15 @@ fn main() -> Result<(), Error> {
 
     info!("STARTING KLONDIKE");
 
-    let mut display = KlondikeDisplay::init();
+    let mut term = Terminal::new()?;
 
     let mut deck = Deck::new();
     deck.cards_mut().shuffle(&mut thread_rng());
 
     let game = KlondikeGame::new(&mut deck);
-    draw_game(&mut display, &game);
+    term.draw_game(&game);
 
-    display.refresh();
-    display.getch();
-    display.clear();
+    term.swap_buffers()?;
 
     Ok(())
 }

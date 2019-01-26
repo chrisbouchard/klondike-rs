@@ -1,35 +1,43 @@
-extern crate ncurses;
-
-use ncurses::*;
-
+use rustty::ui::Painter;
 use crate::display::*;
 
-pub fn draw_horizontal_selector(_display: &mut KlondikeDisplay, coords: Coords, len: i32) {
-    let Coords { x, y } = coords;
-
-    mvprintw(y, x, "╘");
-
-    for i in 1..(len - 1) {
-        mvprintw(y, x + i, "═");
-    }
-
-    // TODO: If len == 1, this will overwrite the opening character.
-    mvprintw(y, x + len - 1, "╛");
-
-    debug!("coords: {:?}, len: {}", coords, len);
+pub trait SelectorPainter {
+    fn draw_horizontal_selector(&mut self, coords: Coords, len: i32);
+    fn draw_vertical_selector(&mut self, coords: Coords, len: i32);
 }
 
-pub fn draw_vertical_selector(_display: &mut KlondikeDisplay, coords: Coords, len: i32) {
-    let Coords { x, y } = coords;
+impl SelectorPainter for Painter {
+    fn draw_horizontal_selector(&mut self, coords: Coords, len: i32) {
+        /* The outside world speaks i32, but rustty speaks usize. */
+        let (x, y) = coords.as_pos();
+        let len = len as usize;
 
-    mvprintw(y, x, "╓");
+        self.printline(y, x, "╘");
 
-    for i in 1..(len - 1) {
-        mvprintw(y + i, x, "║");
+        for i in 1..(len - 1) {
+            self.printline(y, x + i, "═");
+        }
+
+        // TODO: If len == 1, this will overwrite the opening character.
+        self.printline(y, x + len - 1, "╛");
+
+        debug!("coords: {:?}, len: {}", coords, len);
     }
 
-    // TODO: If len == 1, this will overwrite the opening character.
-    mvprintw(y + len - 1, x, "╙");
+    fn draw_vertical_selector(&mut self, coords: Coords, len: i32) {
+        /* The outside world speaks i32, but rustty speaks usize. */
+        let (x, y) = coords.as_pos();
+        let len = len as usize;
 
-    debug!("coords: {:?}, len: {}", coords, len);
+        self.printline(y, x, "╓");
+
+        for i in 1..(len - 1) {
+            self.printline(y + i, x, "║");
+        }
+
+        // TODO: If len == 1, this will overwrite the opening character.
+        self.printline(y + len - 1, x, "╙");
+
+        debug!("coords: {:?}, len: {}", coords, len);
+    }
 }

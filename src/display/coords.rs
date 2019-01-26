@@ -7,11 +7,15 @@ pub struct Coords {
 }
 
 impl Coords {
-    pub const fn x(x: i32) -> Coords {
+    pub const fn from_xy(x: i32, y: i32) -> Coords {
+        Coords { x, y }
+    }
+
+    pub const fn from_x(x: i32) -> Coords {
         Coords { x, y : 0 }
     }
 
-    pub const fn y(y: i32) -> Coords {
+    pub const fn from_y(y: i32) -> Coords {
         Coords { x: 0, y }
     }
 
@@ -21,6 +25,14 @@ impl Coords {
 
     pub const fn to_y(&self) -> Coords {
         Coords { x: 0, y: self.y }
+    }
+
+    pub const fn as_pos(&self) -> rustty::Pos {
+        (self.x as usize, self.y as usize)
+    }
+
+    pub const fn as_size(&self) -> rustty::Size {
+        (self.x as usize, self.y as usize)
     }
 }
 
@@ -83,5 +95,23 @@ impl ops::Mul<Coords> for i32 {
 
     fn mul(self, coords: Coords) -> Self::Output {
         coords.mul(self)
+    }
+}
+
+impl ops::Div<i32> for Coords {
+    type Output = Coords;
+
+    fn div(self, scalar: i32) -> Self::Output {
+        Coords {
+            x: scalar / self.x,
+            y: scalar / self.y,
+        }
+    }
+}
+
+impl ops::DivAssign<i32> for Coords {
+    fn div_assign(&mut self, scalar: i32) {
+        self.x /= scalar;
+        self.y /= scalar;
     }
 }
