@@ -14,12 +14,17 @@ pub enum StackSelection {
 pub struct Stack<'a> {
     pub cards: &'a [Card],
     pub visible_len: usize,
+    pub spread_len: usize,
     pub selection: Option<StackSelection>,
 }
 
 impl<'a> Stack<'a> {
     pub fn visible_index(&self) -> usize {
         utils::index_of_last_n(self.visible_len, self.cards)
+    }
+
+    pub fn spread_index(&self) -> usize {
+        utils::index_of_last_n(self.spread_len, self.cards)
     }
 
     pub fn selection_index(&self) -> Option<usize> {
