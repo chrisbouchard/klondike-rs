@@ -20,6 +20,23 @@ impl Rank {
         }
     }
 
+    pub fn value(&self) -> u8 {
+        let Rank(value) = self;
+        *value
+    }
+
+    pub fn is_followed_by(&self, other: Rank) -> bool {
+        self.value() + 1 == other.value()
+    }
+
+    pub fn is_ace(&self) -> bool {
+        self.value() == 1
+    }
+
+    pub fn is_king(&self) -> bool {
+        self.value() == 13
+    }
+
     pub fn label(&self) -> String {
         match self {
             Rank(1) => "A".to_string(),
@@ -66,6 +83,15 @@ impl Suit {
         /* Canonical order. */
         static SUITS: [Suit; 4] = [Suit::Spades, Suit::Hearts, Suit::Clubs, Suit::Diamonds];
         SUITS.iter().cloned()
+    }
+
+    pub fn index(&self) -> usize {
+        match self {
+            Suit::Clubs => 0,
+            Suit::Spades => 1,
+            Suit::Hearts => 2,
+            Suit::Diamonds => 3,
+        }
     }
 }
 

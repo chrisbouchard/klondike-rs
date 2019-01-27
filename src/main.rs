@@ -46,6 +46,12 @@ fn main() -> Result<(), Error> {
                 'q' => break 'event_loop,
                 's' => game.move_to_stock(),
                 't' => game.move_to_talon(),
+
+                'h' => game.move_left(),
+                'j' => game.move_down(),
+                'k' => game.move_up(),
+                'l' => game.move_right(),
+
                 c @ '1'...'7' =>
                     if let Some(index) = c.to_digit(10) {
                         game.move_to_tableaux(index as usize - 1);

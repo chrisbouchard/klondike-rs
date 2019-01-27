@@ -1,4 +1,5 @@
 #![feature(const_fn)]
+#![feature(iter_unfold)]
 
 extern crate failure;
 #[macro_use]

@@ -22,20 +22,20 @@ impl<T> GamePainter for T where T: StackPainter {
         info!("Printing talon at {:?}", TALON_COORDS);
         self.draw_horizontal_card_stack(TALON_COORDS, &game.talon());
 
-        for (i, (suit, stack)) in game.foundation().enumerate() {
+        for (i, ref stack) in game.foundation().enumerate() {
             let coords =
                 FOUNDATION_COORDS
                     + (i as i32) * (CARD_SIZE.to_x() + COLUMN_OFFSET);
-            info!("Printing {:?} foundation at {:?}", suit, coords);
-            self.draw_horizontal_card_stack(coords, &stack);
+            info!("Printing foundation stack {:?} at {:?}", i, coords);
+            self.draw_horizontal_card_stack(coords, stack);
         }
 
-        for (i, stack) in game.tableaux().enumerate() {
+        for (i, ref stack) in game.tableaux().enumerate() {
             let coords =
                 TABLEAUX_COORDS
                     + (i as i32) * (CARD_SIZE.to_x() + COLUMN_OFFSET);
             info!("Printing tableaux stack {} at {:?}", i, coords);
-            self.draw_vertical_card_stack(coords, &stack);
+            self.draw_vertical_card_stack(coords, stack);
         }
     }
 }
