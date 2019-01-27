@@ -48,7 +48,7 @@ impl KlondikeGame {
                 cards: deck.deal(i as usize).into_iter()
                     .chain(deck.deal_one().map(Card::face_up))
                     .collect(),
-                revealed_len: 1
+                revealed_len: 1,
             });
         }
 
@@ -75,45 +75,35 @@ impl KlondikeGame {
         }
     }
 
+
     pub fn stock(&self) -> Stack {
-        Stack {
-            cards: &self.stock,
-            visible_len: 2,
-            spread_len: 1,
-            selection: match self.selection {
-                GameSelection::Stock => Some(StackSelection::Cards(1)),
-                _ => None
+        Stack::with_cards(
+            &self.stock,
+            StackDetails {
+                len: self.stock.len(),
+                visible_len: 2,
+                spread_len: 1,
+                selection: match self.selection {
+                    GameSelection::Stock => Some(StackSelection::Cards(1)),
+                    _ => None
+                },
             },
-        }
+        )
     }
 
     pub fn talon(&self) -> Stack {
-        Stack {
-            cards: &self.talon,
-            visible_len: self.talon_len + 1,
-            spread_len: self.talon_len,
-            selection: match self.selection {
-                GameSelection::Talon => Some(StackSelection::Cards(1)),
-                _ => None
+        Stack::with_cards(
+            &self.talon,
+            StackDetails {
+                len: self.talon.len(),
+                visible_len: self.talon_len + 1,
+                spread_len: self.talon_len,
+                selection: match self.selection {
+                    GameSelection::Talon => Some(StackSelection::Cards(1)),
+                    _ => None
+                },
             },
-        }
-    }
-
-    pub fn foundation_for_suit(&self, suit: Suit) -> Stack {
-        Stack {
-            cards: match suit {
-                Suit::Clubs => &self.foundation_clubs,
-                Suit::Diamonds => &self.foundation_diamonds,
-                Suit::Hearts => &self.foundation_hearts,
-                Suit::Spades => &self.foundation_spades
-            },
-            visible_len: 2,
-            spread_len: 1,
-            selection: match self.selection {
-                GameSelection::Foundation(selected_suit) if suit == selected_suit => Some(StackSelection::FullStack),
-                _ => None
-            },
-        }
+        )
     }
 
     pub fn foundation(&self) -> impl Iterator<Item=(Suit, Stack)> {
@@ -125,9 +115,26 @@ impl KlondikeGame {
             .into_iter()
     }
 
-    pub fn tableaux_stack(&self, index: usize) -> Option<Stack> {
-        self.tableaux.get(index)
-            .map(|spread| self.tableaux_spread_helper(index, spread))
+    fn foundation_for_suit(&self, suit: Suit) -> Stack {
+        let foundation = match suit {
+            Suit::Clubs => &self.foundation_clubs,
+            Suit::Diamonds => &self.foundation_diamonds,
+            Suit::Hearts => &self.foundation_hearts,
+            Suit::Spades => &self.foundation_spades
+        };
+
+        Stack::with_cards(
+            foundation,
+            StackDetails {
+                len: foundation.len(),
+                visible_len: 2,
+                spread_len: 1,
+                selection: match self.selection {
+                    GameSelection::Foundation(selected_suit) if suit == selected_suit => Some(StackSelection::FullStack),
+                    _ => None
+                },
+            },
+        )
     }
 
     pub fn tableaux(&self) -> impl Iterator<Item=Stack> {
@@ -140,20 +147,23 @@ impl KlondikeGame {
     }
 
     fn tableaux_spread_helper<'a>(&'a self, index: usize, spread: &'a TableauxSpread) -> Stack<'a> {
-        Stack {
-            cards: &spread.cards,
-            visible_len: spread.cards.len(),
-            spread_len: spread.revealed_len,
-            selection: match self.selection {
-                GameSelection::TableauxCards { locked_in, index: selected_index, len } if index == selected_index =>
-                    if locked_in {
-                        Some(StackSelection::Stack(len))
-                    } else {
-                        Some(StackSelection::Cards(len))
-                    },
-                _ => None
+        Stack::with_cards(
+            &spread.cards,
+            StackDetails {
+                len: spread.cards.len(),
+                visible_len: spread.cards.len(),
+                spread_len: spread.revealed_len,
+                selection: match self.selection {
+                    GameSelection::TableauxCards { locked_in, index: selected_index, len } if index == selected_index =>
+                        if locked_in {
+                            Some(StackSelection::Stack(len))
+                        } else {
+                            Some(StackSelection::Cards(len))
+                        },
+                    _ => None
+                },
             },
-        }
+        )
     }
 
 
