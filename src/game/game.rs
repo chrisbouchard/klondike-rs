@@ -155,4 +155,18 @@ impl KlondikeGame {
             },
         }
     }
+
+
+    pub fn move_to_stock(&mut self) -> () {
+        self.selection = GameSelection::Stock;
+    }
+
+    pub fn move_to_talon(&mut self) -> () {
+        self.selection = GameSelection::Talon;
+    }
+
+    pub fn move_to_tableaux(&mut self, index: usize) -> () {
+        self.selection =
+            GameSelection::TableauxCards { locked_in: false, index, len: 1 };
+    }
 }

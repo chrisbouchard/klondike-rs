@@ -10,8 +10,8 @@ static OFFSETS: Offsets = Offsets {
     selected: Coords::from_x(1),
 };
 
-static CARD_SELECTOR_OFFSET: Coords = Coords::from_x(-1);
-static STACK_SELECTOR_OFFSET: Coords = Coords::from_y(1);
+static CARD_SELECTOR_OFFSET: Coords = Coords::from_x(-2);
+static STACK_SELECTOR_OFFSET: Coords = Coords::from_y(0);
 
 pub trait VerticalStackPainter {
     fn draw_vertical_card_stack(&mut self, coords: Coords, stack: &Stack);
@@ -30,7 +30,7 @@ impl<T> VerticalStackPainter for T where T: CardPainter + SelectorPainter {
         let stack_len = stack.len();
         let end_index =
             if stack_len > 0 {
-                stack_len
+                stack_len - 1
             } else {
                 0
             };
