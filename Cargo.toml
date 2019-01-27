@@ -12,9 +12,8 @@ rand = "*"
 rustty = "*"
 simplelog = "*"
 
-[dependencies.ncurses]
-version = "*"
-features = ["wide"]
+[patch.crates-io]
+rustty = { path = './rustty' }
 
 [lib]
 name = "klondike_lib"

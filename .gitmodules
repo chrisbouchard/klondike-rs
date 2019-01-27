@@ -1,0 +1,3 @@
+[submodule "rustty"]
+	path = rustty
+	url = /home/chris/git/rustty

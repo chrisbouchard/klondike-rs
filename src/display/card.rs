@@ -10,7 +10,7 @@ pub trait CardPainter {
     fn draw_card(&mut self, coords: Coords, card: &Card);
 }
 
-impl CardPainter for Painter {
+impl<T> CardPainter for T where T: Painter {
     fn draw_card(&mut self, coords: Coords, card: &Card) {
         draw_card_frame( self, coords);
 
@@ -29,10 +29,10 @@ impl CardPainter for Painter {
                     rustty::Attr::Default,
                 );
 
-            self.printline_with_cell(y + 1, x + 2, &rank_str, cell);
-            self.printline_with_cell(y + 1, x + 5, &suit_str, cell);
-            self.printline_with_cell(y + 2, x + 2, &suit_str, cell);
-            self.printline_with_cell(y + 2, x + 4 + offset, &rank_str, cell);
+            self.printline_with_cell(x + 2, y + 1, &rank_str, cell);
+            self.printline_with_cell(x + 5, y + 1, &suit_str, cell);
+            self.printline_with_cell(x + 2, y + 2, &suit_str, cell);
+            self.printline_with_cell(x + 4 + offset, y + 2, &rank_str, cell);
         } else {
             let cell =
                 Cell::with_style(
@@ -40,8 +40,8 @@ impl CardPainter for Painter {
                     rustty::Color::Default,
                     rustty::Attr::Default,
                 );
-            self.printline_with_cell(y + 1, x + 2, "░░░░", cell);
-            self.printline_with_cell(y + 2, x + 2, "░░░░", cell);
+            self.printline_with_cell(x + 2, y + 1, "░░░░", cell);
+            self.printline_with_cell(x + 2, y + 2, "░░░░", cell);
         }
     }
 }
@@ -49,10 +49,10 @@ impl CardPainter for Painter {
 fn draw_card_frame(painter: &mut Painter, coords: Coords) {
     let (x, y) = coords.as_pos();
 
-    painter.printline(y + 0, x + 0, "╭──────╮");
-    painter.printline(y + 1, x + 0, "│      │");
-    painter.printline(y + 2, x + 0, "│      │");
-    painter.printline(y + 3, x + 0, "╰──────╯");
+    painter.printline(x + 0, y + 0, "╭──────╮");
+    painter.printline(x + 0, y + 1, "│      │");
+    painter.printline(x + 0, y + 2, "│      │");
+    painter.printline(x + 0, y + 3, "╰──────╯");
 }
 
 fn card_color_pair(card: &Card) -> rustty::Color {

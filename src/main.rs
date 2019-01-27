@@ -1,8 +1,6 @@
 #![feature(const_fn)]
 
 extern crate failure;
-#[macro_use]
-extern crate failure_derive;
 extern crate klondike_lib;
 #[macro_use]
 extern crate log;
@@ -15,7 +13,7 @@ use std::result::Result;
 use failure::Error;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
-use rustty::Terminal;
+use rustty::{Event, Terminal};
 use simplelog::*;
 
 use klondike_lib::*;
@@ -40,6 +38,15 @@ fn main() -> Result<(), Error> {
     term.draw_game(&game);
 
     term.swap_buffers()?;
+
+    'event_loop: loop {
+        if let Some(Event::Key(c)) = term.get_event(None)? {
+            match c {
+                'q' => break 'event_loop,
+                _ => {}
+            }
+        }
+    }
 
     Ok(())
 }
