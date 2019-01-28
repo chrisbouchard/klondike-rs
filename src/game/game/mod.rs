@@ -4,8 +4,13 @@ use crate::game::card::*;
 use crate::game::deck::*;
 use crate::game::stack::*;
 
+pub mod foundation;
+pub mod stock;
+pub mod talon;
+
+
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-enum GameArea {
+pub enum AreaId {
     Stock,
     Talon,
     Foundation(usize),
@@ -13,10 +18,31 @@ enum GameArea {
 }
 
 #[derive(Debug)]
-struct GameHolding {
-    source: GameArea,
+pub struct Held {
+    source: AreaId,
     cards: Vec<Card>,
 }
+
+#[derive(Debug)]
+pub struct Focus {
+    held: Option<Held>
+}
+
+pub trait Area {
+    fn id(&self) -> AreaId;
+}
+
+pub trait UnfocusedArea: Area + Sized {
+    type Focused: FocusedArea;
+    fn accepts_focus(&self, focus: &Focus) -> bool;
+    fn try_give_focus(self, focus: Focus) -> Result<Self::Focused, (Self, Focus)>;
+}
+
+pub trait FocusedArea: Area + Sized {
+    type Unfocused: UnfocusedArea;
+    fn take_focus(self) -> (Self::Unfocused, Focus);
+}
+
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 enum GameSelection {
