@@ -17,25 +17,31 @@ pub trait GamePainter {
 impl<T> GamePainter for T where T: StackPainter {
     fn draw_game(&mut self, game: &KlondikeGame) {
         info!("Printing stock at {:?}", STOCK_COORDS);
-        self.draw_horizontal_card_stack(STOCK_COORDS, &game.stock());
+        self.draw_horizontal_card_stack(
+            STOCK_COORDS,
+            &game.area(AreaId::Stock).as_stack()
+        );
 
         info!("Printing talon at {:?}", TALON_COORDS);
-        self.draw_horizontal_card_stack(TALON_COORDS, &game.talon());
+        self.draw_horizontal_card_stack(
+            TALON_COORDS,
+            &game.area(AreaId::Talon).as_stack()
+        );
 
-        for (i, ref stack) in game.foundation().enumerate() {
+        for i in 0..3 {
             let coords =
                 FOUNDATION_COORDS
                     + (i as i32) * (CARD_SIZE.to_x() + COLUMN_OFFSET);
             info!("Printing foundation stack {:?} at {:?}", i, coords);
-            self.draw_horizontal_card_stack(coords, stack);
+            self.draw_horizontal_card_stack(coords, &game.area(AreaId::Foundation(i)).as_stack());
         }
 
-        for (i, ref stack) in game.tableaux().enumerate() {
+        for i in 0..7 {
             let coords =
                 TABLEAUX_COORDS
                     + (i as i32) * (CARD_SIZE.to_x() + COLUMN_OFFSET);
             info!("Printing tableaux stack {} at {:?}", i, coords);
-            self.draw_vertical_card_stack(coords, stack);
+            self.draw_vertical_card_stack(coords, &game.area(AreaId::Tableaux(i)).as_stack());
         }
     }
 }

@@ -92,7 +92,7 @@ impl<'a> Stack<'a> {
     }
 }
 
-impl<'a, 'b> IntoIterator for &'b Stack<'a> where 'a: 'b {
+impl<'a, 'b> IntoIterator for &'b Stack<'a> {
     type Item = &'a Card;
     type IntoIter = Chain<Iter<'a, Card>, Iter<'a, Card>>;
 

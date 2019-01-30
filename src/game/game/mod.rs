@@ -1,291 +1,116 @@
-use std::iter::{once, successors};
+use std::ops::Range;
 
 use crate::game::card::*;
 use crate::game::deck::*;
-use crate::game::stack::*;
 
+pub use self::area::*;
+pub use self::foundation::*;
+pub use self::stock::*;
+pub use self::tableaux::*;
+pub use self::talon::*;
+
+pub mod area;
 pub mod foundation;
 pub mod stock;
+pub mod tableaux;
 pub mod talon;
 
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub enum AreaId {
-    Stock,
-    Talon,
-    Foundation(usize),
-    Tableaux(usize),
-}
-
-#[derive(Debug)]
-pub struct Held {
-    source: AreaId,
-    cards: Vec<Card>,
-}
-
-#[derive(Debug)]
-pub struct Focus {
-    held: Option<Held>
-}
-
-pub trait Area {
-    fn id(&self) -> AreaId;
-}
-
-pub trait UnfocusedArea: Area + Sized {
-    type Focused: FocusedArea;
-    fn accepts_focus(&self, focus: &Focus) -> bool;
-    fn try_give_focus(self, focus: Focus) -> Result<Self::Focused, (Self, Focus)>;
-}
-
-pub trait FocusedArea: Area + Sized {
-    type Unfocused: UnfocusedArea;
-    fn take_focus(self) -> (Self::Unfocused, Focus);
-}
-
-
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-enum GameSelection {
-    Stock,
-    Talon,
-    Foundation(usize),
-    Tableaux(usize, TableauxSelection),
-}
-
-#[derive(Debug)]
-pub struct TableauxSpread {
-    cards: Vec<Card>,
-    revealed_len: usize,
-}
-
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub enum TableauxSelection {
-    Cards(usize),
-    Stack,
-}
-
 #[derive(Debug)]
 pub struct KlondikeGame {
-    stock: Vec<Card>,
+    stock: FocusBox<Stock>,
+    talon: FocusBox<Talon>,
+    foundation: Vec<FocusBox<Foundation>>,
+    tableaux: Vec<FocusBox<Tableaux>>,
 
-    talon: Vec<Card>,
-    talon_len: usize,
-
-    foundation: Vec<Vec<Card>>,
-
-    tableaux: Vec<TableauxSpread>,
-
-    holding: Option<GameHolding>,
-    selection: GameSelection,
+    areas: Vec<AreaId>,
 }
 
 impl KlondikeGame {
     pub fn new(deck: &mut Deck) -> KlondikeGame {
-        let mut tableaux: Vec<TableauxSpread> = Vec::new();
+        let foundation_indices: Range<usize> = 0..3;
+        let tableaux_indices: Range<usize> = 0..7;
 
-        for i in 0..7 {
-            tableaux.push(TableauxSpread {
-                cards: deck.deal(i as usize).into_iter()
+        let areas =
+            [AreaId::Stock, AreaId::Talon].iter()
+                .chain(foundation_indices.map(AreaId::Foundation))
+                .chain(tableaux_indices.map(AreaId::Tableaux))
+                .cloned()
+                .collect::<Vec<_>>();
+
+        let tableaux_cards =
+            tableaux_indices.map(|index| {
+                deck.deal(index).into_iter()
                     .chain(deck.deal_one().map(Card::face_up))
-                    .collect(),
-                revealed_len: 1,
-            });
-        }
+                    .collect::<Vec<_>>()
+            }).collect::<Vec<_>>();
 
-        let talon =
+        // TODO: Start with an empty talon.
+        let talon_cards =
             deck.deal(3).into_iter()
                 .map(Card::face_up)
                 .collect();
-        let stock = deck.deal_rest();
+        let stock_cards = deck.deal_rest();
 
         KlondikeGame {
-            stock,
+            stock: FocusBox::Unfocused(Stock::new(stock_cards)),
+            talon: FocusBox::Unfocused(Talon::new(talon_cards, 3)),
+            foundation: foundation_indices.map(|index: usize| {
+                FocusBox::Unfocused(Foundation::new(0, Vec::new()))
+            }).collect(),
+            tableaux: tableaux_cards.iter().enumerate().map(|(index, cards)| {
+                FocusBox::Unfocused(Tableaux::new(index, cards))
+            }),
 
-            talon,
-            talon_len: 3,
-
-            foundation: vec![
-                Vec::new(),
-                Vec::new(),
-                Vec::new(),
-                Vec::new(),
-            ],
-
-            tableaux,
-
-            holding: None,
-            selection: GameSelection::Stock,
+            areas
         }
     }
 
 
-    pub fn stock(&self) -> Stack {
-        Stack::with_cards(
-            &self.stock,
-            StackDetails {
-                len: self.stock.len(),
-                visible_len: 2,
-                spread_len: 1,
-                selection: match self.selection {
-                    GameSelection::Stock => Some(StackSelection::Cards(1)),
-                    _ => None
-                },
-            },
-        )
+    pub fn area(&self, area_id: AreaId) -> &Area {
+        // TODO: Prevent panic! on indexing?
+        match area_id {
+            AreaId::Stock => &self.stock,
+            AreaId::Talon => &self.talon,
+            AreaId::Foundation(index) => &self.foundation[index],
+            AreaId::Tableaux(index) => &self.tableaux[index]
+        }
     }
 
-    pub fn talon(&self) -> Stack {
-        if let Some(ref holding) = self.holding {
-            match self.selection {
-                GameSelection::Talon =>
-                    Stack::with_floating_cards(
-                        &self.talon,
-                        &holding.cards,
-                        StackDetails {
-                            len: self.talon.len() + holding.cards.len(),
-                            visible_len: self.talon_len + holding.cards.len() + 1,
-                            spread_len: self.talon_len + holding.cards.len(),
-                            selection: Some(StackSelection::Cards(holding.cards.len())),
-                        },
-                    ),
-                _ =>
-                    Stack::with_cards(
-                        &self.talon,
-                        StackDetails {
-                            len: self.talon.len(),
-                            visible_len: self.talon_len + 1,
-                            spread_len: self.talon_len,
-                            selection: match self.selection {
-                                GameSelection::Talon => Some(StackSelection::Cards(1)),
-                                _ => None
-                            },
-                        },
-                    )
+    pub fn with_focused_area<F>(&self, visitor: F)
+        where F: FnOnce(&FocusedArea) {
+        for area_id in self.areas {
+            match area_id {
+                AreaId::Stock => {
+                   if let Some(area) = self.stock.if_focused() {
+                       visitor(area);
+                       break;
+                   }
+                },
+                AreaId::Talon => {
+                    if let Some(area) = self.talon.if_focused() {
+                        visitor(area);
+                        break;
+                    }
+                },
+                AreaId::Foundation(index) => {
+                    if let Some(area) = self.foundation[index].if_focused() {
+                        visitor(area);
+                        break;
+                    }
+                },
+                AreaId::Tableaux(index) => {
+                    if let Some(area) = self.tableaux[index].if_focused() {
+                        visitor(area);
+                        break;
+                    }
+                }
             }
-        } else {
-            Stack::with_cards(
-                &self.talon,
-                StackDetails {
-                    len: self.talon.len(),
-                    visible_len: self.talon_len + 1,
-                    spread_len: self.talon_len,
-                    selection: match self.selection {
-                        GameSelection::Talon => Some(StackSelection::Cards(1)),
-                        _ => None
-                    },
-                },
-            )
-        }
-    }
-
-    pub fn foundation(&self) -> impl Iterator<Item=Stack> {
-        self.foundation.iter().enumerate()
-            .map(|(index, cards)| self.foundation_helper(index, cards))
-            /* Collect into a temporary vector to force the map(...) to be evaluated *now*,
-             * ending the borrow on self. */
-            .collect::<Vec<_>>()
-            .into_iter()
-    }
-
-    fn foundation_helper<'a>(&'a self, index: usize, cards: &'a [Card]) -> Stack<'a> {
-        if let Some(ref holding) = self.holding {
-            match self.selection {
-                GameSelection::Foundation(selected_index) if index == selected_index =>
-                    Stack::with_floating_cards(
-                        cards,
-                        &holding.cards,
-                        StackDetails {
-                            len: cards.len() + holding.cards.len(),
-                            visible_len: 2,
-                            spread_len: 1,
-                            selection: Some(StackSelection::Stack(1)),
-                        },
-                    ),
-                _ =>
-                    Stack::with_cards(
-                        cards,
-                        StackDetails {
-                            len: cards.len(),
-                            visible_len: 2,
-                            spread_len: 1,
-                            selection: None,
-                        },
-                    )
-            }
-        } else {
-            Stack::with_cards(
-                cards,
-                StackDetails {
-                    len: cards.len(),
-                    visible_len: 2,
-                    spread_len: 1,
-                    selection: match self.selection {
-                        GameSelection::Foundation(selected_index) if index == selected_index =>
-                            Some(StackSelection::FullStack),
-                        _ => None
-                    },
-                },
-            )
-        }
-    }
-
-    pub fn tableaux(&self) -> impl Iterator<Item=Stack> {
-        self.tableaux.iter().enumerate()
-            .map(|(index, spread)| self.tableaux_spread_helper(index, spread))
-            /* Collect into a temporary vector to force the map(...) to be evaluated *now*,
-             * ending the borrow on self. */
-            .collect::<Vec<_>>()
-            .into_iter()
-    }
-
-    fn tableaux_spread_helper<'a>(&'a self, index: usize, spread: &'a TableauxSpread) -> Stack<'a> {
-        if let Some(ref holding) = self.holding {
-            match self.selection {
-                GameSelection::Tableaux(selected_index, _) if index == selected_index =>
-                    Stack::with_floating_cards(
-                        &spread.cards,
-                        &holding.cards,
-                        StackDetails {
-                            len: spread.cards.len() + holding.cards.len(),
-                            visible_len: spread.cards.len() + holding.cards.len(),
-                            spread_len: spread.revealed_len + holding.cards.len(),
-                            selection: Some(StackSelection::Stack(holding.cards.len())),
-                        },
-                    ),
-                _ =>
-                    Stack::with_cards(
-                        &spread.cards,
-                        StackDetails {
-                            len: spread.cards.len(),
-                            visible_len: spread.cards.len(),
-                            spread_len: spread.revealed_len,
-                            selection: None,
-                        },
-                    ),
-            }
-        } else {
-            Stack::with_cards(
-                &spread.cards,
-                StackDetails {
-                    len: spread.cards.len(),
-                    visible_len: spread.cards.len(),
-                    spread_len: spread.revealed_len,
-                    selection: match self.selection {
-                        GameSelection::Tableaux(selected_index, tableaux_selection) if index == selected_index =>
-                            match tableaux_selection {
-                                TableauxSelection::Cards(len) =>
-                                    Some(StackSelection::Cards(len)),
-                                TableauxSelection::Stack =>
-                                    Some(StackSelection::FullStack),
-                            }
-                        _ => None
-                    },
-                },
-            )
         }
     }
 
 
+    /*
     pub fn move_to_stock(&mut self) {
         if let Some(selection) = self.first_valid_move(once(GameSelection::Stock)) {
             self.selection = selection;
@@ -435,4 +260,5 @@ impl KlondikeGame {
             }
         }
     }
+    */
 }
