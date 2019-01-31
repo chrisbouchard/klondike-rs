@@ -1,5 +1,5 @@
 use crate::game::card::Card;
-use crate::game::game::area::{Area, AreaId, Focus, FocusedArea, Held, UnfocusedArea};
+use crate::game::game::area::{Area, AreaId, Focus, Held};
 use crate::game::stack::{Stack, StackDetails, StackSelection};
 
 #[derive(Debug)]
@@ -19,7 +19,7 @@ impl TableauxFocus {
             .unwrap_or(TableauxFocus::NoHeld(len))
     }
 
-    fn to_focus(self) -> (Focus, usize) {
+    fn into_focus(self) -> (Focus, usize) {
         match self {
             TableauxFocus::Held(held) => (Focus { held: Some(held) }, 1),
             TableauxFocus::NoHeld(len) => (Focus { held: None }, len),
@@ -29,16 +29,14 @@ impl TableauxFocus {
 
 
 #[derive(Debug)]
-pub struct Tableaux<F = ()> {
+pub struct Tableaux {
     index: usize,
     cards: Vec<Card>,
     revealed_len: usize,
-    focus: F,
+    focus: Option<TableauxFocus>,
 }
 
-pub type FocusedTableaux = Tableaux<TableauxFocus>;
-
-impl<F> Tableaux<F> {
+impl Tableaux {
     pub fn new(index: usize, cards: Vec<Card>) -> Tableaux {
         let revealed_index = cards.iter()
             .position(|(i, card)| card.face_up)
@@ -49,41 +47,7 @@ impl<F> Tableaux<F> {
             index,
             cards,
             revealed_len,
-            focus: (),
-        }
-    }
-
-    fn as_stack_helper<'a>(&'a self, focus: Option<&'a TableauxFocus>) -> Stack<'a> {
-        Stack::new(
-            &self.cards,
-            StackDetails {
-                len: self.cards.len(),
-                visible_len: self.cards.len(),
-                spread_len: self.revealed_len,
-                selection: focus.map(|focus| {
-                    match focus {
-                        TableauxFocus::Held(Held { cards, .. }) => {
-                            StackSelection::Stack(cards.len())
-                        }
-                        TableauxFocus::NoHeld(len) => {
-                            StackSelection::Cards(*len)
-                        }
-                    }
-                }),
-            },
-        )
-    }
-
-    fn take_focus_unsafe(self) -> (Tableaux, F) {
-        (self.with_focus_unsafe(()), self.focus)
-    }
-
-    fn with_focus_unsafe<G>(self, focus: G) -> Tableaux<G> {
-        Tableaux {
-            index: self.index,
-            cards: self.cards,
-            revealed_len: self.revealed_len,
-            focus,
+            focus: None,
         }
     }
 }
@@ -93,34 +57,14 @@ impl Area for Tableaux {
         AreaId::Tableaux(self.base.index)
     }
 
-    fn as_stack(&self) -> Stack {
-        self.as_stack_helper(None)
+    fn is_focused(&self) -> bool {
+        self.focus.is_some()
     }
-}
-
-impl Area for FocusedTableaux {
-    fn id(&self) -> AreaId {
-        AreaId::Tableaux(self.base.index)
-    }
-
-    fn as_stack(&self) -> Stack {
-        let base_stack = self.as_stack_helper(Some(&self.focus));
-
-        if let Some(ref held) = self.focus.held {
-            base_stack.with_floating_cards_spread(&held.cards)
-        } else {
-            base_stack
-        }
-    }
-}
-
-impl UnfocusedArea for Tableaux {
-    type Focused = FocusedTableaux;
 
     fn accepts_focus(&self, focus: &Focus) -> bool {
         if let Some(ref held) = focus.held {
             if let Some(card) = held.cards.first() {
-                match self.base.cards.last() {
+                match self.cards.last() {
                     Some(tableaux_card) =>
                         tableaux_card.face_up
                             && tableaux_card.rank.is_followed_by(card.rank)
@@ -136,33 +80,51 @@ impl UnfocusedArea for Tableaux {
         }
     }
 
-    fn try_give_focus(self, focus: Focus) -> Result<Self::Focused, (Self, Focus)> {
+    fn try_give_focus(&mut self, focus: Focus) -> Result<(), Focus> {
+        if self.is_focused() {
+            panic!("Duplicated focus!");
+        }
+
         if self.accepts_focus(&focus) {
-            let tableaux_focus = TableauxFocus::from_focus(focus);
-            Ok(self.with_focus_unsafe(tableaux_focus))
+            self.focus = Some(TableauxFocus::from_focus(focus));
+            Ok(())
         } else {
-            Err((self, focus))
+            Err(focus)
         }
     }
-}
 
-impl FocusedArea for FocusedTableaux {
-    type Unfocused = Tableaux;
-
-    fn try_move_focus<A>(self, other: A) -> Result<(Self::Unfocused, A::Focused), (Self, A)>
-        where Self: Sized, Self::Unfocused: Sized, A: UnfocusedArea, A::Focused: Sized {
-        let (tableaux, tableaux_focus) = self.take_focus_unsafe();
-        let (focus, len) = tableaux_focus.to_focus();
+    fn try_move_focus(&mut self, other: &mut Area) -> bool {
+        let tableaux_focus =
+            self.focus.take().expect("Attempting to move focus but no focus present!");
+        let (focus, len) = tableaux_focus.into_focus();
 
         match other.try_give_focus(focus) {
-            Ok(other) => {
-                Ok((tableaux, other))
-            }
-            Err((unfocused_area, focus)) => {
-                let tableaux_focus = TableauxFocus::from_focus_with_len(focus, len);
-                let tableaux = tableaux.with_focus_unsafe(tableaux_focus);
-                Err((tableaux, other))
+            Ok(_) => true,
+            Err(focus) => {
+                self.focus = Some(TableauxFocus::from_focus_with_len(focus, len));
+                false
             }
         }
+    }
+
+    fn as_stack(&self) -> Stack {
+        Stack::new(
+            &self.cards,
+            StackDetails {
+                len: self.cards.len(),
+                visible_len: self.cards.len(),
+                spread_len: self.revealed_len,
+                selection: self.focus.map(|ref focus| {
+                    match focus {
+                        TableauxFocus::Held(Held { cards, .. }) => {
+                            StackSelection::Stack(cards.len())
+                        }
+                        TableauxFocus::NoHeld(len) => {
+                            StackSelection::Cards(*len)
+                        }
+                    }
+                }),
+            },
+        )
     }
 }

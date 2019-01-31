@@ -18,10 +18,10 @@ pub mod talon;
 
 #[derive(Debug)]
 pub struct KlondikeGame {
-    stock: FocusBox<Stock>,
-    talon: FocusBox<Talon>,
-    foundation: Vec<FocusBox<Foundation>>,
-    tableaux: Vec<FocusBox<Tableaux>>,
+    stock: Stock,
+    talon: Talon,
+    foundation: Vec<Foundation>,
+    tableaux: Vec<Tableaux>,
 
     areas: Vec<AreaId>,
 }
@@ -38,11 +38,12 @@ impl KlondikeGame {
                 .cloned()
                 .collect::<Vec<_>>();
 
-        let tableaux_cards =
+        let tableaux =
             tableaux_indices.map(|index| {
-                deck.deal(index).into_iter()
+                let cards = deck.deal(index).into_iter()
                     .chain(deck.deal_one().map(Card::face_up))
-                    .collect::<Vec<_>>()
+                    .collect::<Vec<_>>();
+                Tableaux::new(index, cards)
             }).collect::<Vec<_>>();
 
         // TODO: Start with an empty talon.
@@ -50,20 +51,17 @@ impl KlondikeGame {
             deck.deal(3).into_iter()
                 .map(Card::face_up)
                 .collect();
+        let talon = Talon::new(talon_cards, 3);
+
         let stock_cards = deck.deal_rest();
+        let stock = Stock::new(stock_cards);
 
-        KlondikeGame {
-            stock: FocusBox::Unfocused(Stock::new(stock_cards)),
-            talon: FocusBox::Unfocused(Talon::new(talon_cards, 3)),
-            foundation: foundation_indices.map(|index: usize| {
-                FocusBox::Unfocused(Foundation::new(0, Vec::new()))
-            }).collect(),
-            tableaux: tableaux_cards.iter().enumerate().map(|(index, cards)| {
-                FocusBox::Unfocused(Tableaux::new(index, cards))
-            }),
+        let foundation =
+            foundation_indices.map(|index: usize| {
+                Foundation::new(0, Vec::new())
+            }).collect();
 
-            areas
-        }
+        KlondikeGame { stock, talon, foundation, tableaux, areas }
     }
 
 
@@ -77,36 +75,15 @@ impl KlondikeGame {
         }
     }
 
-    pub fn with_focused_area<F>(&self, visitor: F)
-        where F: FnOnce(&FocusedArea) {
-        for area_id in self.areas {
+    pub fn focused_area<F>(&self) -> Option<&Area> {
+        self.areas.iter().find_map(|area_id|
             match area_id {
-                AreaId::Stock => {
-                   if let Some(area) = self.stock.if_focused() {
-                       visitor(area);
-                       break;
-                   }
-                },
-                AreaId::Talon => {
-                    if let Some(area) = self.talon.if_focused() {
-                        visitor(area);
-                        break;
-                    }
-                },
-                AreaId::Foundation(index) => {
-                    if let Some(area) = self.foundation[index].if_focused() {
-                        visitor(area);
-                        break;
-                    }
-                },
-                AreaId::Tableaux(index) => {
-                    if let Some(area) = self.tableaux[index].if_focused() {
-                        visitor(area);
-                        break;
-                    }
-                }
+                AreaId::Stock => self.stock.if_focused(),
+                AreaId::Talon => self.talon.if_focused(),
+                AreaId::Foundation(index) => self.foundation[*index].if_focused(),
+                AreaId::Tableaux(index) => self.tableaux[*index].if_focused()
             }
-        }
+        )
     }
 
 
