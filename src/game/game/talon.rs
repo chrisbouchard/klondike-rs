@@ -28,7 +28,7 @@ impl Area for Talon {
         if let Some(ref held) = focus.held {
             held.source == AreaId::Talon
         } else {
-            !self.base.cards.is_empty()
+            !self.cards.is_empty()
         }
     }
 
@@ -65,7 +65,7 @@ impl Area for Talon {
                 len: self.cards.len(),
                 visible_len: self.fanned_len + 1,
                 spread_len: self.fanned_len,
-                selection: self.focus.map(|_| StackSelection::Cards(1)),
+                selection: self.focus.as_ref().map(|_| StackSelection::Cards(1)),
             },
         )
     }

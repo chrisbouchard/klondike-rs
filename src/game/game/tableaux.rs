@@ -39,7 +39,7 @@ pub struct Tableaux {
 impl Tableaux {
     pub fn new(index: usize, cards: Vec<Card>) -> Tableaux {
         let revealed_index = cards.iter()
-            .position(|(i, card)| card.face_up)
+            .position(|card| card.face_up)
             .unwrap_or_default();
         let revealed_len = cards.len() - revealed_index;
 
@@ -54,7 +54,7 @@ impl Tableaux {
 
 impl Area for Tableaux {
     fn id(&self) -> AreaId {
-        AreaId::Tableaux(self.base.index)
+        AreaId::Tableaux(self.index)
     }
 
     fn is_focused(&self) -> bool {
@@ -76,7 +76,7 @@ impl Area for Tableaux {
                 false
             }
         } else {
-            !self.base.cards.is_empty()
+            !self.cards.is_empty()
         }
     }
 
@@ -114,7 +114,7 @@ impl Area for Tableaux {
                 len: self.cards.len(),
                 visible_len: self.cards.len(),
                 spread_len: self.revealed_len,
-                selection: self.focus.map(|ref focus| {
+                selection: self.focus.as_ref().map(|ref focus| {
                     match focus {
                         TableauxFocus::Held(Held { cards, .. }) => {
                             StackSelection::Stack(cards.len())

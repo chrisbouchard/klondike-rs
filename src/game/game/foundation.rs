@@ -75,7 +75,7 @@ impl Area for Foundation {
                 len: self.cards.len(),
                 visible_len: 2,
                 spread_len: 1,
-                selection: self.focus.map(|_| StackSelection::Cards(1)),
+                selection: self.focus.as_ref().map(|_| StackSelection::Cards(1)),
             },
         )
     }

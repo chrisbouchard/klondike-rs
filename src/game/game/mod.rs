@@ -1,3 +1,4 @@
+use std::iter::once;
 use std::ops::Range;
 
 use crate::game::card::*;
@@ -32,10 +33,10 @@ impl KlondikeGame {
         let tableaux_indices: Range<usize> = 0..7;
 
         let areas =
-            [AreaId::Stock, AreaId::Talon].iter()
-                .chain(foundation_indices.map(AreaId::Foundation))
-                .chain(tableaux_indices.map(AreaId::Tableaux))
-                .cloned()
+            once(AreaId::Stock)
+                .chain(once(AreaId::Talon))
+                .chain(foundation_indices.clone().map(AreaId::Foundation))
+                .chain(tableaux_indices.clone().map(AreaId::Tableaux))
                 .collect::<Vec<_>>();
 
         let tableaux =
@@ -46,19 +47,14 @@ impl KlondikeGame {
                 Tableaux::new(index, cards)
             }).collect::<Vec<_>>();
 
-        // TODO: Start with an empty talon.
-        let talon_cards =
-            deck.deal(3).into_iter()
-                .map(Card::face_up)
-                .collect();
-        let talon = Talon::new(talon_cards, 3);
+        let talon = Talon::new(Vec::new(), 0);
 
         let stock_cards = deck.deal_rest();
         let stock = Stock::new(stock_cards);
 
         let foundation =
-            foundation_indices.map(|index: usize| {
-                Foundation::new(0, Vec::new())
+            foundation_indices.map(|index| {
+                Foundation::new(index, Vec::new())
             }).collect();
 
         KlondikeGame { stock, talon, foundation, tableaux, areas }
@@ -66,13 +62,27 @@ impl KlondikeGame {
 
 
     pub fn area(&self, area_id: AreaId) -> &Area {
-        // TODO: Prevent panic! on indexing?
         match area_id {
             AreaId::Stock => &self.stock,
             AreaId::Talon => &self.talon,
             AreaId::Foundation(index) => &self.foundation[index],
             AreaId::Tableaux(index) => &self.tableaux[index]
         }
+    }
+
+    fn area_mut(&mut self, area_id: AreaId) -> &mut Area {
+        match area_id {
+            AreaId::Stock => &mut self.stock,
+            AreaId::Talon => &mut self.talon,
+            AreaId::Foundation(index) => &mut self.foundation[index],
+            AreaId::Tableaux(index) => &mut self.tableaux.
+        }
+    }
+
+    fn test(&mut self, a1: AreaId, a2: AreaId) {
+        let area1 = self.area_mut(a1);
+        let area2 = self.area_mut(a2);
+        area1.try_move_focus(area2);
     }
 
     pub fn focused_area<F>(&self) -> Option<&Area> {
