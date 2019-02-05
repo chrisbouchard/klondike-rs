@@ -42,8 +42,9 @@ fn main() -> Result<(), Error> {
         term.swap_buffers()?;
 
         if let Some(Event::Key(c)) = term.get_event(None)? {
-            match c {
+            game = match c {
                 'q' => break 'event_loop,
+
                 's' => game.move_to_stock(),
                 't' => game.move_to_talon(),
 
@@ -54,9 +55,12 @@ fn main() -> Result<(), Error> {
 
                 c @ '1'...'7' =>
                     if let Some(index) = c.to_digit(10) {
-                        game.move_to_tableaux(index as usize - 1);
-                    }
-                _ => {}
+                        game.move_to_tableaux(index as usize - 1)
+                    } else {
+                        game
+                    },
+
+                _ => game
             }
         }
     }

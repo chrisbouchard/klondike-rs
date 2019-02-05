@@ -19,13 +19,13 @@ impl<T> GamePainter for T where T: StackPainter {
         info!("Printing stock at {:?}", STOCK_COORDS);
         self.draw_horizontal_card_stack(
             STOCK_COORDS,
-            &game.area(AreaId::Stock).as_stack()
+            &game.stack(AreaId::Stock)
         );
 
         info!("Printing talon at {:?}", TALON_COORDS);
         self.draw_horizontal_card_stack(
             TALON_COORDS,
-            &game.area(AreaId::Talon).as_stack()
+            &game.stack(AreaId::Talon)
         );
 
         for i in 0..3 {
@@ -33,7 +33,7 @@ impl<T> GamePainter for T where T: StackPainter {
                 FOUNDATION_COORDS
                     + (i as i32) * (CARD_SIZE.to_x() + COLUMN_OFFSET);
             info!("Printing foundation stack {:?} at {:?}", i, coords);
-            self.draw_horizontal_card_stack(coords, &game.area(AreaId::Foundation(i)).as_stack());
+            self.draw_horizontal_card_stack(coords, &game.stack(AreaId::Foundation(i)));
         }
 
         for i in 0..7 {
@@ -41,7 +41,7 @@ impl<T> GamePainter for T where T: StackPainter {
                 TABLEAUX_COORDS
                     + (i as i32) * (CARD_SIZE.to_x() + COLUMN_OFFSET);
             info!("Printing tableaux stack {} at {:?}", i, coords);
-            self.draw_vertical_card_stack(coords, &game.area(AreaId::Tableaux(i)).as_stack());
+            self.draw_vertical_card_stack(coords, &game.stack(AreaId::Tableaux(i)));
         }
     }
 }

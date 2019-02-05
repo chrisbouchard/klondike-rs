@@ -1,5 +1,4 @@
-use crate::game::card::*;
-use crate::game::stack::*;
+use crate::game::*;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum AreaId {
@@ -17,35 +16,67 @@ pub struct Held {
 }
 
 #[derive(Debug)]
-pub struct Focus {
-    pub held: Option<Held>
+pub enum SelectionMode {
+    Cards(usize),
+    Held(Held),
+}
+
+impl SelectionMode {
+    pub const fn new() -> SelectionMode {
+        SelectionMode::Cards(1)
+    }
+
+    pub fn moved_ref(&self) -> &SelectionMode {
+        static DEFAULT: SelectionMode = SelectionMode::new();
+
+        match self {
+            SelectionMode::Cards(_) => &DEFAULT,
+            SelectionMode::Held(_) => self,
+        }
+    }
+
+    pub fn moved(self) -> SelectionMode {
+        match self {
+            SelectionMode::Cards(_) => SelectionMode::new(),
+            SelectionMode::Held(_) => self
+        }
+    }
+}
+
+
+#[derive(Debug)]
+pub struct Selection {
+    pub target: AreaId,
+    pub mode: SelectionMode,
+}
+
+impl Selection {
+    pub const fn new() -> Selection {
+        Selection {
+            target: AreaId::Stock,
+            mode: SelectionMode::new(),
+        }
+    }
+
+    pub fn move_to(mut self, area_id: AreaId) -> Selection {
+        self.target = area_id;
+        self.mode = self.mode.moved();
+        self
+    }
+
+    pub fn select(mut self, mode: SelectionMode) -> Selection {
+        self.mode = mode;
+        self
+    }
+
+    pub fn matches(&self, area_id: AreaId) -> bool {
+        self.target == area_id
+    }
 }
 
 
 pub trait Area {
     fn id(&self) -> AreaId;
-
-    fn is_focused(&self) -> bool;
-    fn accepts_focus(&self, focus: &Focus) -> bool;
-
-    fn try_give_focus(&mut self, focus: Focus) -> Result<(), Focus>;
-    fn try_move_focus(&mut self, other: &mut Area) -> bool;
-
-    fn as_stack(&self) -> Stack;
-
-    fn if_focused(&self) -> Option<&Area> where Self: Sized {
-        if self.is_focused() {
-            Some(self)
-        } else {
-            None
-        }
-    }
-
-    fn if_focused_mut(&mut self) -> Option<&mut Area> where Self: Sized {
-        if self.is_focused() {
-            Some(self)
-        } else {
-            None
-        }
-    }
+    fn accepts_focus(&self, mode: &SelectionMode) -> bool;
+    fn as_stack(&self, mode: Option<&SelectionMode>) -> Stack;
 }

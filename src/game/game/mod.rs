@@ -3,6 +3,7 @@ use std::ops::Range;
 
 use crate::game::card::*;
 use crate::game::deck::*;
+use crate::game::stack::*;
 
 pub use self::area::*;
 pub use self::foundation::*;
@@ -23,6 +24,8 @@ pub struct KlondikeGame {
     talon: Talon,
     foundation: Vec<Foundation>,
     tableaux: Vec<Tableaux>,
+
+    selection: Selection,
 
     areas: Vec<AreaId>,
 }
@@ -57,7 +60,16 @@ impl KlondikeGame {
                 Foundation::new(index, Vec::new())
             }).collect();
 
-        KlondikeGame { stock, talon, foundation, tableaux, areas }
+        let selection = Selection::new();
+
+        KlondikeGame {
+            stock,
+            talon,
+            foundation,
+            tableaux,
+            selection,
+            areas,
+        }
     }
 
 
@@ -70,182 +82,122 @@ impl KlondikeGame {
         }
     }
 
-    fn area_mut(&mut self, area_id: AreaId) -> &mut Area {
-        match area_id {
-            AreaId::Stock => &mut self.stock,
-            AreaId::Talon => &mut self.talon,
-            AreaId::Foundation(index) => &mut self.foundation[index],
-            AreaId::Tableaux(index) => &mut self.tableaux.
+    pub fn stack(&self, area_id: AreaId) -> Stack {
+        let mode =
+            if self.selection.matches(area_id) {
+                Some(&self.selection.mode)
+            } else {
+                None
+            };
+
+        self.area(area_id).as_stack(mode)
+    }
+
+
+    pub fn move_to_stock(mut self) -> KlondikeGame {
+        let mode = self.selection.mode.moved_ref();
+        let moves_iter = once(AreaId::Stock);
+
+        if let Some(area_id) = self.first_valid_move(mode, moves_iter) {
+            self.selection = self.selection.move_to(area_id);
         }
+
+        self
     }
 
-    fn test(&mut self, a1: AreaId, a2: AreaId) {
-        let area1 = self.area_mut(a1);
-        let area2 = self.area_mut(a2);
-        area1.try_move_focus(area2);
-    }
+    pub fn move_to_talon(mut self) -> KlondikeGame {
+        let mode = self.selection.mode.moved_ref();
+        let moves_iter = once(AreaId::Talon);
 
-    pub fn focused_area<F>(&self) -> Option<&Area> {
-        self.areas.iter().find_map(|area_id|
-            match area_id {
-                AreaId::Stock => self.stock.if_focused(),
-                AreaId::Talon => self.talon.if_focused(),
-                AreaId::Foundation(index) => self.foundation[*index].if_focused(),
-                AreaId::Tableaux(index) => self.tableaux[*index].if_focused()
-            }
-        )
-    }
-
-
-    /*
-    pub fn move_to_stock(&mut self) {
-        if let Some(selection) = self.first_valid_move(once(GameSelection::Stock)) {
-            self.selection = selection;
+        if let Some(area_id) = self.first_valid_move(mode, moves_iter) {
+            self.selection = self.selection.move_to(area_id);
         }
+
+        self
     }
 
-    pub fn move_to_talon(&mut self) {
-        if let Some(selection) = self.first_valid_move(once(GameSelection::Talon)) {
-            self.selection = selection;
+    pub fn move_to_tableaux(mut self, index: usize) -> KlondikeGame {
+        let mode = self.selection.mode.moved_ref();
+        let moves_iter = once(AreaId::Tableaux(index));
+
+        if let Some(area_id) = self.first_valid_move(mode, moves_iter) {
+            self.selection = self.selection.move_to(area_id);
         }
+
+        self
     }
 
-    pub fn move_to_tableaux(&mut self, index: usize) {
+    pub fn move_left(mut self) -> KlondikeGame {
+        let mode = self.selection.mode.moved_ref();
+
+        let starting_area_id = self.selection.target;
         let moves_iter =
-            once(GameSelection::Tableaux(index, TableauxSelection::Cards(1)));
+            self.areas.iter().rev()
+                .cycle()
+                .skip_while(|area_id| **area_id != starting_area_id)
+                .skip(1)
+                .take_while(|area_id| **area_id != starting_area_id)
+                .cloned();
 
-        if let Some(selection) = self.first_valid_move(moves_iter) {
-            self.selection = selection;
+        if let Some(area_id) = self.first_valid_move(mode, moves_iter) {
+            self.selection = self.selection.move_to(area_id);
         }
+
+        self
     }
 
-    pub fn move_left(&mut self) {
+    pub fn move_right(mut self) -> KlondikeGame {
+        let mode = self.selection.mode.moved_ref();
+
+        let starting_area_id = self.selection.target;
         let moves_iter =
-            successors(Some(self.selection), |selection| {
-                self.next_selection_left(*selection)
-            }).skip(1);  // Skip first result because it's just self.selection.
+            self.areas.iter()
+                .cycle()
+                .skip_while(|area_id| **area_id != starting_area_id)
+                .skip(1)
+                .take_while(|area_id| **area_id != starting_area_id)
+                .cloned();
 
-        if let Some(selection) = self.first_valid_move(moves_iter) {
-            self.selection = selection;
+        if let Some(area_id) = self.first_valid_move(mode, moves_iter) {
+            self.selection = self.selection.move_to(area_id);
         }
+
+        self
     }
 
-    pub fn move_right(&mut self) {
-        let moves_iter =
-            successors(Some(self.selection), |selection| {
-                self.next_selection_right(*selection)
-            }).skip(1);  // Skip first result because it's just self.selection.
+    pub fn move_up(mut self) -> KlondikeGame {
+        if let SelectionMode::Cards(len) = self.selection.mode {
+            let mode = SelectionMode::Cards(len + 1);
+            let moves_iter = once(self.selection.target);
 
-        if let Some(selection) = self.first_valid_move(moves_iter) {
-            self.selection = selection;
-        }
-    }
-
-    pub fn move_up(&mut self) {
-        if let GameSelection::Tableaux(index, TableauxSelection::Cards(len)) = self.selection {
-            let moves_iter =
-                once(GameSelection::Tableaux(index, TableauxSelection::Cards(len + 1)));
-
-            if let Some(selection) = self.first_valid_move(moves_iter) {
-                self.selection = selection;
+            if let Some(area_id) = self.first_valid_move(&mode, moves_iter) {
+                self.selection = self.selection.move_to(area_id);
             }
         }
+
+        self
     }
 
-    pub fn move_down(&mut self) {
-        if let GameSelection::Tableaux(index, TableauxSelection::Cards(len)) = self.selection {
-            let moves_iter =
-                once(GameSelection::Tableaux(index, TableauxSelection::Cards(len - 1)));
+    pub fn move_down(mut self) -> KlondikeGame {
+        if let SelectionMode::Cards(len) = self.selection.mode {
+            if len > 0 {
+                let mode = SelectionMode::Cards(len - 1);
+                let moves_iter = once(self.selection.target);
 
-            if let Some(selection) = self.first_valid_move(moves_iter) {
-                self.selection = selection;
-            }
-        }
-    }
-
-
-    fn first_valid_move(&self, moves_iter: impl Iterator<Item=GameSelection>) -> Option<GameSelection> {
-        moves_iter.filter(|selection| {
-            debug!("first_valid_move: {:?}", selection);
-            self.is_valid_selection(*selection)
-        }).next()
-    }
-
-    fn next_selection_left(&self, selection: GameSelection) -> Option<GameSelection> {
-        match selection {
-            GameSelection::Stock => None,
-            GameSelection::Talon => Some(GameSelection::Stock),
-            GameSelection::Foundation(0) => Some(GameSelection::Talon),
-            GameSelection::Foundation(index) => Some(GameSelection::Foundation(index - 1)),
-            GameSelection::Tableaux(0, _) => Some(GameSelection::Foundation(3)),
-            GameSelection::Tableaux(index, tableaux_selection) =>
-                Some(GameSelection::Tableaux(index - 1, tableaux_selection)),
-        }
-    }
-
-    fn next_selection_right(&self, selection: GameSelection) -> Option<GameSelection> {
-        match selection {
-            GameSelection::Stock => Some(GameSelection::Talon),
-            GameSelection::Talon => Some(GameSelection::Foundation(0)),
-            GameSelection::Foundation(index) if index < 3 =>
-                Some(GameSelection::Foundation(index + 1)),
-            GameSelection::Foundation(_) =>
-                Some(GameSelection::Tableaux(0, TableauxSelection::Cards(1))),
-            GameSelection::Tableaux(index, tableaux_selection) if index < 6 =>
-                Some(GameSelection::Tableaux(index + 1, tableaux_selection)),
-            GameSelection::Tableaux(_, _) => None
-        }
-    }
-
-    fn is_valid_selection(&self, selection: GameSelection) -> bool {
-        if let Some(ref holding) = self.holding {
-            match selection {
-                GameSelection::Stock => false,
-                GameSelection::Talon => holding.source == GameArea::Talon,
-                GameSelection::Foundation(index) =>
-                    if let Some((card, &[])) = holding.cards.split_first() {
-                        match self.foundation[index].last() {
-                            Some(foundation_card) =>
-                                index == card.suit.index()
-                                    && card.rank.is_followed_by(foundation_card.rank),
-                            None =>
-                                index == card.suit.index()
-                                    && card.rank.is_ace()
-                        }
-                    } else {
-                        false
-                    },
-                GameSelection::Tableaux(index, _) =>
-                    if let Some(card) = holding.cards.first() {
-                        match self.tableaux[index].cards.last() {
-                            Some(tableaux_card) =>
-                                tableaux_card.face_up
-                                    && tableaux_card.rank.is_followed_by(card.rank)
-                                    && tableaux_card.color() != card.color(),
-                            None =>
-                                card.rank.is_king()
-                        }
-                    } else {
-                        false
-                    },
-            }
-        } else {
-            match selection {
-                GameSelection::Stock => true,
-                GameSelection::Talon => !self.talon.is_empty(),
-                GameSelection::Foundation(index) => !self.foundation[index].is_empty(),
-                GameSelection::Tableaux(index, tableaux_spread) => {
-                    let spread = &self.tableaux[index];
-                    match tableaux_spread {
-                        TableauxSelection::Cards(len) =>
-                            !spread.cards.is_empty()
-                                && 0 < len
-                                && len <= spread.revealed_len,
-                        TableauxSelection::Stack => !spread.cards.is_empty(),
-                    }
+                if let Some(area_id) = self.first_valid_move(&mode, moves_iter) {
+                    self.selection = self.selection.move_to(area_id);
                 }
             }
         }
+
+        self
     }
-    */
+
+
+    fn first_valid_move<I>(&self, mode: &SelectionMode, moves_iter: I) -> Option<AreaId>
+        where I: Iterator<Item=AreaId> {
+        moves_iter.filter(|area_id| {
+            self.area(*area_id).accepts_focus(mode)
+        }).next()
+    }
 }
