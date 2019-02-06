@@ -42,6 +42,7 @@ fn main() -> Result<(), Error> {
         term.swap_buffers()?;
 
         if let Some(Event::Key(c)) = term.get_event(None)? {
+            debug!("Received key: {:?}", c);
             game = match c {
                 'q' => break 'event_loop,
 

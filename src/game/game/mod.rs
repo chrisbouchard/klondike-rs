@@ -188,8 +188,8 @@ impl KlondikeGame {
             let mode = SelectionMode::Cards(len + 1);
             let moves_iter = once(self.selection.target);
 
-            if let Some(area_id) = self.first_valid_move(&mode, moves_iter) {
-                self.selection = self.selection.move_to(area_id);
+            if let Some(_) = self.first_valid_move(&mode, moves_iter) {
+                self.selection = self.selection.select(mode);
             }
         }
 
@@ -198,12 +198,12 @@ impl KlondikeGame {
 
     pub fn move_down(mut self) -> KlondikeGame {
         if let SelectionMode::Cards(len) = self.selection.mode {
-            if len > 0 {
+            if len > 1 {
                 let mode = SelectionMode::Cards(len - 1);
                 let moves_iter = once(self.selection.target);
 
-                if let Some(area_id) = self.first_valid_move(&mode, moves_iter) {
-                    self.selection = self.selection.move_to(area_id);
+                if let Some(_) = self.first_valid_move(&mode, moves_iter) {
+                    self.selection = self.selection.select(mode);
                 }
             }
         }
