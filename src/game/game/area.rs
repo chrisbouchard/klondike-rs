@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 use crate::game::*;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -75,8 +77,18 @@ impl Selection {
 }
 
 
-pub trait Area {
+#[derive(Copy, Clone, Debug)]
+pub enum Action {
+    Draw,
+    Restock,
+}
+
+
+pub trait Area: Debug {
     fn id(&self) -> AreaId;
+
     fn accepts_focus(&self, mode: &SelectionMode) -> bool;
-    fn as_stack(&self, mode: Option<&SelectionMode>) -> Stack;
+    fn activate(&mut self, mode: &mut SelectionMode) -> Option<Action>;
+
+    fn as_stack<'a>(&'a self, mode: Option<&'a SelectionMode>) -> Stack<'a>;
 }

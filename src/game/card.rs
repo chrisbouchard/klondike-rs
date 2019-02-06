@@ -49,7 +49,7 @@ impl Rank {
     }
 
     pub fn values() -> impl Iterator<Item=Rank> {
-        (1..13).map(|value| Rank(value))
+        (1..14).map(|value| Rank(value))
     }
 }
 

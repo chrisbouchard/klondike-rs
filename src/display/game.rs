@@ -28,7 +28,7 @@ impl<T> GamePainter for T where T: StackPainter {
             &game.stack(AreaId::Talon)
         );
 
-        for i in 0..3 {
+        for i in 0..4 {
             let coords =
                 FOUNDATION_COORDS
                     + (i as i32) * (CARD_SIZE.to_x() + COLUMN_OFFSET);

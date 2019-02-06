@@ -60,7 +60,9 @@ fn main() -> Result<(), Error> {
                         game
                     },
 
-                _ => game
+                ' ' => game.activate(),
+
+                _ => game,
             }
         }
     }

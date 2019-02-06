@@ -1,5 +1,7 @@
+use std::cmp::min;
+
 use crate::game::card::Card;
-use crate::game::game::area::{Area, AreaId, SelectionMode};
+use crate::game::game::area::{Action, Area, AreaId, SelectionMode};
 use crate::game::stack::{Stack, StackDetails, StackSelection};
 
 #[derive(Debug)]
@@ -11,6 +13,24 @@ impl Stock {
     pub fn new(cards: Vec<Card>) -> Stock {
         Stock { cards }
     }
+
+    pub fn draw(&mut self, len: usize) -> Vec<Card> {
+        let len = min(len, self.cards.len());
+
+        if len > 0 {
+            self.cards.split_off(self.cards.len() - len)
+                .into_iter()
+                .rev()
+                .map(|card| card.face_up())
+                .collect()
+        } else {
+            Vec::new()
+        }
+    }
+
+    pub fn place(&mut self, mut cards: Vec<Card>) {
+        self.cards.append(&mut cards);
+    }
 }
 
 impl Area for Stock {
@@ -20,12 +40,26 @@ impl Area for Stock {
 
     fn accepts_focus(&self, mode: &SelectionMode) -> bool {
         match mode {
-            SelectionMode::Cards(len) => *len == 1 && !self.cards.is_empty(),
+            SelectionMode::Cards(len) => *len <= 1,
             _ => false,
         }
     }
 
-    fn as_stack(&self, mode: Option<&SelectionMode>) -> Stack {
+    fn activate(&mut self, mode: &mut SelectionMode) -> Option<Action> {
+        debug_assert!(self.accepts_focus(mode));
+
+        match mode {
+            SelectionMode::Cards(_) =>
+                if self.cards.is_empty() {
+                    Some(Action::Restock)
+                } else {
+                    Some(Action::Draw)
+                },
+            _ => None,
+        }
+    }
+
+    fn as_stack<'a>(&'a self, mode: Option<&'a SelectionMode>) -> Stack<'a> {
         Stack::new(
             &self.cards,
             StackDetails {
