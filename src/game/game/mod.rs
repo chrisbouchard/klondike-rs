@@ -134,6 +134,17 @@ impl KlondikeGame {
         self
     }
 
+    pub fn move_to_foundation(mut self, index: usize) -> KlondikeGame {
+        let mode = self.selection.mode.moved_ref();
+        let moves_iter = once(AreaId::Foundation(index));
+
+        if let Some(area_id) = self.first_valid_move(mode, moves_iter) {
+            self.selection = self.selection.move_to(area_id);
+        }
+
+        self
+    }
+
     pub fn move_to_tableaux(mut self, index: usize) -> KlondikeGame {
         let mode = self.selection.mode.moved_ref();
         let moves_iter = once(AreaId::Tableaux(index));
