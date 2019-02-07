@@ -1,5 +1,3 @@
-extern crate failure;
-
 pub use self::card::*;
 pub use self::deck::*;
 pub use self::game::*;

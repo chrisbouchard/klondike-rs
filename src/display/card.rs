@@ -5,7 +5,8 @@ use termion::color;
 use termion::cursor;
 
 use crate::display::coords::Coords;
-use crate::game::*;
+use crate::display::Result;
+use crate::game::card::{Card, Color};
 
 pub static CARD_SIZE: Coords = Coords::from_xy(8, 4);
 
@@ -28,13 +29,11 @@ impl color::Color for Color {
 
 
 pub trait CardPainter {
-    fn draw_card(&mut self, coords: Coords, card: &Card) -> fmt::Result;
+    fn draw_card(&mut self, coords: Coords, card: &Card) -> Result;
 }
 
 impl<W> CardPainter for W where W: Write {
-    /* TODO: Create a failure Error for the display module, and create variants for both io::Error
-     *       and fmt::Error. Then return display::Result. */
-    fn draw_card(&mut self, coords: Coords, card: &Card) -> fmt::Result {
+    fn draw_card(&mut self, coords: Coords, card: &Card) -> Result {
         draw_card_frame(self, coords)?;
 
         let interior_coords = coords + Coords::from_xy(2, 1);
@@ -62,7 +61,7 @@ impl<W> CardPainter for W where W: Write {
     }
 }
 
-fn draw_card_frame<W>(writer: &mut W, coords: Coords) -> fmt::Result where W: Write {
+fn draw_card_frame<W>(writer: &mut W, coords: Coords) -> Result where W: Write {
     let (row, col) = coords.as_row_col();
 
     // TODO: Use CARD_SIZE?
