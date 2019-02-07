@@ -9,11 +9,8 @@ failure = "*"
 failure_derive = "*"
 log = "*"
 rand = "*"
-rustty = "*"
 simplelog = "*"
-
-[patch.crates-io]
-rustty = { path = './rustty' }
+termion = "1"
 
 [lib]
 name = "klondike_lib"

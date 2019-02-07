@@ -27,12 +27,8 @@ impl Coords {
         Coords { x: 0, y: self.y }
     }
 
-    pub const fn as_pos(&self) -> rustty::Pos {
-        (self.x as usize, self.y as usize)
-    }
-
-    pub const fn as_size(&self) -> rustty::Size {
-        (self.x as usize, self.y as usize)
+    pub const fn as_row_col(&self) -> (u16, u16) {
+        (self.y as u16 + 1, self.x as u16 + 1)
     }
 }
 

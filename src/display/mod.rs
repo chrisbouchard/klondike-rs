@@ -1,5 +1,3 @@
-extern crate rustty;
-
 pub mod card;
 pub mod coords;
 pub mod game;

@@ -1,63 +1,79 @@
-use rustty::Cell;
-use rustty::ui::Painter;
+use std::fmt::{self, Formatter};
+use std::io::Write;
 
-use crate::display::coords::*;
+use termion::color;
+use termion::cursor;
+
+use crate::display::coords::Coords;
 use crate::game::*;
 
 pub static CARD_SIZE: Coords = Coords::from_xy(8, 4);
 
-pub trait CardPainter {
-    fn draw_card(&mut self, coords: Coords, card: &Card);
+
+impl color::Color for Color {
+    fn write_fg(&self, f: &mut Formatter) -> fmt::Result {
+        match self {
+            Color::Black => color::White.write_fg(f),
+            Color::Red => color::Red.write_fg(f),
+        }
+    }
+
+    fn write_bg(&self, f: &mut Formatter) -> fmt::Result {
+        match self {
+            Color::Black => color::White.write_bg(f),
+            Color::Red => color::Red.write_bg(f),
+        }
+    }
 }
 
-impl<T> CardPainter for T where T: Painter {
-    fn draw_card(&mut self, coords: Coords, card: &Card) {
-        draw_card_frame( self, coords);
 
-        let (x, y) = coords.as_pos();
+pub trait CardPainter {
+    fn draw_card(&mut self, coords: Coords, card: &Card) -> fmt::Result;
+}
+
+impl<W> CardPainter for W where W: Write {
+    /* TODO: Create a failure Error for the display module, and create variants for both io::Error
+     *       and fmt::Error. Then return display::Result. */
+    fn draw_card(&mut self, coords: Coords, card: &Card) -> fmt::Result {
+        draw_card_frame(self, coords)?;
+
+        let interior_coords = coords + Coords::from_xy(2, 1);
+        let (row, col) = interior_coords.as_row_col();
+
+        let start = cursor::Goto(row, col);
+        let next = format!("{}{}", cursor::Left(4), cursor::Down(1));
 
         if card.face_up {
             let rank_str = card.rank.label();
             let suit_str = card.suit.symbol();
 
-            let offset = 2 - card.rank.label().len();
+            let offset = cursor::Right(3 - card.rank.label().len() as u16);
 
-            let cell =
-                Cell::with_style(
-                    card_color_pair(card),
-                    rustty::Color::Default,
-                    rustty::Attr::Default,
-                );
-
-            self.printline_with_cell(x + 2, y + 1, &rank_str, cell);
-            self.printline_with_cell(x + 5, y + 1, &suit_str, cell);
-            self.printline_with_cell(x + 2, y + 2, &suit_str, cell);
-            self.printline_with_cell(x + 4 + offset, y + 2, &rank_str, cell);
+            write!(self, "{}{}", start, color::Fg(card.color()))?;
+            write!(self, "{}{}{}{}", rank_str, offset, suit_str, next)?;
+            write!(self, "{}{}{}{}", suit_str, offset, rank_str, next)?;
         } else {
-            let cell =
-                Cell::with_style(
-                    rustty::Color::Blue,
-                    rustty::Color::Default,
-                    rustty::Attr::Default,
-                );
-            self.printline_with_cell(x + 2, y + 1, "░░░░", cell);
-            self.printline_with_cell(x + 2, y + 2, "░░░░", cell);
+            write!(self, "{}{}", start, color::Fg(color::Blue))?;
+            write!(self, "{}{}", "░░░░", next)?;
+            write!(self, "{}{}", "░░░░", next)?;
         }
+
+        Ok(())
     }
 }
 
-fn draw_card_frame(painter: &mut Painter, coords: Coords) {
-    let (x, y) = coords.as_pos();
+fn draw_card_frame<W>(writer: &mut W, coords: Coords) -> fmt::Result where W: Write {
+    let (row, col) = coords.as_row_col();
 
-    painter.printline(x + 0, y + 0, "╭──────╮");
-    painter.printline(x + 0, y + 1, "│      │");
-    painter.printline(x + 0, y + 2, "│      │");
-    painter.printline(x + 0, y + 3, "╰──────╯");
-}
+    // TODO: Use CARD_SIZE?
+    let start = cursor::Goto(row, col);
+    let next = format!("{}{}", cursor::Left(8), cursor::Down(1));
 
-fn card_color_pair(card: &Card) -> rustty::Color {
-    match card.suit.color() {
-        Color::Black => rustty::Color::Default,
-        Color::Red => rustty::Color::Red,
-    }
+    write!(writer, "{}{}", start, color::Fg(color::White))?;
+    write!(writer, "{}{}", "╭──────╮", next)?;
+    write!(writer, "{}{}", "│      │", next)?;
+    write!(writer, "{}{}", "│      │", next)?;
+    write!(writer, "{}{}", "╰──────╯", next)?;
+
+    Ok(())
 }

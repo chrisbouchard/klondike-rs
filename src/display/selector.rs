@@ -1,4 +1,8 @@
-use rustty::ui::Painter;
+use std::io::Write;
+
+use termion::color;
+use termion::cursor;
+
 use crate::display::*;
 
 pub trait SelectorPainter {
@@ -6,37 +10,38 @@ pub trait SelectorPainter {
     fn draw_vertical_selector(&mut self, coords: Coords, len: i32);
 }
 
-impl<T> SelectorPainter for T where T: Painter {
+impl<W> SelectorPainter for W where W: Write {
     fn draw_horizontal_selector(&mut self, coords: Coords, len: i32) {
-        /* The outside world speaks i32, but rustty speaks usize. */
-        let (x, y) = coords.as_pos();
-        let len = len as usize;
+        let (row, col) = coords.as_row_col();
 
-        self.printline(x, y, "╘");
+        let start = cursor::Goto(row, col);
+
+        write!(self, "{}{}", start, color::Fg(color::LightWhite));
+        write!(self, "{}", "╘");
 
         for i in 1..(len - 1) {
-            self.printline(x + i, y, "═");
+            write!(self, "{}", "═");
         }
 
-        // TODO: If len == 1, this will overwrite the opening character.
-        self.printline(x + len - 1, y, "╛");
+        write!(self, "{}", "╛");
 
         debug!("coords: {:?}, len: {}", coords, len);
     }
 
     fn draw_vertical_selector(&mut self, coords: Coords, len: i32) {
-        /* The outside world speaks i32, but rustty speaks usize. */
-        let (x, y) = coords.as_pos();
-        let len = len as usize;
+        let (row, col) = coords.as_row_col();
 
-        self.printline(x, y, "╓");
+        let start = cursor::Goto(row, col);
+        let next = format!("{}{}", cursor::Left(1), cursor::Down(1));
+
+        write!(self, "{}{}", start, color::Fg(color::LightWhite));
+        write!(self, "{}{}", "╓", next);
 
         for i in 1..(len - 1) {
-            self.printline(x, y + i, "║");
+            write!(self, "{}{}", "║", next);
         }
 
-        // TODO: If len == 1, this will overwrite the opening character.
-        self.printline(x, y + len - 1, "╙");
+        write!(self, "{}{}", "╙", next);
 
         debug!("coords: {:?}, len: {}", coords, len);
     }
