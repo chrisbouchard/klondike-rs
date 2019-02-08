@@ -1,5 +1,6 @@
 use crate::display::card::*;
 use crate::display::coords::*;
+use crate::display::Result;
 use crate::display::selector::*;
 use crate::display::stack::common::*;
 use crate::game::stack::*;
@@ -13,16 +14,16 @@ static OFFSETS: Offsets = Offsets {
 static SELECTOR_OFFSET: Coords = Coords::from_y(0);
 
 pub trait HorizontalStackPainter {
-    fn draw_horizontal_card_stack(&mut self, coords: Coords, stack: &Stack);
+    fn draw_horizontal_card_stack(&mut self, coords: Coords, stack: &Stack) -> Result;
 }
 
 impl<T> HorizontalStackPainter for T where T: CardPainter + SelectorPainter {
-    fn draw_horizontal_card_stack(&mut self, coords: Coords, stack: &Stack) {
+    fn draw_horizontal_card_stack(&mut self, coords: Coords, stack: &Stack) -> Result {
         let stack_details = stack.details();
 
         for (i, card) in stack.into_iter().enumerate() {
             if let Some(coords) = card_coords(coords, i, &OFFSETS, stack_details) {
-                self.draw_card(coords, card);
+                self.draw_card(coords, card)?;
             }
         }
 
@@ -56,7 +57,9 @@ impl<T> HorizontalStackPainter for T where T: CardPainter + SelectorPainter {
             debug!("end_coords: {:?}", end_coords);
             debug!("selector_len: {:?}", selector_len);
 
-            self.draw_horizontal_selector(start_coords, selector_len);
+            self.draw_horizontal_selector(start_coords, selector_len)?;
         }
+
+        Ok(())
     }
 }

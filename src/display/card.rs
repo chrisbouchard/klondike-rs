@@ -39,7 +39,7 @@ impl<W> CardPainter for W where W: Write {
         let interior_coords = coords + Coords::from_xy(2, 1);
         let (row, col) = interior_coords.as_row_col();
 
-        let start = cursor::Goto(row, col);
+        let start = cursor::Goto(col, row);
         let next = format!("{}{}", cursor::Left(4), cursor::Down(1));
 
         if card.face_up {
@@ -65,7 +65,7 @@ fn draw_card_frame<W>(writer: &mut W, coords: Coords) -> Result where W: Write {
     let (row, col) = coords.as_row_col();
 
     // TODO: Use CARD_SIZE?
-    let start = cursor::Goto(row, col);
+    let start = cursor::Goto(col, row);
     let next = format!("{}{}", cursor::Left(8), cursor::Down(1));
 
     write!(writer, "{}{}", start, color::Fg(color::White))?;
