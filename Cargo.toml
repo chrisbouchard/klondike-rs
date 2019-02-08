@@ -4,6 +4,12 @@ version = "0.1.0"
 authors = ["Chris Bouchard <chris@upliftinglemma.net>"]
 edition = "2018"
 
+description = "CLI Klondike Solitaire written in Rust"
+categories = ["games"]
+license = "MIT"
+repository = "http://github.com/chrisbouchard/klondike-rs"
+readme = "README.md"
+
 [dependencies]
 failure = "0.1"
 failure_derive = "0.1"
