@@ -3,8 +3,8 @@ use std::io::Write;
 use termion::color;
 use termion::cursor;
 
-use crate::display::coords::Coords;
-use crate::display::Result;
+use super::coords::Coords;
+use super::Result;
 
 pub trait SelectorPainter {
     fn draw_horizontal_selector(&mut self, coords: Coords, len: i32) -> Result;

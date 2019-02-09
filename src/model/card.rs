@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
 
-use crate::game::*;
+use super::{Error, Result};
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum Color {

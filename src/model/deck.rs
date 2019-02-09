@@ -1,4 +1,4 @@
-use crate::game::card::*;
+use super::card::{Card, Rank, Suit};
 
 #[derive(Clone, Debug)]
 pub struct Deck {

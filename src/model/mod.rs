@@ -1,7 +1,7 @@
-pub use self::card::*;
-pub use self::deck::*;
-pub use self::game::*;
-pub use self::stack::*;
+pub use self::card::{Card, Color, Rank, Suit};
+pub use self::deck::Deck;
+pub use self::game::area::AreaId;
+pub use self::game::KlondikeGame;
 
 pub mod card;
 pub mod deck;

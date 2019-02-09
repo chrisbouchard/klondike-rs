@@ -1,15 +1,15 @@
 use std::iter::once;
 use std::ops::Range;
 
-use crate::game::card::*;
-use crate::game::deck::*;
-use crate::game::stack::*;
+use super::card::Card;
+use super::deck::Deck;
+use super::stack::Stack;
 
-pub use self::area::*;
-pub use self::foundation::*;
-pub use self::stock::*;
-pub use self::tableaux::*;
-pub use self::talon::*;
+use self::area::{Action, Area, AreaId, Selection, SelectionMode};
+use self::foundation::Foundation;
+use self::stock::Stock;
+use self::tableaux::Tableaux;
+use self::talon::Talon;
 
 pub mod area;
 pub mod foundation;

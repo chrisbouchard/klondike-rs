@@ -1,9 +1,9 @@
-pub use self::horizontal::HorizontalStackPainter;
-pub use self::vertical::VerticalStackPainter;
+use self::horizontal::HorizontalStackPainter;
+use self::vertical::VerticalStackPainter;
 
 mod common;
-pub mod horizontal;
-pub mod vertical;
+mod horizontal;
+mod vertical;
 
 pub trait StackPainter: HorizontalStackPainter + VerticalStackPainter {}
 

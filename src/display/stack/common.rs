@@ -1,5 +1,5 @@
-use crate::display::coords::*;
-use crate::game::stack::*;
+use crate::display::coords::Coords;
+use crate::model::stack::StackDetails;
 
 #[derive(Debug)]
 pub struct Offsets {

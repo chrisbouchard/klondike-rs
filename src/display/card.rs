@@ -4,9 +4,10 @@ use std::io::Write;
 use termion::color;
 use termion::cursor;
 
-use crate::display::coords::Coords;
-use crate::display::Result;
-use crate::game::card::{Card, Color};
+use crate::model::{Card, Color};
+
+use super::coords::Coords;
+use super::Result;
 
 pub static CARD_SIZE: Coords = Coords::from_xy(8, 4);
 

@@ -1,6 +1,7 @@
-use crate::game::card::Card;
-use crate::game::game::area::{Action, Area, AreaId, Held, SelectionMode};
-use crate::game::stack::{Stack, StackDetails, StackSelection};
+use crate::model::card::Card;
+use crate::model::stack::{Stack, StackDetails, StackSelection};
+
+use super::area::{Action, Area, AreaId, Held, SelectionMode};
 
 #[derive(Debug)]
 pub struct Talon {

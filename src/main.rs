@@ -22,7 +22,8 @@ use termion::input::TermRead;
 use termion::raw::IntoRawMode;
 use termion::screen::AlternateScreen;
 
-use klondike_lib::*;
+use klondike_lib::display::GamePainter;
+use klondike_lib::model::{Deck, KlondikeGame};
 
 type Result = ::std::result::Result<(), Error>;
 

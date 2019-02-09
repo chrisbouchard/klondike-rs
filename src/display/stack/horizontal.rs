@@ -1,9 +1,10 @@
-use crate::display::card::*;
-use crate::display::coords::*;
+use crate::display::card::{CARD_SIZE, CardPainter};
+use crate::display::coords::Coords;
 use crate::display::Result;
-use crate::display::selector::*;
-use crate::display::stack::common::*;
-use crate::game::stack::*;
+use crate::display::selector::SelectorPainter;
+use crate::model::stack::Stack;
+
+use super::common::*;
 
 static OFFSETS: Offsets = Offsets {
     unspread: Coords::from_x(1),

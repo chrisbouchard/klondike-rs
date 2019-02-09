@@ -1,8 +1,9 @@
 use std::iter::Chain;
 use std::slice::Iter;
 
-use crate::game::card::*;
 use crate::utils::usize::BoundedSub;
+
+use super::card::Card;
 
 #[derive(Copy, Clone, Debug)]
 pub enum StackSelection {

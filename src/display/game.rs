@@ -1,8 +1,9 @@
-use crate::display::Result;
-use crate::display::card::*;
-use crate::display::coords::*;
-use crate::display::stack::*;
-use crate::game::*;
+use crate::model::{AreaId, KlondikeGame};
+
+use super::card::CARD_SIZE;
+use super::coords::Coords;
+use super::Result;
+use super::stack::StackPainter;
 
 static STOCK_COORDS: Coords = Coords::from_xy(2, 0);
 static TALON_COORDS: Coords = Coords::from_xy(13, 0);
