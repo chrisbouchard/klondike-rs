@@ -226,8 +226,8 @@ impl KlondikeGame {
     fn first_valid_move<I>(&self, mode: &SelectionMode, mut moves_iter: I) -> Option<AreaId>
         where I: Iterator<Item=AreaId> {
         moves_iter.find(|area_id| {
+            debug!("Checking focus: area: {:?}, mode: {:?}", area_id, mode);
             let area = self.areas.area(*area_id);
-            debug!("Checking focus: area: {:?}, mode: {:?}", area, mode);
             area.accepts_focus(mode)
         })
     }

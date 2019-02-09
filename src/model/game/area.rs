@@ -1,5 +1,3 @@
-use std::fmt::Debug;
-
 use crate::model::{
     card::Card,
     stack::Stack
@@ -87,7 +85,7 @@ pub enum Action {
 }
 
 
-pub trait Area: Debug {
+pub trait Area {
     fn id(&self) -> AreaId;
 
     fn accepts_focus(&self, mode: &SelectionMode) -> bool;
