@@ -48,6 +48,7 @@ fn main() -> Result {
     clear_and_draw_game(&mut output, &mut game)?;
 
     'event_loop: for key in input.keys() {
+        debug!("Read key: {:?}", key);
         game = match key? {
             Key::Char('q') => break 'event_loop,
 
@@ -66,7 +67,7 @@ fn main() -> Result {
                     game
                 },
 
-            Key::F(i @ 1...4) => game.move_to_foundation(i as usize),
+            Key::F(i @ 1...4) => game.move_to_foundation(i as usize - 1),
 
             Key::Char(' ') => game.activate(),
 
