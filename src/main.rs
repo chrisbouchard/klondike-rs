@@ -1,38 +1,47 @@
-extern crate env_logger;
-extern crate failure;
-extern crate klondike_lib;
 #[macro_use]
 extern crate log;
-extern crate log_panics;
-extern crate rand;
-extern crate termion;
 
-use std::io::{stdin, stdout, Write};
+use std::fs::File;
+use std::io::Write;
 
-use failure::Error;
-use rand::seq::SliceRandom;
-use rand::thread_rng;
-use termion::clear;
-use termion::cursor;
-use termion::event::Key;
-use termion::input::TermRead;
-use termion::raw::IntoRawMode;
-use termion::screen::AlternateScreen;
+use log::LevelFilter;
+use rand::{
+    seq::SliceRandom,
+    thread_rng
+};
+use simplelog::{
+    Config,
+    WriteLogger
+};
+use termion::{
+    clear,
+    event::Key,
+    input::TermRead
+};
 
-use klondike_lib::display::GamePainter;
-use klondike_lib::model::{Deck, KlondikeGame};
+use klondike_lib::{
+    display::GamePainter,
+    model::{Deck, KlondikeGame},
+    terminal::Terminal
+};
 
-type Result = ::std::result::Result<(), Error>;
+type Result = ::std::result::Result<(), failure::Error>;
+
+static LOG_FILE: &'static str = "klondike.log";
 
 fn main() -> Result {
-    env_logger::init();
+    WriteLogger::init(
+        LevelFilter::Debug,
+        Config::default(),
+        File::create(LOG_FILE)?
+    )?;
     log_panics::init();
 
     info!("STARTING KLONDIKE");
 
-    let input = stdin();
-    let mut output =
-        AlternateScreen::from(stdout().into_raw_mode()?);
+    let terminal = Terminal::new()?;
+    let input = terminal.input()?;
+    let mut output = terminal.output()?;
 
     let mut deck = Deck::new();
     deck.cards_mut().shuffle(&mut thread_rng());
@@ -70,13 +79,14 @@ fn main() -> Result {
         clear_and_draw_game(&mut output, &mut game)?;
     }
 
+    info!("QUITTING KLONDIKE");
+
     Ok(())
 }
 
 fn clear_and_draw_game<W>(output: &mut W, game: &mut KlondikeGame)  -> Result where W: Write {
     write!(output, "{}", clear::All)?;
     output.draw_game(&game)?;
-    write!(output, "{}", cursor::Hide)?;
     output.flush()?;
 
     Ok(())

@@ -1,9 +1,20 @@
 use std::cmp::min;
 
-use crate::model::card::Card;
-use crate::model::stack::{Stack, StackDetails, StackSelection};
+use crate::model::{
+    card::Card,
+    stack::{
+        Stack,
+        StackDetails,
+        StackSelection
+    }
+};
 
-use super::area::{Action, Area, AreaId, SelectionMode};
+use super::area::{
+    Action,
+    Area,
+    AreaId,
+    SelectionMode
+};
 
 #[derive(Debug)]
 pub struct Stock {

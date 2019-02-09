@@ -199,7 +199,7 @@ impl KlondikeGame {
             let mode = SelectionMode::Cards(len + 1);
             let moves_iter = once(self.selection.target);
 
-            if let Some(_) = self.first_valid_move(&mode, moves_iter) {
+            if self.first_valid_move(&mode, moves_iter).is_some() {
                 self.selection = self.selection.select(mode);
             }
         }
@@ -213,7 +213,7 @@ impl KlondikeGame {
                 let mode = SelectionMode::Cards(len - 1);
                 let moves_iter = once(self.selection.target);
 
-                if let Some(_) = self.first_valid_move(&mode, moves_iter) {
+                if self.first_valid_move(&mode, moves_iter).is_some() {
                     self.selection = self.selection.select(mode);
                 }
             }
@@ -223,13 +223,13 @@ impl KlondikeGame {
     }
 
 
-    fn first_valid_move<I>(&self, mode: &SelectionMode, moves_iter: I) -> Option<AreaId>
+    fn first_valid_move<I>(&self, mode: &SelectionMode, mut moves_iter: I) -> Option<AreaId>
         where I: Iterator<Item=AreaId> {
-        moves_iter.filter(|area_id| {
+        moves_iter.find(|area_id| {
             let area = self.areas.area(*area_id);
             debug!("Checking focus: area: {:?}, mode: {:?}", area, mode);
             area.accepts_focus(mode)
-        }).next()
+        })
     }
 
 

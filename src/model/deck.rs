@@ -48,6 +48,12 @@ impl Deck {
     }
 }
 
+impl Default for Deck {
+    fn default() -> Self {
+        Deck::new()
+    }
+}
+
 impl<'a> From<&'a Deck> for &'a [Card] {
     fn from(deck: &'a Deck) -> Self {
         &deck.cards

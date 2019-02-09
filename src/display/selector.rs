@@ -1,7 +1,9 @@
 use std::io::Write;
 
-use termion::color;
-use termion::cursor;
+use termion::{
+    color,
+    cursor
+};
 
 use super::coords::Coords;
 use super::Result;
@@ -18,13 +20,13 @@ impl<W> SelectorPainter for W where W: Write {
         let start = cursor::Goto(col, row);
 
         write!(self, "{}{}", start, color::Fg(color::LightWhite))?;
-        write!(self, "{}", "╘")?;
+        write!(self, "╘")?;
 
         for _ in 1..(len - 1) {
-            write!(self, "{}", "═")?;
+            write!(self, "═")?;
         }
 
-        write!(self, "{}", "╛")?;
+        write!(self, "╛")?;
 
         debug!("coords: {:?}, len: {}", coords, len);
         Ok(())
@@ -37,13 +39,13 @@ impl<W> SelectorPainter for W where W: Write {
         let next = format!("{}{}", cursor::Left(1), cursor::Down(1));
 
         write!(self, "{}{}", start, color::Fg(color::LightWhite))?;
-        write!(self, "{}{}", "╓", next)?;
+        write!(self, "╓{}", next)?;
 
         for _ in 1..(len - 1) {
-            write!(self, "{}{}", "║", next)?;
+            write!(self, "║{}", next)?;
         }
 
-        write!(self, "{}{}", "╙", next)?;
+        write!(self, "╙{}", next)?;
 
         debug!("coords: {:?}, len: {}", coords, len);
         Ok(())

@@ -41,6 +41,7 @@ impl StackDetails {
 }
 
 
+#[derive(Debug)]
 pub struct Stack<'a> {
     fixed_cards: &'a [Card],
     floating_cards: &'a [Card],

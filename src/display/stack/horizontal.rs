@@ -1,7 +1,12 @@
-use crate::display::card::{CARD_SIZE, CardPainter};
-use crate::display::coords::Coords;
-use crate::display::Result;
-use crate::display::selector::SelectorPainter;
+use crate::display::{
+    card::{
+        CARD_SIZE,
+        CardPainter
+    },
+    coords::Coords,
+    Result,
+    selector::SelectorPainter
+};
 use crate::model::stack::Stack;
 
 use super::common::*;

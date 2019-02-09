@@ -1,8 +1,10 @@
 use std::fmt::{self, Formatter};
 use std::io::Write;
 
-use termion::color;
-use termion::cursor;
+use termion::{
+    color,
+    cursor
+};
 
 use crate::model::{Card, Color};
 
@@ -54,8 +56,8 @@ impl<W> CardPainter for W where W: Write {
             write!(self, "{}{}{}{}", suit_str, offset, rank_str, next)?;
         } else {
             write!(self, "{}{}", start, color::Fg(color::Blue))?;
-            write!(self, "{}{}", "░░░░", next)?;
-            write!(self, "{}{}", "░░░░", next)?;
+            write!(self, "░░░░{}", next)?;
+            write!(self, "░░░░{}", next)?;
         }
 
         Ok(())
@@ -70,10 +72,10 @@ fn draw_card_frame<W>(writer: &mut W, coords: Coords) -> Result where W: Write {
     let next = format!("{}{}", cursor::Left(8), cursor::Down(1));
 
     write!(writer, "{}{}", start, color::Fg(color::White))?;
-    write!(writer, "{}{}", "╭──────╮", next)?;
-    write!(writer, "{}{}", "│      │", next)?;
-    write!(writer, "{}{}", "│      │", next)?;
-    write!(writer, "{}{}", "╰──────╯", next)?;
+    write!(writer, "╭──────╮{}", next)?;
+    write!(writer, "│      │{}", next)?;
+    write!(writer, "│      │{}", next)?;
+    write!(writer, "╰──────╯{}", next)?;
 
     Ok(())
 }

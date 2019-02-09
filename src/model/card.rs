@@ -20,24 +20,24 @@ impl Rank {
         }
     }
 
-    pub fn value(&self) -> u8 {
+    pub fn value(self) -> u8 {
         let Rank(value) = self;
-        *value
+        value
     }
 
-    pub fn is_followed_by(&self, other: Rank) -> bool {
+    pub fn is_followed_by(self, other: Rank) -> bool {
         self.value() + 1 == other.value()
     }
 
-    pub fn is_ace(&self) -> bool {
+    pub fn is_ace(self) -> bool {
         self.value() == 1
     }
 
-    pub fn is_king(&self) -> bool {
+    pub fn is_king(self) -> bool {
         self.value() == 13
     }
 
-    pub fn label(&self) -> String {
+    pub fn label(self) -> String {
         match self {
             Rank(1) => "A".to_string(),
             Rank(value @ 2...10) => format!("{}", value),
@@ -49,7 +49,7 @@ impl Rank {
     }
 
     pub fn values() -> impl Iterator<Item=Rank> {
-        (1..14).map(|value| Rank(value))
+        (1..14).map(Rank)
     }
 }
 
@@ -63,14 +63,14 @@ pub enum Suit {
 }
 
 impl Suit {
-    pub fn color(&self) -> Color {
+    pub fn color(self) -> Color {
         match self {
             Suit::Clubs | Suit::Spades => Color::Black,
             Suit::Diamonds | Suit::Hearts => Color::Red
         }
     }
 
-    pub fn symbol(&self) -> String {
+    pub fn symbol(self) -> String {
         match self {
             Suit::Clubs => "♣",
             Suit::Diamonds => "♦",
@@ -85,7 +85,7 @@ impl Suit {
         SUITS.iter().cloned()
     }
 
-    pub fn index(&self) -> usize {
+    pub fn index(self) -> usize {
         match self {
             Suit::Clubs => 0,
             Suit::Spades => 1,
@@ -122,9 +122,9 @@ impl Card {
 impl PartialOrd<Card> for Card {
     fn partial_cmp(&self, other: &Card) -> Option<Ordering> {
         if self.suit == other.suit {
-            Option::Some(self.rank.cmp(&other.rank))
+            Some(self.rank.cmp(&other.rank))
         } else {
-            Option::None
+            None
         }
     }
 }

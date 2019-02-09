@@ -19,15 +19,15 @@ impl Coords {
         Coords { x: 0, y }
     }
 
-    pub const fn to_x(&self) -> Coords {
+    pub const fn to_x(self) -> Coords {
         Coords { x: self.x, y: 0 }
     }
 
-    pub const fn to_y(&self) -> Coords {
+    pub const fn to_y(self) -> Coords {
         Coords { x: 0, y: self.y }
     }
 
-    pub const fn as_row_col(&self) -> (u16, u16) {
+    pub const fn as_row_col(self) -> (u16, u16) {
         (self.y as u16 + 1, self.x as u16 + 1)
     }
 }

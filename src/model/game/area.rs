@@ -1,7 +1,9 @@
 use std::fmt::Debug;
 
-use crate::model::card::Card;
-use crate::model::stack::Stack;
+use crate::model::{
+    card::Card,
+    stack::Stack
+};
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum AreaId {
