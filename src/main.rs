@@ -1,20 +1,17 @@
-#![feature(const_fn)]
-
+extern crate env_logger;
 extern crate failure;
 extern crate klondike_lib;
 #[macro_use]
 extern crate log;
+extern crate log_panics;
 extern crate rand;
-extern crate simplelog;
 extern crate termion;
 
-use std::fs::File;
 use std::io::{stdin, stdout, Write};
 
 use failure::Error;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
-use simplelog::*;
 use termion::clear;
 use termion::cursor;
 use termion::event::Key;
@@ -27,14 +24,9 @@ use klondike_lib::model::{Deck, KlondikeGame};
 
 type Result = ::std::result::Result<(), Error>;
 
-static LOG_FILE: &'static str = "klondike.log";
-
 fn main() -> Result {
-    WriteLogger::init(
-        LevelFilter::Debug,
-        Config::default(),
-        File::create(LOG_FILE)?,
-    )?;
+    env_logger::init();
+    log_panics::init();
 
     info!("STARTING KLONDIKE");
 

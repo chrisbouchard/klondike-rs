@@ -11,11 +11,12 @@ repository = "http://github.com/chrisbouchard/klondike-rs"
 readme = "README.md"
 
 [dependencies]
+env_logger = "0.6"
 failure = "0.1"
 failure_derive = "0.1"
 log = "0.4"
+log-panics = "2"
 rand = "0.6"
-simplelog = "0.5"
 termion = "1"
 
 [lib]
