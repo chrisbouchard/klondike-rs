@@ -2,23 +2,14 @@ use std::cmp::min;
 
 use crate::model::{
     card::Card,
-    stack::{
-        Stack,
-        StackDetails,
-        StackSelection
-    }
+    stack::{Stack, StackDetails, StackSelection},
 };
 
-use super::area::{
-    Action,
-    Area,
-    AreaId,
-    SelectionMode
-};
+use super::area::{Action, Area, AreaId, SelectionMode};
 
 #[derive(Debug)]
 pub struct Stock {
-    cards: Vec<Card>
+    cards: Vec<Card>,
 }
 
 impl Stock {
@@ -30,7 +21,8 @@ impl Stock {
         let len = min(len, self.cards.len());
 
         if len > 0 {
-            self.cards.split_off(self.cards.len() - len)
+            self.cards
+                .split_off(self.cards.len() - len)
                 .into_iter()
                 .rev()
                 .map(|card| card.face_up())
@@ -61,12 +53,13 @@ impl Area for Stock {
         debug_assert!(self.accepts_focus(mode));
 
         match mode {
-            SelectionMode::Cards(_) =>
+            SelectionMode::Cards(_) => {
                 if self.cards.is_empty() {
                     Some(Action::Restock)
                 } else {
                     Some(Action::Draw)
-                },
+                }
+            }
             _ => None,
         }
     }

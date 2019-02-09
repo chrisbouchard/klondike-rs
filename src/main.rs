@@ -5,24 +5,14 @@ use std::fs::File;
 use std::io::Write;
 
 use log::LevelFilter;
-use rand::{
-    seq::SliceRandom,
-    thread_rng
-};
-use simplelog::{
-    Config,
-    WriteLogger
-};
-use termion::{
-    clear,
-    event::Key,
-    input::TermRead
-};
+use rand::{seq::SliceRandom, thread_rng};
+use simplelog::{Config, WriteLogger};
+use termion::{clear, event::Key, input::TermRead};
 
 use klondike_lib::{
     display::GamePainter,
     model::{Deck, KlondikeGame},
-    terminal::Terminal
+    terminal::Terminal,
 };
 
 type Result = ::std::result::Result<(), failure::Error>;
@@ -33,7 +23,7 @@ fn main() -> Result {
     WriteLogger::init(
         LevelFilter::Debug,
         Config::default(),
-        File::create(LOG_FILE)?
+        File::create(LOG_FILE)?,
     )?;
     log_panics::init();
 
@@ -62,12 +52,13 @@ fn main() -> Result {
             Key::Char('k') | Key::Up => game.move_up(),
             Key::Char('l') | Key::Right => game.move_right(),
 
-            Key::Char(c @ '1'...'7') =>
+            Key::Char(c @ '1'...'7') => {
                 if let Some(index) = c.to_digit(10) {
                     game.move_to_tableaux(index as usize - 1)
                 } else {
                     game
-                },
+                }
+            }
 
             Key::F(i @ 1...4) => game.move_to_foundation(i as usize - 1),
 
@@ -84,7 +75,10 @@ fn main() -> Result {
     Ok(())
 }
 
-fn clear_and_draw_game<W>(output: &mut W, game: &mut KlondikeGame)  -> Result where W: Write {
+fn clear_and_draw_game<W>(output: &mut W, game: &mut KlondikeGame) -> Result
+where
+    W: Write,
+{
     write!(output, "{}", clear::All)?;
     output.draw_game(&game)?;
     output.flush()?;

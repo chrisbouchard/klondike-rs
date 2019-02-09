@@ -1,10 +1,7 @@
 use std::fmt::{self, Formatter};
 use std::io::Write;
 
-use termion::{
-    color,
-    cursor
-};
+use termion::{color, cursor};
 
 use crate::model::{Card, Color};
 
@@ -12,7 +9,6 @@ use super::coords::Coords;
 use super::Result;
 
 pub static CARD_SIZE: Coords = Coords::from_xy(8, 4);
-
 
 impl color::Color for Color {
     fn write_fg(&self, f: &mut Formatter) -> fmt::Result {
@@ -30,12 +26,14 @@ impl color::Color for Color {
     }
 }
 
-
 pub trait CardPainter {
     fn draw_card(&mut self, coords: Coords, card: &Card) -> Result;
 }
 
-impl<W> CardPainter for W where W: Write {
+impl<W> CardPainter for W
+where
+    W: Write,
+{
     fn draw_card(&mut self, coords: Coords, card: &Card) -> Result {
         draw_card_frame(self, coords)?;
 
@@ -64,7 +62,10 @@ impl<W> CardPainter for W where W: Write {
     }
 }
 
-fn draw_card_frame<W>(writer: &mut W, coords: Coords) -> Result where W: Write {
+fn draw_card_frame<W>(writer: &mut W, coords: Coords) -> Result
+where
+    W: Write,
+{
     let (row, col) = coords.as_row_col();
 
     // TODO: Use CARD_SIZE?

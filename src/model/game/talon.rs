@@ -1,19 +1,9 @@
 use crate::model::{
     card::Card,
-    stack::{
-        Stack,
-        StackDetails,
-        StackSelection
-    }
+    stack::{Stack, StackDetails, StackSelection},
 };
 
-use super::area::{
-    Action,
-    Area,
-    AreaId,
-    Held,
-    SelectionMode
-};
+use super::area::{Action, Area, AreaId, Held, SelectionMode};
 
 #[derive(Debug)]
 pub struct Talon {
@@ -28,7 +18,8 @@ impl Talon {
 
     pub fn flip(&mut self) -> Vec<Card> {
         self.fanned_len = 1;
-        self.cards.split_off(0)
+        self.cards
+            .split_off(0)
             .into_iter()
             .rev()
             .map(|card| card.face_down())
@@ -51,7 +42,7 @@ impl Area for Talon {
     fn accepts_focus(&self, mode: &SelectionMode) -> bool {
         match mode {
             SelectionMode::Held(held) => held.source == AreaId::Talon,
-            SelectionMode::Cards(len) => *len == 1 && !self.cards.is_empty()
+            SelectionMode::Cards(len) => *len == 1 && !self.cards.is_empty(),
         }
     }
 
@@ -61,7 +52,10 @@ impl Area for Talon {
         match mode {
             SelectionMode::Cards(_) => {
                 let cards = self.cards.split_off(self.cards.len() - 1);
-                let held = Held { source: self.id(), cards };
+                let held = Held {
+                    source: self.id(),
+                    cards,
+                };
                 *mode = SelectionMode::Held(held);
 
                 if self.fanned_len > 1 {
@@ -81,16 +75,15 @@ impl Area for Talon {
     }
 
     fn as_stack<'a>(&'a self, mode: Option<&'a SelectionMode>) -> Stack<'a> {
-        let base_stack =
-            Stack::new(
-                &self.cards,
-                StackDetails {
-                    len: self.cards.len(),
-                    visible_len: self.fanned_len + 1,
-                    spread_len: self.fanned_len,
-                    selection: mode.map(|_| StackSelection::Cards(1)),
-                },
-            );
+        let base_stack = Stack::new(
+            &self.cards,
+            StackDetails {
+                len: self.cards.len(),
+                visible_len: self.fanned_len + 1,
+                spread_len: self.fanned_len,
+                selection: mode.map(|_| StackSelection::Cards(1)),
+            },
+        );
 
         if let Some(SelectionMode::Held(held)) = mode {
             base_stack.with_floating_cards_spread(&held.cards)

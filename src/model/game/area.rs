@@ -1,7 +1,4 @@
-use crate::model::{
-    card::Card,
-    stack::Stack
-};
+use crate::model::{card::Card, stack::Stack};
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum AreaId {
@@ -10,7 +7,6 @@ pub enum AreaId {
     Foundation(usize),
     Tableaux(usize),
 }
-
 
 #[derive(Debug)]
 pub struct Held {
@@ -41,11 +37,10 @@ impl SelectionMode {
     pub fn moved(self) -> SelectionMode {
         match self {
             SelectionMode::Cards(_) => SelectionMode::new(),
-            SelectionMode::Held(_) => self
+            SelectionMode::Held(_) => self,
         }
     }
 }
-
 
 #[derive(Debug)]
 pub struct Selection {
@@ -77,13 +72,11 @@ impl Selection {
     }
 }
 
-
 #[derive(Copy, Clone, Debug)]
 pub enum Action {
     Draw,
     Restock,
 }
-
 
 pub trait Area {
     fn id(&self) -> AreaId;

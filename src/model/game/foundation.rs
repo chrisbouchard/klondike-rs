@@ -1,19 +1,9 @@
 use crate::model::{
     card::Card,
-    stack::{
-        Stack,
-        StackDetails,
-        StackSelection
-    }
+    stack::{Stack, StackDetails, StackSelection},
 };
 
-use super::area::{
-    Action,
-    Area,
-    AreaId,
-    Held,
-    SelectionMode
-};
+use super::area::{Action, Area, AreaId, Held, SelectionMode};
 
 #[derive(Debug)]
 pub struct Foundation {
@@ -35,7 +25,7 @@ impl Area for Foundation {
     fn accepts_focus(&self, mode: &SelectionMode) -> bool {
         match mode {
             SelectionMode::Cards(len) => *len == 1 && !self.cards.is_empty(),
-            SelectionMode::Held(held) =>
+            SelectionMode::Held(held) => {
                 if held.source == self.id() {
                     true
                 } else if let Some((card, &[])) = held.cards.split_first() {
@@ -43,12 +33,12 @@ impl Area for Foundation {
                         self.index == card.suit.index()
                             && foundation_card.rank.is_followed_by(card.rank)
                     } else {
-                        self.index == card.suit.index()
-                            && card.rank.is_ace()
+                        self.index == card.suit.index() && card.rank.is_ace()
                     }
                 } else {
                     false
-                },
+                }
+            }
         }
     }
 
@@ -58,7 +48,10 @@ impl Area for Foundation {
         match mode {
             SelectionMode::Cards(_) => {
                 let cards = self.cards.split_off(self.cards.len() - 1);
-                let held = Held { source: self.id(), cards };
+                let held = Held {
+                    source: self.id(),
+                    cards,
+                };
                 *mode = SelectionMode::Held(held);
 
                 None
@@ -73,16 +66,15 @@ impl Area for Foundation {
     }
 
     fn as_stack<'a>(&'a self, mode: Option<&'a SelectionMode>) -> Stack<'a> {
-        let base_stack =
-            Stack::new(
-                &self.cards,
-                StackDetails {
-                    len: self.cards.len(),
-                    visible_len: 2,
-                    spread_len: 1,
-                    selection: mode.map(|_| StackSelection::Cards(1)),
-                },
-            );
+        let base_stack = Stack::new(
+            &self.cards,
+            StackDetails {
+                len: self.cards.len(),
+                visible_len: 2,
+                spread_len: 1,
+                selection: mode.map(|_| StackSelection::Cards(1)),
+            },
+        );
 
         if let Some(SelectionMode::Held(held)) = mode {
             base_stack.with_floating_cards(&held.cards)

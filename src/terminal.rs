@@ -1,22 +1,11 @@
-use std::fmt::{
-    self,
-    Debug,
-    Formatter
-};
+use std::fmt::{self, Debug, Formatter};
 use std::fs::File;
-use std::io::{
-    self,
-    Write
-};
+use std::io::{self, Write};
 
 use termion::{
-    self,
-    cursor,
-    raw::{
-        IntoRawMode,
-        RawTerminal
-    },
-    screen::AlternateScreen
+    self, cursor,
+    raw::{IntoRawMode, RawTerminal},
+    screen::AlternateScreen,
 };
 
 #[derive(Debug, Fail)]
@@ -33,7 +22,6 @@ impl From<io::Error> for Error {
     }
 }
 
-
 pub struct Terminal {
     input: File,
     output: AlternateScreen<RawTerminal<File>>,
@@ -42,8 +30,7 @@ pub struct Terminal {
 impl Terminal {
     pub fn new() -> Result<Self> {
         let input = termion::get_tty()?;
-        let mut output =
-            AlternateScreen::from(termion::get_tty()?.into_raw_mode()?);
+        let mut output = AlternateScreen::from(termion::get_tty()?.into_raw_mode()?);
 
         write!(output, "{}", cursor::Hide)?;
 

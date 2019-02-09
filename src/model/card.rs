@@ -8,7 +8,6 @@ pub enum Color {
     Red,
 }
 
-
 #[derive(Copy, Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Rank(pub u8);
 
@@ -16,7 +15,7 @@ impl Rank {
     pub fn new(value: u8) -> Result<Rank> {
         match value {
             1...13 => Ok(Rank(value)),
-            _ => Err(Error::InvalidRank { value })
+            _ => Err(Error::InvalidRank { value }),
         }
     }
 
@@ -44,15 +43,14 @@ impl Rank {
             Rank(11) => "J".to_string(),
             Rank(12) => "Q".to_string(),
             Rank(13) => "K".to_string(),
-            _ => "E".to_string()
+            _ => "E".to_string(),
         }
     }
 
-    pub fn values() -> impl Iterator<Item=Rank> {
+    pub fn values() -> impl Iterator<Item = Rank> {
         (1..14).map(Rank)
     }
 }
-
 
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
 pub enum Suit {
@@ -66,7 +64,7 @@ impl Suit {
     pub fn color(self) -> Color {
         match self {
             Suit::Clubs | Suit::Spades => Color::Black,
-            Suit::Diamonds | Suit::Hearts => Color::Red
+            Suit::Diamonds | Suit::Hearts => Color::Red,
         }
     }
 
@@ -75,11 +73,12 @@ impl Suit {
             Suit::Clubs => "♣",
             Suit::Diamonds => "♦",
             Suit::Hearts => "♥",
-            Suit::Spades => "♠"
-        }.to_string()
+            Suit::Spades => "♠",
+        }
+        .to_string()
     }
 
-    pub fn values() -> impl Iterator<Item=Suit> {
+    pub fn values() -> impl Iterator<Item = Suit> {
         /* Canonical order. */
         static SUITS: [Suit; 4] = [Suit::Spades, Suit::Hearts, Suit::Clubs, Suit::Diamonds];
         SUITS.iter().cloned()
@@ -94,7 +93,6 @@ impl Suit {
         }
     }
 }
-
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Card {

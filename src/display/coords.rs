@@ -12,7 +12,7 @@ impl Coords {
     }
 
     pub const fn from_x(x: i32) -> Coords {
-        Coords { x, y : 0 }
+        Coords { x, y: 0 }
     }
 
     pub const fn from_y(y: i32) -> Coords {

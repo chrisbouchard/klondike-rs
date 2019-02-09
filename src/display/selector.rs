@@ -1,9 +1,6 @@
 use std::io::Write;
 
-use termion::{
-    color,
-    cursor
-};
+use termion::{color, cursor};
 
 use super::coords::Coords;
 use super::Result;
@@ -13,7 +10,10 @@ pub trait SelectorPainter {
     fn draw_vertical_selector(&mut self, coords: Coords, len: i32) -> Result;
 }
 
-impl<W> SelectorPainter for W where W: Write {
+impl<W> SelectorPainter for W
+where
+    W: Write,
+{
     fn draw_horizontal_selector(&mut self, coords: Coords, len: i32) -> Result {
         let (row, col) = coords.as_row_col();
 

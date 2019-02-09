@@ -2,7 +2,7 @@ use super::card::{Card, Rank, Suit};
 
 #[derive(Clone, Debug)]
 pub struct Deck {
-    cards: Vec<Card>
+    cards: Vec<Card>,
 }
 
 impl Deck {
@@ -13,7 +13,8 @@ impl Deck {
             for rank in Rank::values() {
                 cards.push(Card {
                     face_up: false,
-                    rank, suit,
+                    rank,
+                    suit,
                 })
             }
         }
