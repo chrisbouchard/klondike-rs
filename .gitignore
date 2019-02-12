@@ -1,4 +1,5 @@
 /.idea
+/tags
 /target
 **/*.iml
 **/*.log
