@@ -3,17 +3,22 @@ use crate::model::{
     stack::{Stack, StackDetails, StackSelection},
 };
 
-use super::area::{Action, Area, AreaId, Held, SelectionMode};
+use super::{
+    area::{Action, Area, AreaId, Held, SelectionMode},
+    settings::KlondikeGameSettings,
+};
 
 #[derive(Debug)]
-pub struct Tableaux {
+pub struct Tableaux<'a> {
     index: usize,
     cards: Vec<Card>,
     revealed_len: usize,
+
+    settings: &'a KlondikeGameSettings
 }
 
-impl Tableaux {
-    pub fn new(index: usize, cards: Vec<Card>) -> Tableaux {
+impl<'a> Tableaux<'a> {
+    pub fn new(index: usize, cards: Vec<Card>, settings: &KlondikeGameSettings) -> Tableaux {
         let revealed_index = cards
             .iter()
             .position(|card| card.face_up)
@@ -24,11 +29,12 @@ impl Tableaux {
             index,
             cards,
             revealed_len,
+            settings,
         }
     }
 }
 
-impl Area for Tableaux {
+impl<'a> Area for Tableaux<'a> {
     fn id(&self) -> AreaId {
         AreaId::Tableaux(self.index)
     }
@@ -87,14 +93,16 @@ impl Area for Tableaux {
                 let len = held.cards.len();
                 self.revealed_len += len;
                 self.cards.append(&mut held.cards);
-                *mode = SelectionMode::Cards(len);
 
-                None
+                let source = held.source;
+                *mode = SelectionMode::new();
+
+                Some(Action::MoveTo(source))
             }
         }
     }
 
-    fn as_stack<'a>(&'a self, mode: Option<&'a SelectionMode>) -> Stack<'a> {
+    fn as_stack<'s>(&'s self, mode: Option<&'s SelectionMode>) -> Stack<'s> {
         let base_stack = Stack::new(
             &self.cards,
             StackDetails {

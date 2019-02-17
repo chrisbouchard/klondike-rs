@@ -75,6 +75,7 @@ impl Selection {
 #[derive(Copy, Clone, Debug)]
 pub enum Action {
     Draw,
+    MoveTo(AreaId),
     Restock,
 }
 

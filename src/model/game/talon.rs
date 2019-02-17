@@ -3,17 +3,22 @@ use crate::model::{
     stack::{Stack, StackDetails, StackSelection},
 };
 
-use super::area::{Action, Area, AreaId, Held, SelectionMode};
+use super::{
+    area::{Action, Area, AreaId, Held, SelectionMode},
+    settings::KlondikeGameSettings,
+};
 
 #[derive(Debug)]
-pub struct Talon {
+pub struct Talon<'a> {
     cards: Vec<Card>,
     fanned_len: usize,
+
+    settings: &'a KlondikeGameSettings,
 }
 
-impl Talon {
-    pub fn new(cards: Vec<Card>, fanned_len: usize) -> Talon {
-        Talon { cards, fanned_len }
+impl<'a> Talon<'a> {
+    pub fn new(cards: Vec<Card>, fanned_len: usize, settings: &KlondikeGameSettings) -> Talon {
+        Talon { cards, fanned_len, settings }
     }
 
     pub fn flip(&mut self) -> Vec<Card> {
@@ -34,7 +39,7 @@ impl Talon {
     }
 }
 
-impl Area for Talon {
+impl<'a> Area for Talon<'a> {
     fn id(&self) -> AreaId {
         AreaId::Talon
     }
@@ -67,14 +72,16 @@ impl Area for Talon {
             SelectionMode::Held(held) => {
                 self.fanned_len += held.cards.len();
                 self.cards.append(&mut held.cards);
-                *mode = SelectionMode::Cards(1);
 
-                None
+                let source = held.source;
+                *mode = SelectionMode::new();
+
+                Some(Action::MoveTo(source))
             }
         }
     }
 
-    fn as_stack<'a>(&'a self, mode: Option<&'a SelectionMode>) -> Stack<'a> {
+    fn as_stack<'s>(&'s self, mode: Option<&'s SelectionMode>) -> Stack<'s> {
         let base_stack = Stack::new(
             &self.cards,
             StackDetails {

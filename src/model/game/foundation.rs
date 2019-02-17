@@ -3,21 +3,26 @@ use crate::model::{
     stack::{Stack, StackDetails, StackSelection},
 };
 
-use super::area::{Action, Area, AreaId, Held, SelectionMode};
+use super::{
+    area::{Action, Area, AreaId, Held, SelectionMode},
+    settings::KlondikeGameSettings,
+};
 
 #[derive(Debug)]
-pub struct Foundation {
+pub struct Foundation<'a> {
     index: usize,
     cards: Vec<Card>,
+
+    settings: &'a KlondikeGameSettings,
 }
 
-impl Foundation {
-    pub fn new(index: usize, cards: Vec<Card>) -> Foundation {
-        Foundation { index, cards }
+impl<'a> Foundation<'a> {
+    pub fn new(index: usize, cards: Vec<Card>, settings: &KlondikeGameSettings) -> Foundation {
+        Foundation { index, cards, settings }
     }
 }
 
-impl Area for Foundation {
+impl<'a> Area for Foundation<'a> {
     fn id(&self) -> AreaId {
         AreaId::Foundation(self.index)
     }
@@ -47,25 +52,29 @@ impl Area for Foundation {
 
         match mode {
             SelectionMode::Cards(_) => {
-                let cards = self.cards.split_off(self.cards.len() - 1);
-                let held = Held {
-                    source: self.id(),
-                    cards,
-                };
-                *mode = SelectionMode::Held(held);
+                if self.settings.take_from_foundation {
+                    let cards = self.cards.split_off(self.cards.len() - 1);
+                    let held = Held {
+                        source: self.id(),
+                        cards,
+                    };
+                    *mode = SelectionMode::Held(held);
+                }
 
                 None
             }
             SelectionMode::Held(held) => {
                 self.cards.append(&mut held.cards);
-                *mode = SelectionMode::Cards(1);
 
-                None
+                let source = held.source;
+                *mode = SelectionMode::new();
+
+                Some(Action::MoveTo(source))
             }
         }
     }
 
-    fn as_stack<'a>(&'a self, mode: Option<&'a SelectionMode>) -> Stack<'a> {
+    fn as_stack<'s>(&'s self, mode: Option<&'s SelectionMode>) -> Stack<'s> {
         let base_stack = Stack::new(
             &self.cards,
             StackDetails {

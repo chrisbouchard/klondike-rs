@@ -5,20 +5,24 @@ use crate::model::{
     stack::{Stack, StackDetails, StackSelection},
 };
 
-use super::area::{Action, Area, AreaId, SelectionMode};
+use super::{
+    area::{Action, Area, AreaId, SelectionMode},
+    settings::KlondikeGameSettings,
+};
 
 #[derive(Debug)]
-pub struct Stock {
+pub struct Stock<'a> {
     cards: Vec<Card>,
+    settings: &'a KlondikeGameSettings,
 }
 
-impl Stock {
-    pub fn new(cards: Vec<Card>) -> Stock {
-        Stock { cards }
+impl<'a> Stock<'a> {
+    pub fn new(cards: Vec<Card>, settings: &KlondikeGameSettings) -> Stock {
+        Stock { cards, settings }
     }
 
-    pub fn draw(&mut self, len: usize) -> Vec<Card> {
-        let len = min(len, self.cards.len());
+    pub fn draw(&mut self) -> Vec<Card> {
+        let len = min(self.settings.draw_from_stock_len, self.cards.len());
 
         if len > 0 {
             self.cards
@@ -37,7 +41,7 @@ impl Stock {
     }
 }
 
-impl Area for Stock {
+impl<'a> Area for Stock<'a> {
     fn id(&self) -> AreaId {
         AreaId::Stock
     }
@@ -64,7 +68,7 @@ impl Area for Stock {
         }
     }
 
-    fn as_stack<'a>(&'a self, mode: Option<&'a SelectionMode>) -> Stack<'a> {
+    fn as_stack<'s>(&'s self, mode: Option<&'s SelectionMode>) -> Stack<'s> {
         Stack::new(
             &self.cards,
             StackDetails {

@@ -1,6 +1,6 @@
 pub use self::card::{Card, Color, Rank, Suit};
 pub use self::deck::Deck;
-pub use self::game::{area::AreaId, KlondikeGame};
+pub use self::game::{area::AreaId, settings::KlondikeGameSettings, KlondikeGame};
 
 pub mod card;
 pub mod deck;
