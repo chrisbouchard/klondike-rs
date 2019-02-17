@@ -11,7 +11,7 @@ use termion::{clear, event::Key, input::TermRead};
 
 use klondike_lib::{
     display::GamePainter,
-    model::{Deck, KlondikeGame},
+    model::{AreaId, Deck, KlondikeGame},
     terminal::Terminal,
 };
 
@@ -44,8 +44,10 @@ fn main() -> Result {
         game = match key? {
             Key::Char('q') => break 'event_loop,
 
-            Key::Char('s') => game.move_to_stock(),
-            Key::Char('t') => game.move_to_talon(),
+            Key::Char('s') => game.move_to(AreaId::Stock),
+            Key::Char('t') => game.move_to(AreaId::Talon),
+
+            Key::Char('f') => game.move_to_foundation(),
 
             Key::Char('h') | Key::Left => game.move_left(),
             Key::Char('j') | Key::Down => game.move_down(),
@@ -54,13 +56,13 @@ fn main() -> Result {
 
             Key::Char(c @ '1'...'7') => {
                 if let Some(index) = c.to_digit(10) {
-                    game.move_to_tableaux(index as usize - 1)
+                    game.move_to(AreaId::Tableaux(index as usize - 1))
                 } else {
                     game
                 }
             }
 
-            Key::F(i @ 1...4) => game.move_to_foundation(i as usize - 1),
+            Key::F(i @ 1...4) => game.move_to(AreaId::Foundation(i as usize - 1)),
 
             Key::Char(' ') => game.activate(),
 
