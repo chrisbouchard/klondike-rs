@@ -14,7 +14,7 @@ pub struct Tableaux<'a> {
     cards: Vec<Card>,
     revealed_len: usize,
 
-    settings: &'a KlondikeGameSettings
+    settings: &'a KlondikeGameSettings,
 }
 
 impl<'a> Tableaux<'a> {

@@ -18,7 +18,11 @@ pub struct Talon<'a> {
 
 impl<'a> Talon<'a> {
     pub fn new(cards: Vec<Card>, fanned_len: usize, settings: &KlondikeGameSettings) -> Talon {
-        Talon { cards, fanned_len, settings }
+        Talon {
+            cards,
+            fanned_len,
+            settings,
+        }
     }
 
     pub fn flip(&mut self) -> Vec<Card> {

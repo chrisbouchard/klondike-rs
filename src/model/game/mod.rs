@@ -19,7 +19,6 @@ pub mod stock;
 pub mod tableaux;
 pub mod talon;
 
-
 #[derive(Debug)]
 pub struct KlondikeGameAreas<'a> {
     stock: Stock<'a>,
@@ -65,7 +64,8 @@ impl<'a> KlondikeGame<'a> {
             .chain(settings.tableaux_indices().map(AreaId::Tableaux))
             .collect::<Vec<_>>();
 
-        let tableaux = settings.tableaux_indices()
+        let tableaux = settings
+            .tableaux_indices()
             .map(|index| {
                 let cards = deck
                     .deal(index)
@@ -81,7 +81,8 @@ impl<'a> KlondikeGame<'a> {
         let stock_cards = deck.deal_rest();
         let stock = Stock::new(stock_cards, settings);
 
-        let foundation = settings.foundation_indices()
+        let foundation = settings
+            .foundation_indices()
             .map(|index| Foundation::new(index, Vec::new(), settings))
             .collect();
 

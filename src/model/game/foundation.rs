@@ -18,7 +18,11 @@ pub struct Foundation<'a> {
 
 impl<'a> Foundation<'a> {
     pub fn new(index: usize, cards: Vec<Card>, settings: &KlondikeGameSettings) -> Foundation {
-        Foundation { index, cards, settings }
+        Foundation {
+            index,
+            cards,
+            settings,
+        }
     }
 }
 
