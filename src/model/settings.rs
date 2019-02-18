@@ -1,11 +1,11 @@
 #[derive(Debug)]
-pub struct KlondikeGameSettings {
+pub struct Settings {
     pub draw_from_stock_len: usize,
     pub tableaux_len: usize,
     pub take_from_foundation: bool,
 }
 
-impl KlondikeGameSettings {
+impl Settings {
     pub fn foundation_indices(&self) -> impl Iterator<Item = usize> {
         0..4
     }
@@ -15,9 +15,9 @@ impl KlondikeGameSettings {
     }
 }
 
-impl Default for KlondikeGameSettings {
+impl Default for Settings {
     fn default() -> Self {
-        KlondikeGameSettings {
+        Settings {
             draw_from_stock_len: 3,
             tableaux_len: 7,
             take_from_foundation: true,

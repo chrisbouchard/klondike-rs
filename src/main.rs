@@ -11,7 +11,7 @@ use termion::{clear, event::Key, input::TermRead};
 
 use klondike_lib::{
     display::GamePainter,
-    model::{AreaId, Deck, KlondikeGame, KlondikeGameSettings},
+    model::{AreaId, Deck, Game, Settings},
     terminal::Terminal,
 };
 
@@ -33,12 +33,12 @@ fn main() -> Result {
     let input = terminal.input()?;
     let mut output = terminal.output()?;
 
-    let settings = KlondikeGameSettings::default();
+    let settings = Settings::default();
 
     let mut deck = Deck::new();
     deck.cards_mut().shuffle(&mut thread_rng());
 
-    let mut game = KlondikeGame::new(&mut deck, &settings);
+    let mut game = Game::new(&mut deck, &settings);
     clear_and_draw_game(&mut output, &mut game)?;
 
     'event_loop: for key in input.keys() {
@@ -79,7 +79,7 @@ fn main() -> Result {
     Ok(())
 }
 
-fn clear_and_draw_game<W>(output: &mut W, game: &mut KlondikeGame) -> Result
+fn clear_and_draw_game<W>(output: &mut W, game: &mut Game) -> Result
 where
     W: Write,
 {

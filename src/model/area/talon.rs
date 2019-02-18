@@ -1,23 +1,21 @@
 use crate::model::{
     card::Card,
+    settings::Settings,
     stack::{Stack, StackDetails, StackSelection},
 };
 
-use super::{
-    area::{Action, Area, AreaId, Held, SelectionMode},
-    settings::KlondikeGameSettings,
-};
+use super::{Action, Area, AreaId, Held, SelectionMode};
 
 #[derive(Debug)]
 pub struct Talon<'a> {
     cards: Vec<Card>,
     fanned_len: usize,
 
-    settings: &'a KlondikeGameSettings,
+    settings: &'a Settings,
 }
 
 impl<'a> Talon<'a> {
-    pub fn new(cards: Vec<Card>, fanned_len: usize, settings: &KlondikeGameSettings) -> Talon {
+    pub fn new(cards: Vec<Card>, fanned_len: usize, settings: &Settings) -> Talon {
         Talon {
             cards,
             fanned_len,

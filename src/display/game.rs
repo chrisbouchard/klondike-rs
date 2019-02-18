@@ -1,4 +1,4 @@
-use crate::model::{AreaId, KlondikeGame};
+use crate::model::{AreaId, Game};
 
 use super::card::CARD_SIZE;
 use super::coords::Coords;
@@ -13,14 +13,14 @@ static TABLEAUX_COORDS: Coords = Coords::from_xy(2, 5);
 static COLUMN_OFFSET: Coords = Coords::from_x(3);
 
 pub trait GamePainter {
-    fn draw_game(&mut self, game: &KlondikeGame) -> Result;
+    fn draw_game(&mut self, game: &Game) -> Result;
 }
 
 impl<T> GamePainter for T
 where
     T: StackPainter,
 {
-    fn draw_game(&mut self, game: &KlondikeGame) -> Result {
+    fn draw_game(&mut self, game: &Game) -> Result {
         info!("Printing stock at {:?}", STOCK_COORDS);
         self.draw_horizontal_card_stack(STOCK_COORDS, &game.stack(AreaId::Stock))?;
 

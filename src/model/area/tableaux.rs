@@ -1,12 +1,10 @@
 use crate::model::{
     card::Card,
+    settings::Settings,
     stack::{Stack, StackDetails, StackSelection},
 };
 
-use super::{
-    area::{Action, Area, AreaId, Held, SelectionMode},
-    settings::KlondikeGameSettings,
-};
+use super::{Action, Area, AreaId, Held, SelectionMode};
 
 #[derive(Debug)]
 pub struct Tableaux<'a> {
@@ -14,11 +12,11 @@ pub struct Tableaux<'a> {
     cards: Vec<Card>,
     revealed_len: usize,
 
-    settings: &'a KlondikeGameSettings,
+    settings: &'a Settings,
 }
 
 impl<'a> Tableaux<'a> {
-    pub fn new(index: usize, cards: Vec<Card>, settings: &KlondikeGameSettings) -> Tableaux {
+    pub fn new(index: usize, cards: Vec<Card>, settings: &Settings) -> Tableaux {
         let revealed_index = cards
             .iter()
             .position(|card| card.face_up)

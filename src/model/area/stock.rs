@@ -2,22 +2,20 @@ use std::cmp::min;
 
 use crate::model::{
     card::Card,
+    settings::Settings,
     stack::{Stack, StackDetails, StackSelection},
 };
 
-use super::{
-    area::{Action, Area, AreaId, SelectionMode},
-    settings::KlondikeGameSettings,
-};
+use super::{Action, Area, AreaId, SelectionMode};
 
 #[derive(Debug)]
 pub struct Stock<'a> {
     cards: Vec<Card>,
-    settings: &'a KlondikeGameSettings,
+    settings: &'a Settings,
 }
 
 impl<'a> Stock<'a> {
-    pub fn new(cards: Vec<Card>, settings: &KlondikeGameSettings) -> Stock {
+    pub fn new(cards: Vec<Card>, settings: &Settings) -> Stock {
         Stock { cards, settings }
     }
 

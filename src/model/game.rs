@@ -1,26 +1,18 @@
 use std::iter::once;
 
-use super::card::Card;
-use super::deck::Deck;
-use super::stack::Stack;
-
-use self::area::{Action, Area, AreaId, Selection, SelectionMode};
-use self::foundation::Foundation;
-use self::settings::KlondikeGameSettings;
-use self::stock::Stock;
-use self::tableaux::Tableaux;
-use self::talon::Talon;
-
-pub mod area;
-pub mod foundation;
-pub mod history;
-pub mod settings;
-pub mod stock;
-pub mod tableaux;
-pub mod talon;
+use super::{
+    area::{
+        foundation::Foundation, stock::Stock, tableaux::Tableaux, talon::Talon, Action, Area,
+        AreaId, Selection, SelectionMode,
+    },
+    card::Card,
+    deck::Deck,
+    settings::Settings,
+    stack::Stack,
+};
 
 #[derive(Debug)]
-pub struct KlondikeGameAreas<'a> {
+pub struct GameAreas<'a> {
     stock: Stock<'a>,
     talon: Talon<'a>,
     foundation: Vec<Foundation<'a>>,
@@ -29,7 +21,7 @@ pub struct KlondikeGameAreas<'a> {
     ids: Vec<AreaId>,
 }
 
-impl<'a> KlondikeGameAreas<'a> {
+impl<'a> GameAreas<'a> {
     fn area(&self, area_id: AreaId) -> &Area {
         match area_id {
             AreaId::Stock => &self.stock,
@@ -70,14 +62,14 @@ impl<'a> KlondikeGameAreas<'a> {
 }
 
 #[derive(Debug)]
-pub struct KlondikeGame<'a> {
-    areas: KlondikeGameAreas<'a>,
+pub struct Game<'a> {
+    areas: GameAreas<'a>,
     selection: Selection,
-    settings: &'a KlondikeGameSettings,
+    settings: &'a Settings,
 }
 
-impl<'a> KlondikeGame<'a> {
-    pub fn new<'d>(deck: &'d mut Deck, settings: &'a KlondikeGameSettings) -> KlondikeGame<'a> {
+impl<'a> Game<'a> {
+    pub fn new<'d>(deck: &'d mut Deck, settings: &'a Settings) -> Game<'a> {
         let ids = once(AreaId::Stock)
             .chain(once(AreaId::Talon))
             .chain(settings.foundation_indices().map(AreaId::Foundation))
@@ -108,8 +100,8 @@ impl<'a> KlondikeGame<'a> {
 
         let selection = Selection::new();
 
-        KlondikeGame {
-            areas: KlondikeGameAreas {
+        Game {
+            areas: GameAreas {
                 stock,
                 talon,
                 foundation,
@@ -131,7 +123,7 @@ impl<'a> KlondikeGame<'a> {
         self.areas.area(area_id).as_stack(mode)
     }
 
-    pub fn move_to(mut self, area_id: AreaId) -> KlondikeGame<'a> {
+    pub fn move_to(mut self, area_id: AreaId) -> Game<'a> {
         let mode = self.selection.mode.moved_ref();
         let moves_iter = once(area_id);
 
@@ -142,7 +134,7 @@ impl<'a> KlondikeGame<'a> {
         self
     }
 
-    pub fn move_to_foundation(mut self) -> KlondikeGame<'a> {
+    pub fn move_to_foundation(mut self) -> Game<'a> {
         let mode = self.selection.mode.moved_ref();
         let moves_iter = self.settings.foundation_indices().map(AreaId::Foundation);
 
@@ -153,7 +145,7 @@ impl<'a> KlondikeGame<'a> {
         self
     }
 
-    pub fn move_left(mut self) -> KlondikeGame<'a> {
+    pub fn move_left(mut self) -> Game<'a> {
         let mode = self.selection.mode.moved_ref();
 
         let starting_area_id = self.selection.target;
@@ -166,7 +158,7 @@ impl<'a> KlondikeGame<'a> {
         self
     }
 
-    pub fn move_right(mut self) -> KlondikeGame<'a> {
+    pub fn move_right(mut self) -> Game<'a> {
         let mode = self.selection.mode.moved_ref();
 
         let starting_area_id = self.selection.target;
@@ -179,7 +171,7 @@ impl<'a> KlondikeGame<'a> {
         self
     }
 
-    pub fn move_up(mut self) -> KlondikeGame<'a> {
+    pub fn move_up(mut self) -> Game<'a> {
         if let SelectionMode::Cards(len) = self.selection.mode {
             let mode = SelectionMode::Cards(len + 1);
             let moves_iter = once(self.selection.target);
@@ -192,7 +184,7 @@ impl<'a> KlondikeGame<'a> {
         self
     }
 
-    pub fn move_down(mut self) -> KlondikeGame<'a> {
+    pub fn move_down(mut self) -> Game<'a> {
         if let SelectionMode::Cards(len) = self.selection.mode {
             if len > 1 {
                 let mode = SelectionMode::Cards(len - 1);
@@ -218,25 +210,22 @@ impl<'a> KlondikeGame<'a> {
         })
     }
 
-    pub fn activate(mut self) -> KlondikeGame<'a> {
+    pub fn activate(mut self) -> Game<'a> {
         let selected_area = self.areas.area_mut(self.selection.target);
 
-        if let Some(action) = selected_area.activate(&mut self.selection.mode) {
-            match action {
-                Action::Draw => {
-                    let cards = self.areas.stock.draw();
-                    self.areas.talon.place(cards);
-                }
-                Action::MoveTo(area_id) => {
-                    self = self.move_to(area_id);
-                }
-                Action::Restock => {
-                    let cards = self.areas.talon.flip();
-                    self.areas.stock.place(cards);
-                }
+        match selected_area.activate(&mut self.selection.mode) {
+            Some(Action::Draw) => {
+                let cards = self.areas.stock.draw();
+                self.areas.talon.place(cards);
+                self
             }
+            Some(Action::MoveTo(area_id)) => self.move_to(area_id),
+            Some(Action::Restock) => {
+                let cards = self.areas.talon.flip();
+                self.areas.stock.place(cards);
+                self
+            }
+            None => self,
         }
-
-        self
     }
 }

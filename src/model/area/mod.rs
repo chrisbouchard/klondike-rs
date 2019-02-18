@@ -1,4 +1,9 @@
-use crate::model::{card::Card, stack::Stack};
+pub mod foundation;
+pub mod stock;
+pub mod tableaux;
+pub mod talon;
+
+use super::{card::Card, stack::Stack};
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum AreaId {
