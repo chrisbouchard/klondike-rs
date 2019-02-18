@@ -48,12 +48,24 @@ impl<'a> KlondikeGameAreas<'a> {
         }
     }
 
-    fn area_id_iter<'b>(&'b self) -> impl Iterator<Item = AreaId> + 'b {
-        self.ids.iter().cycle().cloned()
+    fn area_id_iter<'b>(&'b self, start: AreaId) -> impl DoubleEndedIterator<Item = AreaId> + 'b {
+        let equals_pred = |area_id: &AreaId| start == *area_id;
+
+        let (before, after) = if let Some(position) = self.ids.iter().position(equals_pred) {
+            self.ids.split_at(position)
+        } else {
+            let empty: &[AreaId] = &[];
+            (empty, empty)
+        };
+
+        after.iter().skip(1).chain(before).cloned()
     }
 
-    fn area_id_iter_rev<'b>(&'b self) -> impl Iterator<Item = AreaId> + 'b {
-        self.ids.iter().rev().cycle().cloned()
+    fn area_id_iter_rev<'b>(
+        &'b self,
+        start: AreaId,
+    ) -> impl DoubleEndedIterator<Item = AreaId> + 'b {
+        self.area_id_iter(start).rev()
     }
 }
 
@@ -145,12 +157,7 @@ impl<'a> KlondikeGame<'a> {
         let mode = self.selection.mode.moved_ref();
 
         let starting_area_id = self.selection.target;
-        let moves_iter = self
-            .areas
-            .area_id_iter()
-            .skip_while(|area_id| *area_id != starting_area_id)
-            .skip(1)
-            .take_while(|area_id| *area_id != starting_area_id);
+        let moves_iter = self.areas.area_id_iter_rev(starting_area_id);
 
         if let Some(area_id) = self.first_valid_move(mode, moves_iter) {
             self.selection = self.selection.move_to(area_id);
@@ -163,12 +170,7 @@ impl<'a> KlondikeGame<'a> {
         let mode = self.selection.mode.moved_ref();
 
         let starting_area_id = self.selection.target;
-        let moves_iter = self
-            .areas
-            .area_id_iter_rev()
-            .skip_while(|area_id| *area_id != starting_area_id)
-            .skip(1)
-            .take_while(|area_id| *area_id != starting_area_id);
+        let moves_iter = self.areas.area_id_iter(starting_area_id);
 
         if let Some(area_id) = self.first_valid_move(mode, moves_iter) {
             self.selection = self.selection.move_to(area_id);
