@@ -96,7 +96,6 @@ impl Suit {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Card {
-    pub face_up: bool,
     pub rank: Rank,
     pub suit: Suit,
 }
@@ -104,16 +103,6 @@ pub struct Card {
 impl Card {
     pub fn color(&self) -> Color {
         self.suit.color()
-    }
-
-    pub fn face_up(mut self) -> Self {
-        self.face_up = true;
-        self
-    }
-
-    pub fn face_down(mut self) -> Self {
-        self.face_up = false;
-        self
     }
 }
 

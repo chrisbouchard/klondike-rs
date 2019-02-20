@@ -14,36 +14,44 @@ pub enum AreaId {
 }
 
 #[derive(Debug)]
-pub struct Held {
-    pub source: AreaId,
-    pub cards: Vec<Card>,
-}
-
-#[derive(Debug)]
 pub enum SelectionMode {
-    Cards(usize),
-    Held(Held),
+    Free { len: usize },
+    Held { len: usize, source: AreaId },
 }
 
 impl SelectionMode {
-    pub const fn new() -> SelectionMode {
-        SelectionMode::Cards(1)
+    pub fn is_free(&self) -> bool {
+        match self {
+            SelectionMode::Free { .. } => true,
+            _ => false,
+        }
     }
 
-    pub fn moved_ref(&self) -> &SelectionMode {
-        static DEFAULT: SelectionMode = SelectionMode::new();
-
+    pub fn is_held(&self) -> bool {
         match self {
-            SelectionMode::Cards(_) => &DEFAULT,
-            SelectionMode::Held(_) => self,
+            SelectionMode::Held { .. } => true,
+            _ => false,
+        }
+    }
+
+    pub fn len(&self) -> usize {
+        match self {
+            SelectionMode::Free { len, .. } => *len,
+            SelectionMode::Held { len, .. } => *len,
         }
     }
 
     pub fn moved(self) -> SelectionMode {
         match self {
-            SelectionMode::Cards(_) => SelectionMode::new(),
-            SelectionMode::Held(_) => self,
+            SelectionMode::Free { .. } => Self::default(),
+            SelectionMode::Held { .. } => self,
         }
+    }
+}
+
+impl Default for SelectionMode {
+    fn default() -> Self {
+        SelectionMode::Free { len: 1 }
     }
 }
 
@@ -54,13 +62,6 @@ pub struct Selection {
 }
 
 impl Selection {
-    pub const fn new() -> Selection {
-        Selection {
-            target: AreaId::Stock,
-            mode: SelectionMode::new(),
-        }
-    }
-
     pub fn move_to(mut self, area_id: AreaId) -> Selection {
         self.target = area_id;
         self.mode = self.mode.moved();
@@ -77,18 +78,48 @@ impl Selection {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+impl Default for Selection {
+    fn default() -> Self {
+        Selection {
+            target: AreaId::Stock,
+            mode: SelectionMode::default(),
+        }
+    }
+}
+
 pub enum Action {
+    Default,
     Draw,
-    MoveTo(AreaId),
-    Restock,
+    FlipOver,
+    Refresh,
 }
 
 pub trait Area {
     fn id(&self) -> AreaId;
 
-    fn accepts_focus(&self, mode: &SelectionMode) -> bool;
-    fn activate(&mut self, mode: &mut SelectionMode) -> Option<Action>;
+    fn accepts_cards(&self, cards: &Vec<Card>) -> bool;
+    fn accepts_selection(&self, mode: &SelectionMode) -> bool;
+
+    fn offer_cards(&mut self, cards: Vec<Card>) -> Result<(), Vec<Card>> {
+        if self.accepts_cards(&cards) {
+            self.place_cards(cards);
+            Ok(())
+        } else {
+            Err(cards)
+        }
+    }
+
+    fn place_cards(&mut self, cards: Vec<Card>);
+
+    fn replace_cards(&mut self, cards: Vec<Card>) {
+        self.place_cards(cards);
+    }
+
+    fn take_cards(&mut self, len: usize) -> Vec<Card>;
+
+    fn activate(&self, mode: &SelectionMode) -> Action {
+        Action::Default
+    }
 
     fn as_stack<'a>(&'a self, mode: Option<&'a SelectionMode>) -> Stack<'a>;
 }

@@ -27,14 +27,15 @@ impl color::Color for Color {
 }
 
 pub trait CardPainter {
-    fn draw_card(&mut self, coords: Coords, card: &Card) -> Result;
+    fn draw_card_face_up(&mut self, coords: Coords, card: &Card) -> Result;
+    fn draw_card_face_down(&mut self, coords: Coords, card: &Card) -> Result;
 }
 
 impl<W> CardPainter for W
 where
     W: Write,
 {
-    fn draw_card(&mut self, coords: Coords, card: &Card) -> Result {
+    fn draw_card_face_up(&mut self, coords: Coords, card: &Card) -> Result {
         draw_card_frame(self, coords)?;
 
         let interior_coords = coords + Coords::from_xy(2, 1);
@@ -43,20 +44,30 @@ where
         let start = cursor::Goto(col, row);
         let next = format!("{}{}", cursor::Left(4), cursor::Down(1));
 
-        if card.face_up {
-            let rank_str = card.rank.label();
-            let suit_str = card.suit.symbol();
+        let rank_str = card.rank.label();
+        let suit_str = card.suit.symbol();
 
-            let offset = cursor::Right(3 - card.rank.label().len() as u16);
+        let offset = cursor::Right(3 - card.rank.label().len() as u16);
 
-            write!(self, "{}{}", start, color::Fg(card.color()))?;
-            write!(self, "{}{}{}{}", rank_str, offset, suit_str, next)?;
-            write!(self, "{}{}{}{}", suit_str, offset, rank_str, next)?;
-        } else {
-            write!(self, "{}{}", start, color::Fg(color::Blue))?;
-            write!(self, "░░░░{}", next)?;
-            write!(self, "░░░░{}", next)?;
-        }
+        write!(self, "{}{}", start, color::Fg(card.color()))?;
+        write!(self, "{}{}{}{}", rank_str, offset, suit_str, next)?;
+        write!(self, "{}{}{}{}", suit_str, offset, rank_str, next)?;
+
+        Ok(())
+    }
+
+    fn draw_card_face_down(&mut self, coords: Coords, card: &Card) -> Result {
+        draw_card_frame(self, coords)?;
+
+        let interior_coords = coords + Coords::from_xy(2, 1);
+        let (row, col) = interior_coords.as_row_col();
+
+        let start = cursor::Goto(col, row);
+        let next = format!("{}{}", cursor::Left(4), cursor::Down(1));
+
+        write!(self, "{}{}", start, color::Fg(color::Blue))?;
+        write!(self, "░░░░{}", next)?;
+        write!(self, "░░░░{}", next)?;
 
         Ok(())
     }

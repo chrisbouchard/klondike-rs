@@ -1,10 +1,13 @@
-use crate::display::{
-    card::{CardPainter, CARD_SIZE},
-    coords::Coords,
-    selector::SelectorPainter,
-    Result,
+use crate::{
+    display::{
+        card::{CardPainter, CARD_SIZE},
+        coords::Coords,
+        selector::SelectorPainter,
+        Result,
+    },
+    model::stack::Stack,
+    utils::usize::BoundedSub,
 };
-use crate::model::stack::Stack;
 
 use super::common::*;
 
@@ -25,29 +28,32 @@ where
     T: CardPainter + SelectorPainter,
 {
     fn draw_horizontal_card_stack(&mut self, coords: Coords, stack: &Stack) -> Result {
-        let stack_details = stack.details();
+        let face_up_index = stack.details.face_up_index();
 
         for (i, card) in stack.into_iter().enumerate() {
-            if let Some(coords) = card_coords(coords, i, &OFFSETS, stack_details) {
-                self.draw_card(coords, card)?;
+            if let Some(coords) = card_coords(coords, i, &OFFSETS, &stack.details) {
+                if i < face_up_index {
+                    self.draw_card_face_down(coords, card)?;
+                } else {
+                    self.draw_card_face_up(coords, card)?;
+                }
             }
         }
 
-        if stack_details.selection.is_some() {
-            let selection_index = stack_details.selection_index().unwrap_or_default();
+        if stack.details.selection.is_some() {
+            let selection_index = stack.details.selection_index().unwrap_or_default();
 
             debug!("selection_index: {}", selection_index);
 
             /* Be careful about getting the last index. It's possible for the stack to actually be empty,
              * in which case we can't subtract from a 0 usize. */
-            let stack_len = stack_details.len;
-            let end_index = if stack_len > 0 { stack_len - 1 } else { 0 };
+            let end_index = stack.details.len.bounded_sub(1);
 
-            let start_coords = card_coords(coords, selection_index, &OFFSETS, stack_details)
+            let start_coords = card_coords(coords, selection_index, &OFFSETS, &stack.details)
                 .unwrap_or(coords)
                 + CARD_SIZE.to_y()
                 + SELECTOR_OFFSET;
-            let end_coords = card_coords(coords, end_index, &OFFSETS, stack_details)
+            let end_coords = card_coords(coords, end_index, &OFFSETS, &stack.details)
                 .unwrap_or(coords)
                 + CARD_SIZE
                 + SELECTOR_OFFSET;

@@ -79,11 +79,7 @@ impl<'a> Game<'a> {
         let tableaux = settings
             .tableaux_indices()
             .map(|index| {
-                let cards = deck
-                    .deal(index)
-                    .into_iter()
-                    .chain(deck.deal_one().map(Card::face_up))
-                    .collect::<Vec<_>>();
+                let cards = deck.deal(index + 1);
                 Tableaux::new(index, cards, settings)
             })
             .collect::<Vec<_>>();
@@ -98,7 +94,7 @@ impl<'a> Game<'a> {
             .map(|index| Foundation::new(index, Vec::new(), settings))
             .collect();
 
-        let selection = Selection::new();
+        let selection = Selection::default();
 
         Game {
             areas: GameAreas {

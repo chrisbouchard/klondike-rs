@@ -1,10 +1,13 @@
-use crate::model::{
-    card::Card,
-    settings::Settings,
-    stack::{Stack, StackDetails, StackSelection},
+use crate::{
+    model::{
+        card::Card,
+        settings::Settings,
+        stack::{Stack, StackDetails, StackSelection},
+    },
+    utils::{usize::BoundedSub, vec::SplitOffBounded},
 };
 
-use super::{Action, Area, AreaId, Held, SelectionMode};
+use super::{Action, Area, AreaId, SelectionMode};
 
 #[derive(Debug)]
 pub struct Talon<'a> {
@@ -22,23 +25,6 @@ impl<'a> Talon<'a> {
             settings,
         }
     }
-
-    pub fn flip(&mut self) -> Vec<Card> {
-        self.fanned_len = 1;
-        self.cards
-            .split_off(0)
-            .into_iter()
-            .rev()
-            .map(|card| card.face_down())
-            .collect()
-    }
-
-    pub fn place(&mut self, mut cards: Vec<Card>) {
-        if !cards.is_empty() {
-            self.fanned_len = cards.len();
-            self.cards.append(&mut cards);
-        }
-    }
 }
 
 impl<'a> Area for Talon<'a> {
@@ -46,58 +32,42 @@ impl<'a> Area for Talon<'a> {
         AreaId::Talon
     }
 
-    fn accepts_focus(&self, mode: &SelectionMode) -> bool {
-        match mode {
-            SelectionMode::Held(held) => held.source == AreaId::Talon,
-            SelectionMode::Cards(len) => *len == 1 && !self.cards.is_empty(),
-        }
+    fn accepts_cards(&self, cards: &Vec<Card>) -> bool {
+        false
     }
 
-    fn activate(&mut self, mode: &mut SelectionMode) -> Option<Action> {
-        debug_assert!(self.accepts_focus(mode));
+    fn accepts_selection(&self, mode: &SelectionMode) -> bool {
+        mode.is_held() || (mode.len() == 1 && !self.cards.is_empty())
+    }
 
-        match mode {
-            SelectionMode::Cards(_) => {
-                let cards = self.cards.split_off(self.cards.len() - 1);
-                let held = Held {
-                    source: self.id(),
-                    cards,
-                };
-                *mode = SelectionMode::Held(held);
+    fn place_cards(&mut self, mut cards: Vec<Card>) {
+        self.fanned_len = cards.len();
+        self.cards.append(&mut cards);
+    }
 
-                if self.fanned_len > 1 {
-                    self.fanned_len -= 1;
-                }
+    fn take_cards(&mut self, len: usize) -> Vec<Card> {
+        let cards = self.cards.split_off_bounded(len);
+        self.fanned_len.bounded_sub_with_min(cards.len(), 1);
+        cards
+    }
 
-                None
-            }
-            SelectionMode::Held(held) => {
-                self.fanned_len += held.cards.len();
-                self.cards.append(&mut held.cards);
-
-                let source = held.source;
-                *mode = SelectionMode::new();
-
-                Some(Action::MoveTo(source))
-            }
-        }
+    fn replace_cards(&mut self, mut cards: Vec<Card>) {
+        self.fanned_len += cards.len();
+        self.cards.append(&mut cards);
     }
 
     fn as_stack<'s>(&'s self, mode: Option<&'s SelectionMode>) -> Stack<'s> {
-        let base_stack = Stack::new(
-            &self.cards,
-            StackDetails {
-                len: self.cards.len(),
+        let cards_len = self.cards.len();
+
+        Stack {
+            cards: &self.cards,
+            details: StackDetails {
+                len: cards_len,
+                face_up_len: cards_len,
                 visible_len: self.fanned_len + 1,
                 spread_len: self.fanned_len,
                 selection: mode.map(|_| StackSelection::Cards(1)),
             },
-        );
-
-        if let Some(SelectionMode::Held(held)) = mode {
-            base_stack.with_floating_cards_spread(&held.cards)
-        } else {
-            base_stack
         }
     }
 }

@@ -11,11 +11,7 @@ impl Deck {
 
         for suit in Suit::values() {
             for rank in Rank::values() {
-                cards.push(Card {
-                    face_up: false,
-                    rank,
-                    suit,
-                })
+                cards.push(Card { rank, suit })
             }
         }
 

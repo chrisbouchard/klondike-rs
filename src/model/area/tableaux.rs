@@ -1,10 +1,13 @@
-use crate::model::{
-    card::Card,
-    settings::Settings,
-    stack::{Stack, StackDetails, StackSelection},
+use crate::{
+    model::{
+        card::Card,
+        settings::Settings,
+        stack::{Stack, StackDetails, StackSelection},
+    },
+    utils::{usize::BoundedSub, vec::SplitOffBounded},
 };
 
-use super::{Action, Area, AreaId, Held, SelectionMode};
+use super::{Action, Area, AreaId, SelectionMode};
 
 #[derive(Debug)]
 pub struct Tableaux<'a> {
@@ -37,87 +40,66 @@ impl<'a> Area for Tableaux<'a> {
         AreaId::Tableaux(self.index)
     }
 
-    fn accepts_focus(&self, mode: &SelectionMode) -> bool {
-        match mode {
-            SelectionMode::Held(held) => {
-                if held.source == self.id() {
-                    true
-                } else if let Some(card) = held.cards.first() {
-                    match self.cards.last() {
-                        Some(tableaux_card) => {
-                            tableaux_card.face_up
-                                && card.rank.is_followed_by(tableaux_card.rank)
-                                && card.color() != tableaux_card.color()
-                        }
-                        None => card.rank.is_king(),
-                    }
-                } else {
-                    false
-                }
+    fn accepts_cards(&self, cards: &Vec<Card>) -> bool {
+        if let Some(card) = cards.first() {
+            if let Some(tableaux_card) = self.cards.last() {
+                tableaux_card.face_up
+                    && card.rank.is_followed_by(tableaux_card.rank)
+                    && card.color() != tableaux_card.color()
+            } else {
+                card.rank.is_king()
             }
-            SelectionMode::Cards(len) => {
-                (*len <= self.revealed_len)
-                    || (*len == 1 && self.revealed_len == 0 && !self.cards.is_empty())
-            }
+        } else {
+            false
         }
     }
 
-    fn activate(&mut self, mode: &mut SelectionMode) -> Option<Action> {
-        debug_assert!(self.accepts_focus(mode));
+    fn accepts_selection(&self, mode: &SelectionMode) -> bool {
+        let len = mode.len();
 
-        match mode {
-            SelectionMode::Cards(len) => {
-                if self.revealed_len > 0 {
-                    self.revealed_len -= *len;
+        if self.revealed_len > 0 {
+            mode.is_held() || (len > 0 && len <= self.revealed_len)
+        } else {
+            mode.is_free() && len == 1 && !self.cards.is_empty()
+        }
+    }
 
-                    let cards = self.cards.split_off(self.cards.len() - *len);
-                    let held = Held {
-                        source: self.id(),
-                        cards,
-                    };
-                    *mode = SelectionMode::Held(held);
+    fn place_cards(&mut self, mut cards: Vec<Card>) {
+        self.revealed_len += cards.len();
+        self.cards.append(&mut cards);
+    }
 
-                    None
-                } else {
-                    if let Some(card) = self.cards.last_mut() {
-                        self.revealed_len = 1;
-                        card.face_up = true;
-                    }
+    fn take_cards(&mut self, len: usize) -> Vec<Card> {
+        let cards = self.cards.split_off_bounded(len);
+        self.revealed_len.bounded_sub(cards.len());
+        cards
+    }
 
-                    None
-                }
-            }
-            SelectionMode::Held(held) => {
-                let len = held.cards.len();
-                self.revealed_len += len;
-                self.cards.append(&mut held.cards);
-
-                let source = held.source;
-                *mode = SelectionMode::new();
-
-                Some(Action::MoveTo(source))
-            }
+    fn activate(&self, mode: &SelectionMode) -> Action {
+        if self.revealed_len > 0 {
+            Action::Default
+        } else {
+            Action::FlipOver
         }
     }
 
     fn as_stack<'s>(&'s self, mode: Option<&'s SelectionMode>) -> Stack<'s> {
-        let base_stack = Stack::new(
-            &self.cards,
-            StackDetails {
+        Stack {
+            cards: &self.cards,
+            details: StackDetails {
                 len: self.cards.len(),
+                face_up_len: self.revealed_len,
                 visible_len: self.cards.len(),
                 spread_len: self.revealed_len,
-                selection: mode.map(|mode| match mode {
-                    SelectionMode::Held(held) => StackSelection::Stack(held.cards.len()),
-                    SelectionMode::Cards(len) => StackSelection::Cards(*len),
-                }),
+                selection: mode.map(selection_to_stack_selection),
             },
-        );
-
-        if let Some(SelectionMode::Held(held)) = mode {
-            base_stack.with_floating_cards_spread(&held.cards)
-        } else {
-            base_stack
         }
+    }
+}
+
+fn selection_to_stack_selection(mode: &SelectionMode) -> StackSelection {
+    match mode {
+        SelectionMode::Held { len } => StackSelection::Stack(*len),
+        SelectionMode::Free { len } => StackSelection::Cards(*len),
     }
 }
