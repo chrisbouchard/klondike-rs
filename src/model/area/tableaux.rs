@@ -19,13 +19,7 @@ pub struct Tableaux<'a> {
 }
 
 impl<'a> Tableaux<'a> {
-    pub fn new(index: usize, cards: Vec<Card>, settings: &Settings) -> Tableaux {
-        let revealed_index = cards
-            .iter()
-            .position(|card| card.face_up)
-            .unwrap_or_default();
-        let revealed_len = cards.len() - revealed_index;
-
+    pub fn new(index: usize, revealed_len: usize, cards: Vec<Card>, settings: &Settings) -> Tableaux {
         Tableaux {
             index,
             cards,
@@ -43,7 +37,7 @@ impl<'a> Area for Tableaux<'a> {
     fn accepts_cards(&self, cards: &Vec<Card>) -> bool {
         if let Some(card) = cards.first() {
             if let Some(tableaux_card) = self.cards.last() {
-                tableaux_card.face_up
+                self.revealed_len > 0
                     && card.rank.is_followed_by(tableaux_card.rank)
                     && card.color() != tableaux_card.color()
             } else {
@@ -99,7 +93,7 @@ impl<'a> Area for Tableaux<'a> {
 
 fn selection_to_stack_selection(mode: &SelectionMode) -> StackSelection {
     match mode {
-        SelectionMode::Held { len } => StackSelection::Stack(*len),
-        SelectionMode::Free { len } => StackSelection::Cards(*len),
+        SelectionMode::Held { len, .. } => StackSelection::Stack(*len),
+        SelectionMode::Free { len, .. } => StackSelection::Cards(*len),
     }
 }

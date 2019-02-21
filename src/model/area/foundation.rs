@@ -7,7 +7,7 @@ use crate::{
     utils::vec::SplitOffBounded,
 };
 
-use super::{Action, Area, AreaId, SelectionMode};
+use super::{Area, AreaId, SelectionMode};
 
 #[derive(Debug)]
 pub struct Foundation<'a> {

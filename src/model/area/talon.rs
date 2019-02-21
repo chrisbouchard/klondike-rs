@@ -7,7 +7,7 @@ use crate::{
     utils::{usize::BoundedSub, vec::SplitOffBounded},
 };
 
-use super::{Action, Area, AreaId, SelectionMode};
+use super::{Area, AreaId, SelectionMode};
 
 #[derive(Debug)]
 pub struct Talon<'a> {
@@ -45,15 +45,15 @@ impl<'a> Area for Talon<'a> {
         self.cards.append(&mut cards);
     }
 
+    fn replace_cards(&mut self, mut cards: Vec<Card>) {
+        self.fanned_len += cards.len();
+        self.cards.append(&mut cards);
+    }
+
     fn take_cards(&mut self, len: usize) -> Vec<Card> {
         let cards = self.cards.split_off_bounded(len);
         self.fanned_len.bounded_sub_with_min(cards.len(), 1);
         cards
-    }
-
-    fn replace_cards(&mut self, mut cards: Vec<Card>) {
-        self.fanned_len += cards.len();
-        self.cards.append(&mut cards);
     }
 
     fn as_stack<'s>(&'s self, mode: Option<&'s SelectionMode>) -> Stack<'s> {
