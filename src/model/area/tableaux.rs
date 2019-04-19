@@ -57,7 +57,7 @@ impl<'a, S> Tableaux<'a, S> {
 }
 
 impl<'a> UnselectedTableaux<'a> {
-    pub fn new<'b>(
+    pub fn create<'b>(
         index: usize,
         revealed_len: usize,
         cards: Vec<Card>,

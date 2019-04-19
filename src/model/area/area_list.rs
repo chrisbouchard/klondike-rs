@@ -23,6 +23,8 @@ pub struct AreaList<'a> {
     after_areas: Vec<Box<dyn UnselectedArea<'a> + 'a>>,
 }
 
+// This list is always non-empty
+#[allow(clippy::len_without_is_empty)]
 impl<'a> AreaList<'a> {
     pub fn new<T, I>(areas: T) -> AreaList<'a>
     where
@@ -171,7 +173,7 @@ impl<'a> AreaList<'a> {
         *self
             .area_ids
             .get(&area_id)
-            .expect(&format!("Unknown area id {:?}", area_id))
+            .unwrap_or_else(|| panic!("Unknown area id {:?}", area_id))
     }
 }
 

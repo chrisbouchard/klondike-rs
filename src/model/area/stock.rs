@@ -1,10 +1,7 @@
-use crate::{
-    model::{
-        card::Card,
-        settings::Settings,
-        stack::{Stack, StackDetails, StackSelection},
-    },
-    utils::vec::SplitOffBounded,
+use crate::model::{
+    card::Card,
+    settings::Settings,
+    stack::{Stack, StackDetails, StackSelection},
 };
 
 use super::{Action, Area, AreaId, Held, SelectedArea, UnselectedArea};
@@ -38,7 +35,7 @@ impl<'a, S> Stock<'a, S> {
 }
 
 impl<'a> UnselectedStock<'a> {
-    pub fn new<'b>(cards: Vec<Card>, settings: &'a Settings) -> Box<dyn UnselectedArea<'a> + 'b>
+    pub fn create<'b>(cards: Vec<Card>, settings: &'a Settings) -> Box<dyn UnselectedArea<'a> + 'b>
     where
         'a: 'b,
     {

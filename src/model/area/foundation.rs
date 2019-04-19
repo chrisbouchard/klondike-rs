@@ -77,7 +77,7 @@ impl<'a, S> Foundation<'a, S> {
 }
 
 impl<'a> UnselectedFoundation<'a> {
-    pub fn new<'b>(
+    pub fn create<'b>(
         index: usize,
         cards: Vec<Card>,
         settings: &'a Settings,
@@ -100,7 +100,7 @@ impl<'a> Area<'a> for UnselectedFoundation<'a> {
     }
 
     fn as_stack(&self) -> Stack {
-        return self.as_stack(None);
+        self.as_stack(None)
     }
 }
 
@@ -110,7 +110,7 @@ impl<'a> Area<'a> for SelectedFoundation<'a> {
     }
 
     fn as_stack(&self) -> Stack {
-        return self.as_stack(Some(self.selection));
+        self.as_stack(Some(self.selection))
     }
 }
 

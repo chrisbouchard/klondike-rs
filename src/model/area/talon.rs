@@ -43,7 +43,7 @@ impl<'a, S> Talon<'a, S> {
 }
 
 impl<'a> UnselectedTalon<'a> {
-    pub fn new<'b>(
+    pub fn create<'b>(
         cards: Vec<Card>,
         fanned_len: usize,
         settings: &'a Settings,

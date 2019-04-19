@@ -1,7 +1,7 @@
 use super::{
     area::{
         area_list::AreaList, foundation::UnselectedFoundation, stock::UnselectedStock,
-        tableaux::UnselectedTableaux, talon::UnselectedTalon, AreaId,
+        tableaux::UnselectedTableaux, talon::UnselectedTalon, Area, AreaId,
     },
     deck::Deck,
     settings::Settings,
@@ -21,20 +21,20 @@ impl<'a> Game<'a> {
             .tableaux_indices()
             .map(|index| {
                 let cards = deck.deal(index + 1);
-                UnselectedTableaux::new(index, index, cards, settings)
+                UnselectedTableaux::create(index, index, cards, settings)
             })
             .collect::<Vec<_>>();
 
         let stock = {
             let cards = deck.deal_rest();
-            UnselectedStock::new(cards, settings)
+            UnselectedStock::create(cards, settings)
         };
 
-        let talon = UnselectedTalon::new(vec![], 0, settings);
+        let talon = UnselectedTalon::create(vec![], 0, settings);
 
         let mut foundation = settings
             .foundation_indices()
-            .map(|index| UnselectedFoundation::new(index, vec![], settings))
+            .map(|index| UnselectedFoundation::create(index, vec![], settings))
             .collect::<Vec<_>>();
 
         let mut areas: Vec<Box<dyn UnselectedArea>> = vec![stock, talon];
@@ -46,7 +46,7 @@ impl<'a> Game<'a> {
         Game { areas, settings }
     }
 
-    pub fn stack<'b>(&'b self, area_id: AreaId) -> Stack<'b> {
+    pub fn stack(&self, area_id: AreaId) -> Stack {
         self.areas.get_by_area_id(area_id).as_stack()
     }
 
@@ -68,7 +68,7 @@ impl<'a> Game<'a> {
             .iter_from_selected()
             .skip(1)
             .rev()
-            .map(|area| area.id())
+            .map(Area::id)
             .collect::<Vec<_>>();
 
         self.make_first_valid_move(moves)
@@ -80,7 +80,7 @@ impl<'a> Game<'a> {
             .areas
             .iter_from_selected()
             .skip(1)
-            .map(|area| area.id())
+            .map(Area::id)
             .collect::<Vec<_>>();
 
         self.make_first_valid_move(moves)
