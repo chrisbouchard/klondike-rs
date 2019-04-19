@@ -42,7 +42,7 @@ impl<'a, S> Tableaux<'a, S> {
         }
     }
 
-    fn as_stack<'b>(&'b self, mode: Option<Selection>) -> Stack<'b> {
+    fn as_stack(&self, mode: Option<Selection>) -> Stack {
         Stack {
             cards: &self.cards,
             details: StackDetails {
@@ -81,7 +81,7 @@ impl<'a> Area<'a> for UnselectedTableaux<'a> {
         AreaId::Tableaux(self.index)
     }
 
-    fn as_stack<'b>(&'b self) -> Stack<'b> {
+    fn as_stack(&self) -> Stack {
         self.as_stack(None)
     }
 }
@@ -91,7 +91,7 @@ impl<'a> Area<'a> for SelectedTableaux<'a> {
         AreaId::Tableaux(self.index)
     }
 
-    fn as_stack<'b>(&'b self) -> Stack<'b> {
+    fn as_stack(&self) -> Stack {
         self.as_stack(Some(self.selection))
     }
 }

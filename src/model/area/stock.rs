@@ -23,7 +23,7 @@ pub type UnselectedStock<'a> = Stock<'a, ()>;
 pub type SelectedStock<'a> = Stock<'a, Selection>;
 
 impl<'a, S> Stock<'a, S> {
-    fn as_stack<'b>(&'b self, mode: Option<Selection>) -> Stack<'b> {
+    fn as_stack(&self, mode: Option<Selection>) -> Stack {
         Stack {
             cards: &self.cards,
             details: StackDetails {
@@ -55,7 +55,7 @@ impl<'a> Area<'a> for UnselectedStock<'a> {
         AreaId::Stock
     }
 
-    fn as_stack<'b>(&'b self) -> Stack<'b> {
+    fn as_stack(&self) -> Stack {
         self.as_stack(None)
     }
 }
@@ -65,7 +65,7 @@ impl<'a> Area<'a> for SelectedStock<'a> {
         AreaId::Stock
     }
 
-    fn as_stack<'b>(&'b self) -> Stack<'b> {
+    fn as_stack(&self) -> Stack {
         self.as_stack(Some(self.selection))
     }
 }

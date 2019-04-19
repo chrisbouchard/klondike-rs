@@ -60,7 +60,7 @@ impl<'a, S> Foundation<'a, S> {
         }
     }
 
-    fn as_stack<'b>(&'b self, selection: Option<Selection>) -> Stack<'b> {
+    fn as_stack(&self, selection: Option<Selection>) -> Stack {
         let cards_len = self.cards.len();
 
         Stack {
@@ -99,7 +99,7 @@ impl<'a> Area<'a> for UnselectedFoundation<'a> {
         AreaId::Foundation(self.index)
     }
 
-    fn as_stack<'b>(&'b self) -> Stack<'b> {
+    fn as_stack(&self) -> Stack {
         return self.as_stack(None);
     }
 }
@@ -109,7 +109,7 @@ impl<'a> Area<'a> for SelectedFoundation<'a> {
         AreaId::Foundation(self.index)
     }
 
-    fn as_stack<'b>(&'b self) -> Stack<'b> {
+    fn as_stack(&self) -> Stack {
         return self.as_stack(Some(self.selection));
     }
 }

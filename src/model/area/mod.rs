@@ -28,7 +28,7 @@ pub enum Action {
 
 pub trait Area<'a> {
     fn id(&self) -> AreaId;
-    fn as_stack<'b>(&'b self) -> Stack<'b>;
+    fn as_stack(&self) -> Stack;
 }
 
 pub trait UnselectedArea<'a>: Area<'a> {

@@ -26,7 +26,7 @@ pub type UnselectedTalon<'a> = Talon<'a, ()>;
 pub type SelectedTalon<'a> = Talon<'a, Selection>;
 
 impl<'a, S> Talon<'a, S> {
-    fn as_stack<'b>(&'b self, mode: Option<Selection>) -> Stack<'b> {
+    fn as_stack(&self, mode: Option<Selection>) -> Stack {
         let cards_len = self.cards.len();
 
         Stack {
@@ -65,7 +65,7 @@ impl<'a> Area<'a> for UnselectedTalon<'a> {
         AreaId::Talon
     }
 
-    fn as_stack<'b>(&'b self) -> Stack<'b> {
+    fn as_stack(&self) -> Stack {
         self.as_stack(None)
     }
 }
@@ -75,7 +75,7 @@ impl<'a> Area<'a> for SelectedTalon<'a> {
         AreaId::Talon
     }
 
-    fn as_stack<'b>(&'b self) -> Stack<'b> {
+    fn as_stack(&self) -> Stack {
         self.as_stack(Some(self.selection))
     }
 }
