@@ -1,9 +1,8 @@
 use std::collections::HashMap;
-
-use crate::utils::vec::SplitOffAround;
+use std::fmt;
 
 use super::{move_selection, Area, AreaId, SelectedArea, UnselectedArea};
-use std::fmt::{Debug, Formatter, Result as FmtResult};
+use crate::utils::vec::SplitOffAround;
 
 /// A list of [areas](Area) with one [selected](SelectedArea) and the rest
 /// [unselected](UnselectedArea) that can efficiently move the selection and map [area ids](AreaId)
@@ -94,11 +93,17 @@ impl<'a> AreaList<'a> {
         self.get_by_index(index)
     }
 
-    pub fn iter<'b>(&'b self) -> Iter<'a, 'b> where 'a: 'b {
+    pub fn iter<'b>(&'b self) -> Iter<'a, 'b>
+    where
+        'a: 'b,
+    {
         Iter::new(self)
     }
 
-    pub fn iter_from_selected<'b>(&'b self) -> Iter<'a, 'b> where 'a: 'b {
+    pub fn iter_from_selected<'b>(&'b self) -> Iter<'a, 'b>
+    where
+        'a: 'b,
+    {
         let selected_area_id = self.selected_area.id();
         let selected_index = self.get_index(selected_area_id);
         Iter::new_at_index(self, selected_index)
@@ -170,10 +175,24 @@ impl<'a> AreaList<'a> {
     }
 }
 
-// TODO: Implement this!
-impl<'a> Debug for AreaList<'a> {
-    fn fmt(&self, f: &mut Formatter) -> FmtResult {
-        unimplemented!()
+impl<'a> fmt::Debug for AreaList<'a> {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        // We don't assume that Areas implement Debug, so we'll just format them as their area ids.
+        let before_areas_formatted = fmt
+            .debug_list()
+            .entries(self.before_areas.iter().map(|area| area.id()))
+            .finish();
+        let after_areas_formatted = fmt
+            .debug_list()
+            .entries(self.after_areas.iter().map(|area| area.id()))
+            .finish();
+
+        fmt.debug_struct("AreaList")
+            .field("area_ids", &self.area_ids)
+            .field("before_areas", &before_areas_formatted)
+            .field("selected_area", &self.selected_area.id())
+            .field("after_areas", &after_areas_formatted)
+            .finish()
     }
 }
 
@@ -186,7 +205,10 @@ pub struct Iter<'a, 'b> {
     area_list: &'b AreaList<'a>,
 }
 
-impl<'a, 'b> Iter<'a, 'b> where 'a: 'b {
+impl<'a, 'b> Iter<'a, 'b>
+where
+    'a: 'b,
+{
     fn new(area_list: &'b AreaList<'a>) -> Iter<'a, 'b> {
         Iter::new_at_index(area_list, 0)
     }
@@ -206,7 +228,10 @@ impl<'a, 'b> Iter<'a, 'b> where 'a: 'b {
     }
 }
 
-impl<'a, 'b> Iterator for Iter<'a, 'b> where 'a: 'b {
+impl<'a, 'b> Iterator for Iter<'a, 'b>
+where
+    'a: 'b,
+{
     type Item = &'b Area<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -233,7 +258,10 @@ impl<'a, 'b> Iterator for Iter<'a, 'b> where 'a: 'b {
     }
 }
 
-impl<'a, 'b> DoubleEndedIterator for Iter<'a, 'b> where 'a: 'b {
+impl<'a, 'b> DoubleEndedIterator for Iter<'a, 'b>
+where
+    'a: 'b,
+{
     fn next_back(&mut self) -> Option<Self::Item> {
         if self.visited_count < self.len {
             let item = self.area_list.get_by_index(self.reverse_index);

@@ -56,7 +56,7 @@ where
         Ok(())
     }
 
-    fn draw_card_face_down(&mut self, coords: Coords, card: &Card) -> Result {
+    fn draw_card_face_down(&mut self, coords: Coords, _: &Card) -> Result {
         draw_card_frame(self, coords)?;
 
         let interior_coords = coords + Coords::from_xy(2, 1);

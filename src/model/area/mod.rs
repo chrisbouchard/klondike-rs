@@ -39,7 +39,7 @@ pub trait UnselectedArea<'a>: Area<'a> {
         'a: 'b;
     fn select_with_held<'b>(
         self: Box<Self>,
-        held: Held
+        held: Held,
     ) -> Result<Box<dyn SelectedArea<'a> + 'b>, (Box<dyn UnselectedArea<'a> + 'b>, Held)>
     where
         'a: 'b;
@@ -97,7 +97,10 @@ where
         match target.select() {
             Ok(target_selected) => Ok((source_unselected, target_selected)),
             Err(target_unselected) => {
-                let source_selected = source_unselected.select().ok().expect("Unable to replace selection");
+                let source_selected = source_unselected
+                    .select()
+                    .ok()
+                    .expect("Unable to replace selection");
                 Err((source_selected, target_unselected))
             }
         }

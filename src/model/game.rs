@@ -17,13 +17,18 @@ pub struct Game<'a> {
 
 impl<'a> Game<'a> {
     pub fn new<'d>(deck: &'d mut Deck, settings: &'a Settings) -> Game<'a> {
-        let mut tableaux = settings.tableaux_indices().map(|index| {
-            let cards = deck.deal(index + 1);
-            UnselectedTableaux::new(index, index, cards, settings)
-        }).collect::<Vec<_>>();
+        let mut tableaux = settings
+            .tableaux_indices()
+            .map(|index| {
+                let cards = deck.deal(index + 1);
+                UnselectedTableaux::new(index, index, cards, settings)
+            })
+            .collect::<Vec<_>>();
 
-        let stock_cards = deck.deal_rest();
-        let stock = UnselectedStock::new(stock_cards, settings);
+        let stock = {
+            let cards = deck.deal_rest();
+            UnselectedStock::new(cards, settings)
+        };
 
         let talon = UnselectedTalon::new(vec![], 0, settings);
 
