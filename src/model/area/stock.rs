@@ -7,50 +7,31 @@ use crate::{
     utils::vec::SplitOffBounded,
 };
 
-use super::{Action, Area, AreaId, SelectionMode};
+use super::{Action, Area, AreaId, Held, SelectedArea, UnselectedArea};
+
+#[derive(Copy, Clone, Debug)]
+struct Selection;
 
 #[derive(Debug)]
-pub struct Stock<'a> {
+pub struct Stock<'a, S> {
     cards: Vec<Card>,
     settings: &'a Settings,
+    selection: S,
 }
 
-impl<'a> Stock<'a> {
-    pub fn new(cards: Vec<Card>, settings: &Settings) -> Stock {
-        Stock { cards, settings }
-    }
-}
+pub type UnselectedStock<'a> = Stock<'a, ()>;
+pub type SelectedStock<'a> = Stock<'a, Selection>;
 
-impl<'a> Area for Stock<'a> {
-    fn id(&self) -> AreaId {
-        AreaId::Stock
-    }
-
-    fn accepts_cards(&self, cards: &Vec<Card>) -> bool {
-        false
-    }
-
-    fn accepts_selection(&self, mode: &SelectionMode) -> bool {
-        mode.is_free() && mode.len() == 1
-    }
-
-    fn place_cards(&mut self, mut cards: Vec<Card>) {
-        self.cards.append(&mut cards)
-    }
-
-    fn take_cards(&mut self, len: usize) -> Vec<Card> {
-        self.cards.split_off_bounded(len)
-    }
-
-    fn activate(&self, mode: &SelectionMode) -> Action {
-        if self.cards.is_empty() {
-            Action::Draw
-        } else {
-            Action::Refresh
+impl<'a, S> Stock<'a, S> {
+    pub fn new(cards: Vec<Card>, settings: &Settings) -> UnselectedStock {
+        Stock {
+            cards,
+            settings,
+            selection: (),
         }
     }
 
-    fn as_stack<'s>(&'s self, mode: Option<&'s SelectionMode>) -> Stack<'s> {
+    fn as_stack(&self, mode: Option<Selection>) -> Stack {
         Stack {
             cards: &self.cards,
             details: StackDetails {
@@ -61,5 +42,81 @@ impl<'a> Area for Stock<'a> {
                 selection: mode.map(|_| StackSelection::Cards(1)),
             },
         }
+    }
+}
+
+impl<'a> Area for UnselectedStock<'a> {
+    fn id(&self) -> AreaId {
+        AreaId::Stock
+    }
+
+    fn as_stack(&self) -> Stack {
+        self.as_stack(None)
+    }
+}
+
+impl<'a> Area for SelectedStock<'a> {
+    fn id(&self) -> AreaId {
+        AreaId::Stock
+    }
+
+    fn as_stack(&self) -> Stack {
+        self.as_stack(Some(self.selection))
+    }
+}
+
+impl<'a> UnselectedArea for UnselectedStock<'a> {
+    fn select(self: Box<Self>) -> Result<Box<dyn SelectedArea>, Box<dyn UnselectedArea>> {
+        Ok(Box::new(Stock {
+            cards: self.cards,
+            settings: self.settings,
+            selection: Selection,
+        }))
+    }
+
+    fn select_with_held(
+        self: Box<Self>,
+        held: Held,
+    ) -> Result<Box<dyn SelectedArea>, (Box<dyn UnselectedArea>, Held)> {
+        Err((self, held))
+    }
+
+    fn as_area(&self) -> &dyn Area {
+        self
+    }
+}
+
+impl<'a> SelectedArea for SelectedStock<'a> {
+    fn deselect(self: Box<Self>) -> (Box<dyn UnselectedArea>, Option<Held>) {
+        let unselected = Box::new(Stock {
+            cards: self.cards,
+            settings: self.settings,
+            selection: (),
+        });
+
+        (unselected, None)
+    }
+
+    fn activate(&mut self) -> Option<Action> {
+        if self.cards.is_empty() {
+            Some(Action::SendTo {
+                area: AreaId::Talon,
+                held: Held {
+                    source: self.id(),
+                    cards: vec![], // TODO: Take from the stock's cards
+                },
+            })
+        } else {
+            Some(Action::TakeFrom {
+                area: AreaId::Talon,
+            })
+        }
+    }
+
+    fn select_more(&mut self) {}
+    fn select_less(&mut self) {}
+
+    fn as_area(&self) -> &dyn Area {
+        self
     }
 }

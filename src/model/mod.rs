@@ -13,8 +13,17 @@ pub mod stack;
 
 #[derive(Debug, Fail)]
 pub enum Error {
+    #[fail(display = "duplicate area ids: {:?}", area_ids)]
+    DuplicateAreaIds { area_ids: Vec<AreaId> },
+
+    #[fail(display = "area list must not be empty")]
+    EmptyAreaList,
+
     #[fail(display = "invalid rank: {}", value)]
     InvalidRank { value: u8 },
+
+    #[fail(display = "unknown area id: {:?}", area_id)]
+    UnknownAreaId { area_id: AreaId },
 }
 
 pub type Result<T> = ::std::result::Result<T, Error>;

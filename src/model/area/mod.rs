@@ -1,11 +1,12 @@
+use super::{card::Card, stack::Stack};
+
+pub mod area_list;
 pub mod foundation;
 pub mod stock;
 pub mod tableaux;
 pub mod talon;
 
-use super::{card::Card, stack::Stack};
-
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub enum AreaId {
     Stock,
     Talon,
@@ -14,112 +15,70 @@ pub enum AreaId {
 }
 
 #[derive(Debug)]
-pub enum SelectionMode {
-    Free { len: usize },
-    Held { len: usize, source: AreaId },
-}
-
-impl SelectionMode {
-    pub fn is_free(&self) -> bool {
-        match self {
-            SelectionMode::Free { .. } => true,
-            _ => false,
-        }
-    }
-
-    pub fn is_held(&self) -> bool {
-        match self {
-            SelectionMode::Held { .. } => true,
-            _ => false,
-        }
-    }
-
-    pub fn len(&self) -> usize {
-        match self {
-            SelectionMode::Free { len, .. } => *len,
-            SelectionMode::Held { len, .. } => *len,
-        }
-    }
-
-    pub fn moved(self) -> SelectionMode {
-        match self {
-            SelectionMode::Free { .. } => Self::default(),
-            SelectionMode::Held { .. } => self,
-        }
-    }
-}
-
-impl Default for SelectionMode {
-    fn default() -> Self {
-        SelectionMode::Free { len: 1 }
-    }
+pub struct Held {
+    pub source: AreaId,
+    pub cards: Vec<Card>,
 }
 
 #[derive(Debug)]
-pub struct Selection {
-    pub target: AreaId,
-    pub mode: SelectionMode,
-}
-
-impl Selection {
-    pub fn move_to(mut self, area_id: AreaId) -> Selection {
-        self.target = area_id;
-        self.mode = self.mode.moved();
-        self
-    }
-
-    pub fn select(mut self, mode: SelectionMode) -> Selection {
-        self.mode = mode;
-        self
-    }
-
-    pub fn matches(&self, area_id: AreaId) -> bool {
-        self.target == area_id
-    }
-}
-
-impl Default for Selection {
-    fn default() -> Self {
-        Selection {
-            target: AreaId::Stock,
-            mode: SelectionMode::default(),
-        }
-    }
-}
-
 pub enum Action {
-    Default,
-    Draw,
-    FlipOver,
-    Refresh,
+    SendTo { area: AreaId, held: Held },
+    TakeFrom { area: AreaId },
 }
 
 pub trait Area {
     fn id(&self) -> AreaId;
+    fn as_stack(&self) -> Stack;
+}
 
-    fn accepts_cards(&self, cards: &Vec<Card>) -> bool;
-    fn accepts_selection(&self, mode: &SelectionMode) -> bool;
+pub trait UnselectedArea: Area {
+    fn select(self: Box<Self>) -> Result<Box<dyn SelectedArea>, Box<dyn UnselectedArea>>;
+    fn select_with_held(
+        self: Box<Self>,
+        held: Held,
+    ) -> Result<Box<dyn SelectedArea>, (Box<dyn UnselectedArea>, Held)>;
 
-    fn offer_cards(&mut self, cards: Vec<Card>) -> Result<(), Vec<Card>> {
-        if self.accepts_cards(&cards) {
-            self.place_cards(cards);
-            Ok(())
-        } else {
-            Err(cards)
+    fn as_area(&self) -> &dyn Area;
+}
+
+pub trait SelectedArea: Area {
+    fn deselect(self: Box<Self>) -> (Box<dyn UnselectedArea>, Option<Held>);
+
+    fn activate(&mut self) -> Option<Action>;
+    fn select_more(&mut self);
+    fn select_less(&mut self);
+
+    fn as_area(&self) -> &dyn Area;
+}
+
+pub fn move_selection(
+    source: Box<dyn SelectedArea>,
+    target: Box<dyn UnselectedArea>,
+) -> Result<
+    (Box<dyn UnselectedArea>, Box<dyn SelectedArea>),
+    (Box<dyn SelectedArea>, Box<dyn UnselectedArea>),
+> {
+    let (source_unselected, held) = source.deselect();
+
+    if let Some(held) = held {
+        match target.select_with_held(held) {
+            Ok(target_selected) => Ok((source_unselected, target_selected)),
+
+            Err((target_unselected, held)) => {
+                let source_selected = target
+                    .select_with_held(held)
+                    .ok()
+                    .expect("Unable to replace selection with held cards");
+                Err((source_selected, target_unselected))
+            }
+        }
+    } else {
+        match target.select() {
+            Ok(target_selected) => Ok((source_unselected, target_selected)),
+            Err(target_unselected) => {
+                let source_selected = target.select().ok().expect("Unable to replace selection");
+                Err((source_selected, target_unselected))
+            }
         }
     }
-
-    fn place_cards(&mut self, cards: Vec<Card>);
-
-    fn replace_cards(&mut self, cards: Vec<Card>) {
-        self.place_cards(cards);
-    }
-
-    fn take_cards(&mut self, len: usize) -> Vec<Card>;
-
-    fn activate(&self, mode: &SelectionMode) -> Action {
-        Action::Default
-    }
-
-    fn as_stack<'a>(&'a self, mode: Option<&'a SelectionMode>) -> Stack<'a>;
 }

@@ -7,31 +7,40 @@ use crate::{
     utils::{usize::BoundedSub, vec::SplitOffBounded},
 };
 
-use super::{Action, Area, AreaId, SelectionMode};
+use super::{Action, Area, AreaId, Held, SelectedArea, UnselectedArea};
+
+#[derive(Copy, Clone, Debug)]
+pub struct Selection {
+    held: bool,
+    len: usize,
+}
 
 #[derive(Debug)]
-pub struct Tableaux<'a> {
+pub struct Tableaux<'a, S> {
     index: usize,
     cards: Vec<Card>,
     revealed_len: usize,
-
     settings: &'a Settings,
+    selection: S,
 }
 
-impl<'a> Tableaux<'a> {
-    pub fn new(index: usize, revealed_len: usize, cards: Vec<Card>, settings: &Settings) -> Tableaux {
+pub type UnselectedTableaux<'a> = Tableaux<'a, ()>;
+pub type SelectedTableaux<'a> = Tableaux<'a, Selection>;
+
+impl<'a, S> Tableaux<'a, S> {
+    pub fn new(
+        index: usize,
+        revealed_len: usize,
+        cards: Vec<Card>,
+        settings: &Settings,
+    ) -> UnselectedTableaux {
         Tableaux {
             index,
             cards,
             revealed_len,
             settings,
+            selection: (),
         }
-    }
-}
-
-impl<'a> Area for Tableaux<'a> {
-    fn id(&self) -> AreaId {
-        AreaId::Tableaux(self.index)
     }
 
     fn accepts_cards(&self, cards: &Vec<Card>) -> bool {
@@ -48,36 +57,7 @@ impl<'a> Area for Tableaux<'a> {
         }
     }
 
-    fn accepts_selection(&self, mode: &SelectionMode) -> bool {
-        let len = mode.len();
-
-        if self.revealed_len > 0 {
-            mode.is_held() || (len > 0 && len <= self.revealed_len)
-        } else {
-            mode.is_free() && len == 1 && !self.cards.is_empty()
-        }
-    }
-
-    fn place_cards(&mut self, mut cards: Vec<Card>) {
-        self.revealed_len += cards.len();
-        self.cards.append(&mut cards);
-    }
-
-    fn take_cards(&mut self, len: usize) -> Vec<Card> {
-        let cards = self.cards.split_off_bounded(len);
-        self.revealed_len.bounded_sub(cards.len());
-        cards
-    }
-
-    fn activate(&self, mode: &SelectionMode) -> Action {
-        if self.revealed_len > 0 {
-            Action::Default
-        } else {
-            Action::FlipOver
-        }
-    }
-
-    fn as_stack<'s>(&'s self, mode: Option<&'s SelectionMode>) -> Stack<'s> {
+    fn as_stack(&self, mode: Option<Selection>) -> Stack {
         Stack {
             cards: &self.cards,
             details: StackDetails {
@@ -91,9 +71,130 @@ impl<'a> Area for Tableaux<'a> {
     }
 }
 
-fn selection_to_stack_selection(mode: &SelectionMode) -> StackSelection {
-    match mode {
-        SelectionMode::Held { len, .. } => StackSelection::Stack(*len),
-        SelectionMode::Free { len, .. } => StackSelection::Cards(*len),
+impl<'a> Area for UnselectedTableaux<'a> {
+    fn id(&self) -> AreaId {
+        AreaId::Tableaux(self.index)
+    }
+
+    fn as_stack(&self) -> Stack {
+        self.as_stack(None)
+    }
+}
+
+impl<'a> Area for SelectedTableaux<'a> {
+    fn id(&self) -> AreaId {
+        AreaId::Tableaux(self.index)
+    }
+
+    fn as_stack(&self) -> Stack {
+        self.as_stack(Some(self.selection))
+    }
+}
+
+impl<'a> UnselectedArea for UnselectedTableaux<'a> {
+    fn select(self: Box<Self>) -> Result<Box<dyn SelectedArea>, Box<dyn UnselectedArea>> {
+        if !self.cards.is_empty() {
+            Ok(Box::new(Tableaux {
+                index: self.index,
+                cards: self.cards,
+                revealed_len: self.revealed_len,
+                settings: self.settings,
+                selection: Selection {
+                    held: false,
+                    len: 1,
+                },
+            }))
+        } else {
+            Err(self)
+        }
+    }
+
+    fn select_with_held(
+        self: Box<Self>,
+        mut held: Held,
+    ) -> Result<Box<dyn SelectedArea>, (Box<dyn UnselectedArea>, Held)> {
+        if self.id() == held.source || self.accepts_cards(&held.cards) {
+            let held_len = held.cards.len();
+            self.revealed_len += held_len;
+            self.cards.append(&mut held.cards);
+            Ok(Box::new(Tableaux {
+                index: self.index,
+                cards: self.cards,
+                revealed_len: self.revealed_len,
+                settings: self.settings,
+                selection: Selection {
+                    held: true,
+                    len: held_len,
+                },
+            }))
+        } else {
+            Err((self, held))
+        }
+    }
+
+    fn as_area(&self) -> &dyn Area {
+        self
+    }
+}
+
+impl<'a> SelectedArea for SelectedTableaux<'a> {
+    fn deselect(self: Box<Self>) -> (Box<dyn UnselectedArea>, Option<Held>) {
+        let held = if self.selection.held {
+            let cards = self.cards.split_off_bounded(self.selection.len);
+            self.revealed_len -= cards.len();
+
+            Some(Held {
+                source: self.id(),
+                cards,
+            })
+        } else {
+            None
+        };
+
+        let unselected = Box::new(Tableaux {
+            index: self.index,
+            cards: self.cards,
+            revealed_len: self.revealed_len,
+            settings: self.settings,
+            selection: (),
+        });
+
+        (unselected, held)
+    }
+
+    fn activate(&mut self) -> Option<Action> {
+        if self.revealed_len > 0 {
+            self.selection.held = !self.selection.held;
+        } else {
+            self.revealed_len += 1;
+        }
+
+        None
+    }
+
+    fn select_more(&mut self) {
+        if self.selection.len < self.revealed_len {
+            self.selection.len += 1;
+        }
+    }
+
+    fn select_less(&mut self) {
+        if self.selection.len > 1 {
+            self.selection.len.bounded_sub(1);
+        }
+    }
+
+    fn as_area(&self) -> &dyn Area {
+        self
+    }
+}
+
+fn selection_to_stack_selection(selection: &Selection) -> StackSelection {
+    let &Selection { held, len } = selection;
+
+    if held {
+        StackSelection::Stack(len)
+    } else {
+        StackSelection::Cards(len)
     }
 }

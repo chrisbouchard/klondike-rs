@@ -23,3 +23,21 @@ impl BoundedSub for usize {
         }
     }
 }
+
+
+pub trait SymmetricDifference<T = Self> {
+    type Output;
+    fn sym_diff(self, other: T) -> Self::Output;
+}
+
+impl SymmetricDifference for usize {
+    type Output = usize;
+
+    fn sym_diff(self, other: usize) -> usize {
+        if other < self {
+            self - other
+        } else {
+            other - self
+        }
+    }
+}
