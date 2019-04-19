@@ -10,7 +10,7 @@ use crate::{
 use super::{Action, Area, AreaId, Held, SelectedArea, UnselectedArea};
 
 #[derive(Copy, Clone, Debug)]
-struct Selection;
+pub struct Selection;
 
 #[derive(Debug)]
 pub struct Stock<'a, S> {
@@ -23,15 +23,7 @@ pub type UnselectedStock<'a> = Stock<'a, ()>;
 pub type SelectedStock<'a> = Stock<'a, Selection>;
 
 impl<'a, S> Stock<'a, S> {
-    pub fn new(cards: Vec<Card>, settings: &Settings) -> UnselectedStock {
-        Stock {
-            cards,
-            settings,
-            selection: (),
-        }
-    }
-
-    fn as_stack(&self, mode: Option<Selection>) -> Stack {
+    fn as_stack<'b>(&'b self, mode: Option<Selection>) -> Stack<'b> {
         Stack {
             cards: &self.cards,
             details: StackDetails {
@@ -45,28 +37,46 @@ impl<'a, S> Stock<'a, S> {
     }
 }
 
-impl<'a> Area for UnselectedStock<'a> {
+impl<'a> UnselectedStock<'a> {
+    pub fn new<'b>(cards: Vec<Card>, settings: &'a Settings) -> Box<dyn UnselectedArea<'a> + 'b>
+    where
+        'a: 'b,
+    {
+        Box::new(Stock {
+            cards,
+            settings,
+            selection: (),
+        })
+    }
+}
+
+impl<'a> Area<'a> for UnselectedStock<'a> {
     fn id(&self) -> AreaId {
         AreaId::Stock
     }
 
-    fn as_stack(&self) -> Stack {
+    fn as_stack<'b>(&'b self) -> Stack<'b> {
         self.as_stack(None)
     }
 }
 
-impl<'a> Area for SelectedStock<'a> {
+impl<'a> Area<'a> for SelectedStock<'a> {
     fn id(&self) -> AreaId {
         AreaId::Stock
     }
 
-    fn as_stack(&self) -> Stack {
+    fn as_stack<'b>(&'b self) -> Stack<'b> {
         self.as_stack(Some(self.selection))
     }
 }
 
-impl<'a> UnselectedArea for UnselectedStock<'a> {
-    fn select(self: Box<Self>) -> Result<Box<dyn SelectedArea>, Box<dyn UnselectedArea>> {
+impl<'a> UnselectedArea<'a> for UnselectedStock<'a> {
+    fn select<'b>(
+        self: Box<Self>,
+    ) -> Result<Box<dyn SelectedArea<'a> + 'b>, Box<dyn UnselectedArea<'a> + 'b>>
+    where
+        'a: 'b,
+    {
         Ok(Box::new(Stock {
             cards: self.cards,
             settings: self.settings,
@@ -74,20 +84,29 @@ impl<'a> UnselectedArea for UnselectedStock<'a> {
         }))
     }
 
-    fn select_with_held(
+    fn select_with_held<'b>(
         self: Box<Self>,
         held: Held,
-    ) -> Result<Box<dyn SelectedArea>, (Box<dyn UnselectedArea>, Held)> {
+    ) -> Result<Box<dyn SelectedArea<'a> + 'b>, (Box<dyn UnselectedArea<'a> + 'b>, Held)>
+    where
+        'a: 'b,
+    {
         Err((self, held))
     }
 
-    fn as_area(&self) -> &dyn Area {
+    fn as_area<'b>(&'b self) -> &'b dyn Area<'a>
+    where
+        'a: 'b,
+    {
         self
     }
 }
 
-impl<'a> SelectedArea for SelectedStock<'a> {
-    fn deselect(self: Box<Self>) -> (Box<dyn UnselectedArea>, Option<Held>) {
+impl<'a> SelectedArea<'a> for SelectedStock<'a> {
+    fn deselect<'b>(self: Box<Self>) -> (Box<dyn UnselectedArea<'a> + 'b>, Option<Held>)
+    where
+        'a: 'b,
+    {
         let unselected = Box::new(Stock {
             cards: self.cards,
             settings: self.settings,
@@ -116,7 +135,10 @@ impl<'a> SelectedArea for SelectedStock<'a> {
     fn select_more(&mut self) {}
     fn select_less(&mut self) {}
 
-    fn as_area(&self) -> &dyn Area {
+    fn as_area<'b>(&'b self) -> &'b dyn Area<'a>
+    where
+        'a: 'b,
+    {
         self
     }
 }

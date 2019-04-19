@@ -20,14 +20,14 @@ static OFFSETS: Offsets = Offsets {
 static SELECTOR_OFFSET: Coords = Coords::from_y(0);
 
 pub trait HorizontalStackPainter {
-    fn draw_horizontal_card_stack(&mut self, coords: Coords, stack: &Stack) -> Result;
+    fn draw_horizontal_card_stack<'a, 'b>(&mut self, coords: Coords, stack: &'a Stack<'b>) -> Result where 'b: 'a;
 }
 
 impl<T> HorizontalStackPainter for T
 where
     T: CardPainter + SelectorPainter,
 {
-    fn draw_horizontal_card_stack(&mut self, coords: Coords, stack: &Stack) -> Result {
+    fn draw_horizontal_card_stack<'a, 'b>(&mut self, coords: Coords, stack: &'a Stack<'b>) -> Result where 'b: 'a {
         let face_up_index = stack.details.face_up_index();
 
         for (i, card) in stack.into_iter().enumerate() {

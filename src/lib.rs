@@ -9,7 +9,6 @@
 )]
 /* missing_docs */
 #![feature(const_fn)]
-#![feature(iter_unfold)]
 
 #[macro_use]
 extern crate failure_derive;

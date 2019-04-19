@@ -26,38 +26,59 @@ pub enum Action {
     TakeFrom { area: AreaId },
 }
 
-pub trait Area {
+pub trait Area<'a> {
     fn id(&self) -> AreaId;
-    fn as_stack(&self) -> Stack;
+    fn as_stack<'b>(&'b self) -> Stack<'b>;
 }
 
-pub trait UnselectedArea: Area {
-    fn select(self: Box<Self>) -> Result<Box<dyn SelectedArea>, Box<dyn UnselectedArea>>;
-    fn select_with_held(
+pub trait UnselectedArea<'a>: Area<'a> {
+    fn select<'b>(
         self: Box<Self>,
-        held: Held,
-    ) -> Result<Box<dyn SelectedArea>, (Box<dyn UnselectedArea>, Held)>;
+    ) -> Result<Box<dyn SelectedArea<'a> + 'b>, Box<dyn UnselectedArea<'a> + 'b>>
+    where
+        'a: 'b;
+    fn select_with_held<'b>(
+        self: Box<Self>,
+        held: Held
+    ) -> Result<Box<dyn SelectedArea<'a> + 'b>, (Box<dyn UnselectedArea<'a> + 'b>, Held)>
+    where
+        'a: 'b;
 
-    fn as_area(&self) -> &dyn Area;
+    fn as_area<'b>(&'b self) -> &'b dyn Area<'a>
+    where
+        'a: 'b;
 }
 
-pub trait SelectedArea: Area {
-    fn deselect(self: Box<Self>) -> (Box<dyn UnselectedArea>, Option<Held>);
+pub trait SelectedArea<'a>: Area<'a> {
+    fn deselect<'b>(self: Box<Self>) -> (Box<dyn UnselectedArea<'a> + 'b>, Option<Held>)
+    where
+        'a: 'b;
 
     fn activate(&mut self) -> Option<Action>;
     fn select_more(&mut self);
     fn select_less(&mut self);
 
-    fn as_area(&self) -> &dyn Area;
+    fn as_area<'b>(&'b self) -> &'b dyn Area<'a>
+    where
+        'a: 'b;
 }
 
-pub fn move_selection(
-    source: Box<dyn SelectedArea>,
-    target: Box<dyn UnselectedArea>,
+pub fn move_selection<'a, 'b>(
+    source: Box<dyn SelectedArea<'a> + 'b>,
+    target: Box<dyn UnselectedArea<'a> + 'b>,
 ) -> Result<
-    (Box<dyn UnselectedArea>, Box<dyn SelectedArea>),
-    (Box<dyn SelectedArea>, Box<dyn UnselectedArea>),
-> {
+    (
+        Box<dyn UnselectedArea<'a> + 'b>,
+        Box<dyn SelectedArea<'a> + 'b>,
+    ),
+    (
+        Box<dyn SelectedArea<'a> + 'b>,
+        Box<dyn UnselectedArea<'a> + 'b>,
+    ),
+>
+where
+    'a: 'b,
+{
     let (source_unselected, held) = source.deselect();
 
     if let Some(held) = held {
@@ -65,7 +86,7 @@ pub fn move_selection(
             Ok(target_selected) => Ok((source_unselected, target_selected)),
 
             Err((target_unselected, held)) => {
-                let source_selected = target
+                let source_selected = source_unselected
                     .select_with_held(held)
                     .ok()
                     .expect("Unable to replace selection with held cards");
@@ -76,7 +97,7 @@ pub fn move_selection(
         match target.select() {
             Ok(target_selected) => Ok((source_unselected, target_selected)),
             Err(target_unselected) => {
-                let source_selected = target.select().ok().expect("Unable to replace selection");
+                let source_selected = source_unselected.select().ok().expect("Unable to replace selection");
                 Err((source_selected, target_unselected))
             }
         }

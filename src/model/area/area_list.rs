@@ -1,9 +1,9 @@
-use std::{collections::HashMap, iter::once};
+use std::collections::HashMap;
 
 use crate::utils::vec::SplitOffAround;
 
 use super::{move_selection, Area, AreaId, SelectedArea, UnselectedArea};
-use std::fmt::{Debug, Error as FmtError, Formatter};
+use std::fmt::{Debug, Formatter, Result as FmtResult};
 
 /// A list of [areas](Area) with one [selected](SelectedArea) and the rest
 /// [unselected](UnselectedArea) that can efficiently move the selection and map [area ids](AreaId)
@@ -16,19 +16,19 @@ pub struct AreaList<'a> {
     /// Map from area id to the index of the area in the list
     area_ids: HashMap<AreaId, usize>,
     /// The list of areas before the selected area
-    before_areas: Vec<Box<dyn UnselectedArea + 'a>>,
+    before_areas: Vec<Box<dyn UnselectedArea<'a> + 'a>>,
     /// The selected area and head of the zipper
-    selected_area: Box<dyn SelectedArea + 'a>,
+    selected_area: Box<dyn SelectedArea<'a> + 'a>,
     /// The list of areas after the selected area. This list is kept in reverse order so we can
     /// efficiently push and pop to move left and right.
-    after_areas: Vec<Box<dyn UnselectedArea + 'a>>,
+    after_areas: Vec<Box<dyn UnselectedArea<'a> + 'a>>,
 }
 
 impl<'a> AreaList<'a> {
-    pub fn new<T, I>(mut areas: T) -> AreaList<'a>
+    pub fn new<T, I>(areas: T) -> AreaList<'a>
     where
-        T: IntoIterator<Item = Box<dyn UnselectedArea + 'a>, IntoIter = I>,
-        I: Iterator<Item = Box<dyn UnselectedArea + 'a>>,
+        T: IntoIterator<Item = Box<dyn UnselectedArea<'a> + 'a>, IntoIter = I>,
+        I: Iterator<Item = Box<dyn UnselectedArea<'a> + 'a>>,
     {
         // First collect up the incoming areas into a Vec. This will become after_areas later.
         let mut areas = areas.into_iter().collect::<Vec<_>>();
@@ -74,7 +74,7 @@ impl<'a> AreaList<'a> {
         self.before_areas.len() + self.after_areas.len() + 1
     }
 
-    pub fn get_by_index(&'a self, index: usize) -> &'a dyn Area {
+    pub fn get_by_index(&self, index: usize) -> &dyn Area<'a> {
         let selected_area_id = self.selected_area.id();
         let selected_index = self.get_index(selected_area_id);
 
@@ -89,31 +89,27 @@ impl<'a> AreaList<'a> {
         }
     }
 
-    pub fn get_by_area_id(&'a self, area_id: AreaId) -> &'a dyn Area {
+    pub fn get_by_area_id(&self, area_id: AreaId) -> &dyn Area<'a> {
         let index = self.get_index(area_id);
         self.get_by_index(index)
     }
 
-    pub fn area_ids(&'a self) -> impl DoubleEndedIterator<Item = AreaId> + 'a {
-        self.before_areas
-            .iter()
-            .map(|area| area.id())
-            .chain(once(self.selected_area.id()))
-            .chain(self.after_areas.iter().rev().map(|area| area.id()))
+    pub fn iter<'b>(&'b self) -> Iter<'a, 'b> where 'a: 'b {
+        Iter::new(self)
     }
 
-    pub fn area_ids_selected_first(&'a self) -> impl DoubleEndedIterator<Item = AreaId> + 'a {
-        once(self.selected_area.id())
-            .chain(self.after_areas.iter().rev().map(|area| area.id()))
-            .chain(self.before_areas.iter().map(|area| area.id()))
+    pub fn iter_from_selected<'b>(&'b self) -> Iter<'a, 'b> where 'a: 'b {
+        let selected_area_id = self.selected_area.id();
+        let selected_index = self.get_index(selected_area_id);
+        Iter::new_at_index(self, selected_index)
     }
 
-    pub fn move_selection(&mut self, target_area_id: AreaId) -> bool {
+    pub fn move_selection(mut self, target_area_id: AreaId) -> (Self, bool) {
         let selected_area_id = self.selected_area.id();
 
         // No work to do if we're already where we want to end up.
         if selected_area_id == target_area_id {
-            return true;
+            return (self, true);
         }
 
         let selected_index = self.get_index(selected_area_id);
@@ -152,7 +148,7 @@ impl<'a> AreaList<'a> {
                 other_vec.push(unselected_area);
                 other_vec.extend(areas_to_move.into_iter().rev());
 
-                true
+                (self, true)
             }
 
             // If we were *un*able to move the selection, put everything back where we found it.
@@ -161,7 +157,7 @@ impl<'a> AreaList<'a> {
                 target_vec.push(target_area);
                 target_vec.extend(areas_to_move.into_iter());
 
-                false
+                (self, false)
             }
         }
     }
@@ -170,31 +166,32 @@ impl<'a> AreaList<'a> {
         *self
             .area_ids
             .get(&area_id)
-            .expect(&format!("Unknown area id {}", area_id))
+            .expect(&format!("Unknown area id {:?}", area_id))
     }
 }
 
 // TODO: Implement this!
 impl<'a> Debug for AreaList<'a> {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), FmtError> {
+    fn fmt(&self, f: &mut Formatter) -> FmtResult {
         unimplemented!()
     }
 }
 
-pub struct Iter<'a> {
+#[derive(Debug)]
+pub struct Iter<'a, 'b> {
     len: usize,
     forward_index: usize,
     reverse_index: usize,
     visited_count: usize,
-    area_list: &'a AreaList<'a>,
+    area_list: &'b AreaList<'a>,
 }
 
-impl<'a> Iter<'a> {
-    fn new(area_list: &'a AreaList) -> Iter<'a> {
+impl<'a, 'b> Iter<'a, 'b> where 'a: 'b {
+    fn new(area_list: &'b AreaList<'a>) -> Iter<'a, 'b> {
         Iter::new_at_index(area_list, 0)
     }
 
-    fn new_at_index(area_list: &'a AreaList, index: usize) -> Iter<'a> {
+    fn new_at_index(area_list: &'b AreaList<'a>, index: usize) -> Iter<'a, 'b> {
         let len = area_list.len();
 
         let reverse_index = if index == 0 { len - 1 } else { index - 1 };
@@ -209,8 +206,8 @@ impl<'a> Iter<'a> {
     }
 }
 
-impl<'a> Iterator for Iter<'a> {
-    type Item = &'a Area;
+impl<'a, 'b> Iterator for Iter<'a, 'b> where 'a: 'b {
+    type Item = &'b Area<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.visited_count < self.len {
@@ -236,7 +233,7 @@ impl<'a> Iterator for Iter<'a> {
     }
 }
 
-impl<'a> DoubleEndedIterator for Iter<'a> {
+impl<'a, 'b> DoubleEndedIterator for Iter<'a, 'b> where 'a: 'b {
     fn next_back(&mut self) -> Option<Self::Item> {
         if self.visited_count < self.len {
             let item = self.area_list.get_by_index(self.reverse_index);
@@ -256,4 +253,4 @@ impl<'a> DoubleEndedIterator for Iter<'a> {
     }
 }
 
-impl<'a> ExactSizeIterator for Iter<'a> {}
+impl<'a, 'b> ExactSizeIterator for Iter<'a, 'b> where 'a: 'b {}

@@ -79,8 +79,9 @@ fn main() -> Result {
     Ok(())
 }
 
-fn clear_and_draw_game<W>(output: &mut W, game: &mut Game) -> Result
+fn clear_and_draw_game<'a, 'b, W>(output: &mut W, game: &'a mut Game<'b>) -> Result
 where
+    'b: 'a,
     W: Write,
 {
     write!(output, "{}", clear::All)?;

@@ -4,7 +4,7 @@ use crate::{
         settings::Settings,
         stack::{Stack, StackDetails, StackSelection},
     },
-    utils::{usize::BoundedSub, vec::SplitOffBounded},
+    utils::vec::SplitOffBounded,
 };
 
 use super::{Action, Area, AreaId, Held, SelectedArea, UnselectedArea};
@@ -28,22 +28,7 @@ pub type UnselectedTableaux<'a> = Tableaux<'a, ()>;
 pub type SelectedTableaux<'a> = Tableaux<'a, Selection>;
 
 impl<'a, S> Tableaux<'a, S> {
-    pub fn new(
-        index: usize,
-        revealed_len: usize,
-        cards: Vec<Card>,
-        settings: &Settings,
-    ) -> UnselectedTableaux {
-        Tableaux {
-            index,
-            cards,
-            revealed_len,
-            settings,
-            selection: (),
-        }
-    }
-
-    fn accepts_cards(&self, cards: &Vec<Card>) -> bool {
+    fn accepts_cards(&self, cards: &[Card]) -> bool {
         if let Some(card) = cards.first() {
             if let Some(tableaux_card) = self.cards.last() {
                 self.revealed_len > 0
@@ -57,7 +42,7 @@ impl<'a, S> Tableaux<'a, S> {
         }
     }
 
-    fn as_stack(&self, mode: Option<Selection>) -> Stack {
+    fn as_stack<'b>(&'b self, mode: Option<Selection>) -> Stack<'b> {
         Stack {
             cards: &self.cards,
             details: StackDetails {
@@ -71,28 +56,53 @@ impl<'a, S> Tableaux<'a, S> {
     }
 }
 
-impl<'a> Area for UnselectedTableaux<'a> {
+impl<'a> UnselectedTableaux<'a> {
+    pub fn new<'b>(
+        index: usize,
+        revealed_len: usize,
+        cards: Vec<Card>,
+        settings: &'a Settings,
+    ) -> Box<dyn UnselectedArea<'a> + 'b>
+    where
+        'a: 'b,
+    {
+        Box::new(Tableaux {
+            index,
+            cards,
+            revealed_len,
+            settings,
+            selection: (),
+        })
+    }
+}
+
+impl<'a> Area<'a> for UnselectedTableaux<'a> {
     fn id(&self) -> AreaId {
         AreaId::Tableaux(self.index)
     }
 
-    fn as_stack(&self) -> Stack {
+    fn as_stack<'b>(&'b self) -> Stack<'b> {
         self.as_stack(None)
     }
 }
 
-impl<'a> Area for SelectedTableaux<'a> {
+impl<'a> Area<'a> for SelectedTableaux<'a> {
     fn id(&self) -> AreaId {
         AreaId::Tableaux(self.index)
     }
 
-    fn as_stack(&self) -> Stack {
+    fn as_stack<'b>(&'b self) -> Stack<'b> {
         self.as_stack(Some(self.selection))
     }
 }
 
-impl<'a> UnselectedArea for UnselectedTableaux<'a> {
-    fn select(self: Box<Self>) -> Result<Box<dyn SelectedArea>, Box<dyn UnselectedArea>> {
+impl<'a> UnselectedArea<'a> for UnselectedTableaux<'a> {
+    fn select<'b>(
+        self: Box<Self>,
+    ) -> Result<Box<dyn SelectedArea<'a> + 'b>, Box<dyn UnselectedArea<'a> + 'b>>
+    where
+        'a: 'b,
+    {
         if !self.cards.is_empty() {
             Ok(Box::new(Tableaux {
                 index: self.index,
@@ -109,10 +119,13 @@ impl<'a> UnselectedArea for UnselectedTableaux<'a> {
         }
     }
 
-    fn select_with_held(
-        self: Box<Self>,
+    fn select_with_held<'b>(
+        mut self: Box<Self>,
         mut held: Held,
-    ) -> Result<Box<dyn SelectedArea>, (Box<dyn UnselectedArea>, Held)> {
+    ) -> Result<Box<dyn SelectedArea<'a> + 'b>, (Box<dyn UnselectedArea<'a> + 'b>, Held)>
+    where
+        'a: 'b,
+    {
         if self.id() == held.source || self.accepts_cards(&held.cards) {
             let held_len = held.cards.len();
             self.revealed_len += held_len;
@@ -132,13 +145,19 @@ impl<'a> UnselectedArea for UnselectedTableaux<'a> {
         }
     }
 
-    fn as_area(&self) -> &dyn Area {
+    fn as_area<'b>(&'b self) -> &'b dyn Area<'a>
+    where
+        'a: 'b,
+    {
         self
     }
 }
 
-impl<'a> SelectedArea for SelectedTableaux<'a> {
-    fn deselect(self: Box<Self>) -> (Box<dyn UnselectedArea>, Option<Held>) {
+impl<'a> SelectedArea<'a> for SelectedTableaux<'a> {
+    fn deselect<'b>(mut self: Box<Self>) -> (Box<dyn UnselectedArea<'a> + 'b>, Option<Held>)
+    where
+        'a: 'b,
+    {
         let held = if self.selection.held {
             let cards = self.cards.split_off_bounded(self.selection.len);
             self.revealed_len -= cards.len();
@@ -180,17 +199,20 @@ impl<'a> SelectedArea for SelectedTableaux<'a> {
 
     fn select_less(&mut self) {
         if self.selection.len > 1 {
-            self.selection.len.bounded_sub(1);
+            self.selection.len -= 1;
         }
     }
 
-    fn as_area(&self) -> &dyn Area {
+    fn as_area<'b>(&'b self) -> &'b dyn Area<'a>
+    where
+        'a: 'b,
+    {
         self
     }
 }
 
-fn selection_to_stack_selection(selection: &Selection) -> StackSelection {
-    let &Selection { held, len } = selection;
+fn selection_to_stack_selection(selection: Selection) -> StackSelection {
+    let Selection { held, len } = selection;
 
     if held {
         StackSelection::Stack(len)

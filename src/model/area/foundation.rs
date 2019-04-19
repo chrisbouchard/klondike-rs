@@ -43,16 +43,7 @@ pub type UnselectedFoundation<'a> = Foundation<'a, ()>;
 pub type SelectedFoundation<'a> = Foundation<'a, Selection>;
 
 impl<'a, S> Foundation<'a, S> {
-    pub fn new(index: usize, cards: Vec<Card>, settings: &Settings) -> UnselectedFoundation {
-        Foundation {
-            index,
-            cards,
-            settings,
-            selection: (),
-        }
-    }
-
-    fn accepts_cards(&self, cards: &[Card]) -> bool {
+    fn accepts_cards(&'a self, cards: &[Card]) -> bool {
         // We only accept one card at a time.
         if let [card] = cards {
             if let Some(foundation_card) = self.cards.last() {
@@ -69,7 +60,7 @@ impl<'a, S> Foundation<'a, S> {
         }
     }
 
-    fn as_stack(&self, selection: Option<Selection>) -> Stack {
+    fn as_stack<'b>(&'b self, selection: Option<Selection>) -> Stack<'b> {
         let cards_len = self.cards.len();
 
         Stack {
@@ -85,28 +76,51 @@ impl<'a, S> Foundation<'a, S> {
     }
 }
 
-impl<'a> Area for UnselectedFoundation<'a> {
+impl<'a> UnselectedFoundation<'a> {
+    pub fn new<'b>(
+        index: usize,
+        cards: Vec<Card>,
+        settings: &'a Settings,
+    ) -> Box<dyn UnselectedArea<'a> + 'b>
+    where
+        'a: 'b,
+    {
+        Box::new(Foundation {
+            index,
+            cards,
+            settings,
+            selection: (),
+        })
+    }
+}
+
+impl<'a> Area<'a> for UnselectedFoundation<'a> {
     fn id(&self) -> AreaId {
         AreaId::Foundation(self.index)
     }
 
-    fn as_stack(&self) -> Stack {
+    fn as_stack<'b>(&'b self) -> Stack<'b> {
         return self.as_stack(None);
     }
 }
 
-impl<'a> Area for SelectedFoundation<'a> {
+impl<'a> Area<'a> for SelectedFoundation<'a> {
     fn id(&self) -> AreaId {
         AreaId::Foundation(self.index)
     }
 
-    fn as_stack(&self) -> Stack {
+    fn as_stack<'b>(&'b self) -> Stack<'b> {
         return self.as_stack(Some(self.selection));
     }
 }
 
-impl<'a> UnselectedArea for UnselectedFoundation<'a> {
-    fn select(self: Box<Self>) -> Result<Box<dyn SelectedArea>, Box<dyn UnselectedArea>> {
+impl<'a> UnselectedArea<'a> for UnselectedFoundation<'a> {
+    fn select<'b>(
+        self: Box<Self>,
+    ) -> Result<Box<dyn SelectedArea<'a> + 'b>, Box<dyn UnselectedArea<'a> + 'b>>
+    where
+        'a: 'b,
+    {
         if !self.cards.is_empty() {
             Ok(Box::new(Foundation {
                 index: self.index,
@@ -119,10 +133,13 @@ impl<'a> UnselectedArea for UnselectedFoundation<'a> {
         }
     }
 
-    fn select_with_held(
-        self: Box<Self>,
+    fn select_with_held<'b>(
+        mut self: Box<Self>,
         mut held: Held,
-    ) -> Result<Box<dyn SelectedArea>, (Box<dyn UnselectedArea>, Held)> {
+    ) -> Result<Box<dyn SelectedArea<'a> + 'b>, (Box<dyn UnselectedArea<'a> + 'b>, Held)>
+    where
+        'a: 'b,
+    {
         if self.id() == held.source || self.accepts_cards(&held.cards) {
             self.cards.append(&mut held.cards);
             Ok(Box::new(Foundation {
@@ -136,13 +153,19 @@ impl<'a> UnselectedArea for UnselectedFoundation<'a> {
         }
     }
 
-    fn as_area(&self) -> &dyn Area {
+    fn as_area<'b>(&'b self) -> &'b dyn Area<'a>
+    where
+        'a: 'b,
+    {
         self
     }
 }
 
-impl<'a> SelectedArea for SelectedFoundation<'a> {
-    fn deselect(self: Box<Self>) -> (Box<dyn UnselectedArea>, Option<Held>) {
+impl<'a> SelectedArea<'a> for SelectedFoundation<'a> {
+    fn deselect<'b>(mut self: Box<Self>) -> (Box<dyn UnselectedArea<'a> + 'b>, Option<Held>)
+    where
+        'a: 'b,
+    {
         let held = if self.selection.held {
             // Our selection size is implicitly one, so we split off the last card as a new Vec.
             let cards = self.cards.split_off_bounded(1);
@@ -178,7 +201,10 @@ impl<'a> SelectedArea for SelectedFoundation<'a> {
     fn select_more(&mut self) {}
     fn select_less(&mut self) {}
 
-    fn as_area(&self) -> &dyn Area {
+    fn as_area<'b>(&'b self) -> &'b dyn Area<'a>
+    where
+        'a: 'b,
+    {
         self
     }
 }

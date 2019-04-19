@@ -26,16 +26,7 @@ pub type UnselectedTalon<'a> = Talon<'a, ()>;
 pub type SelectedTalon<'a> = Talon<'a, Selection>;
 
 impl<'a, S> Talon<'a, S> {
-    pub fn new(cards: Vec<Card>, fanned_len: usize, settings: &Settings) -> UnselectedTalon {
-        Talon {
-            cards,
-            fanned_len,
-            settings,
-            selection: (),
-        }
-    }
-
-    fn as_stack(&self, mode: Option<Selection>) -> Stack {
+    fn as_stack<'b>(&'b self, mode: Option<Selection>) -> Stack<'b> {
         let cards_len = self.cards.len();
 
         Stack {
@@ -51,28 +42,51 @@ impl<'a, S> Talon<'a, S> {
     }
 }
 
-impl<'a> Area for UnselectedTalon<'a> {
+impl<'a> UnselectedTalon<'a> {
+    pub fn new<'b>(
+        cards: Vec<Card>,
+        fanned_len: usize,
+        settings: &'a Settings,
+    ) -> Box<dyn UnselectedArea<'a> + 'b>
+    where
+        'a: 'b,
+    {
+        Box::new(Talon {
+            cards,
+            fanned_len,
+            settings,
+            selection: (),
+        })
+    }
+}
+
+impl<'a> Area<'a> for UnselectedTalon<'a> {
     fn id(&self) -> AreaId {
         AreaId::Talon
     }
 
-    fn as_stack(&self) -> Stack {
+    fn as_stack<'b>(&'b self) -> Stack<'b> {
         self.as_stack(None)
     }
 }
 
-impl<'a> Area for SelectedTalon<'a> {
+impl<'a> Area<'a> for SelectedTalon<'a> {
     fn id(&self) -> AreaId {
         AreaId::Talon
     }
 
-    fn as_stack(&self) -> Stack {
+    fn as_stack<'b>(&'b self) -> Stack<'b> {
         self.as_stack(Some(self.selection))
     }
 }
 
-impl<'a> UnselectedArea for UnselectedTalon<'a> {
-    fn select(self: Box<Self>) -> Result<Box<dyn SelectedArea>, Box<dyn UnselectedArea>> {
+impl<'a> UnselectedArea<'a> for UnselectedTalon<'a> {
+    fn select<'b>(
+        self: Box<Self>,
+    ) -> Result<Box<dyn SelectedArea<'a> + 'b>, Box<dyn UnselectedArea<'a> + 'b>>
+    where
+        'a: 'b,
+    {
         if !self.cards.is_empty() {
             Ok(Box::new(Talon {
                 cards: self.cards,
@@ -85,10 +99,13 @@ impl<'a> UnselectedArea for UnselectedTalon<'a> {
         }
     }
 
-    fn select_with_held(
-        self: Box<Self>,
+    fn select_with_held<'b>(
+        mut self: Box<Self>,
         mut held: Held,
-    ) -> Result<Box<dyn SelectedArea>, (Box<dyn UnselectedArea>, Held)> {
+    ) -> Result<Box<dyn SelectedArea<'a> + 'b>, (Box<dyn UnselectedArea<'a> + 'b>, Held)>
+    where
+        'a: 'b,
+    {
         if self.id() == held.source {
             self.fanned_len += held.cards.len();
             self.cards.append(&mut held.cards);
@@ -103,13 +120,19 @@ impl<'a> UnselectedArea for UnselectedTalon<'a> {
         }
     }
 
-    fn as_area(&self) -> &dyn Area {
+    fn as_area<'b>(&'b self) -> &'b dyn Area<'a>
+    where
+        'a: 'b,
+    {
         self
     }
 }
 
-impl<'a> SelectedArea for SelectedTalon<'a> {
-    fn deselect(self: Box<Self>) -> (Box<dyn UnselectedArea>, Option<Held>) {
+impl<'a> SelectedArea<'a> for SelectedTalon<'a> {
+    fn deselect<'b>(mut self: Box<Self>) -> (Box<dyn UnselectedArea<'a> + 'b>, Option<Held>)
+    where
+        'a: 'b,
+    {
         let held = if self.selection.held {
             let cards = self.cards.split_off_bounded(1);
             self.fanned_len -= 1;
@@ -140,7 +163,10 @@ impl<'a> SelectedArea for SelectedTalon<'a> {
     fn select_more(&mut self) {}
     fn select_less(&mut self) {}
 
-    fn as_area(&self) -> &dyn Area {
+    fn as_area<'b>(&'b self) -> &'b dyn Area<'a>
+    where
+        'a: 'b,
+    {
         self
     }
 }

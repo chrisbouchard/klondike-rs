@@ -1,11 +1,8 @@
-use std::iter::once;
-
 use super::{
     area::{
-        area_list::AreaList, foundation::Foundation, stock::Stock, tableaux::Tableaux,
-        talon::Talon, Action, Area, AreaId,
+        area_list::AreaList, foundation::UnselectedFoundation, stock::UnselectedStock,
+        tableaux::UnselectedTableaux, talon::UnselectedTalon, AreaId,
     },
-    card::Card,
     deck::Deck,
     settings::Settings,
     stack::Stack,
@@ -20,65 +17,71 @@ pub struct Game<'a> {
 
 impl<'a> Game<'a> {
     pub fn new<'d>(deck: &'d mut Deck, settings: &'a Settings) -> Game<'a> {
-        let tableaux = settings.tableaux_indices().map(|index| {
+        let mut tableaux = settings.tableaux_indices().map(|index| {
             let cards = deck.deal(index + 1);
-            Box::new(Tableaux::new(index, index, cards, settings)) as Box<dyn UnselectedArea>
-        });
-
-        let talon = Box::new(Talon::new(Vec::new(), 0, settings));
-
-        let foundation = settings.foundation_indices().map(|index| {
-            Box::new(Foundation::new(index, Vec::new(), settings)) as Box<dyn UnselectedArea>
-        });
+            UnselectedTableaux::new(index, index, cards, settings)
+        }).collect::<Vec<_>>();
 
         let stock_cards = deck.deal_rest();
-        let stock = Box::new(Stock::new(stock_cards, settings));
+        let stock = UnselectedStock::new(stock_cards, settings);
+
+        let talon = UnselectedTalon::new(vec![], 0, settings);
+
+        let mut foundation = settings
+            .foundation_indices()
+            .map(|index| UnselectedFoundation::new(index, vec![], settings))
+            .collect::<Vec<_>>();
 
         let mut areas: Vec<Box<dyn UnselectedArea>> = vec![stock, talon];
-        areas.extend(foundation);
-        areas.extend(tableaux);
+        areas.append(&mut foundation);
+        areas.append(&mut tableaux);
 
         let areas = AreaList::new(areas);
 
         Game { areas, settings }
     }
 
-    pub fn stack(&self, area_id: AreaId) -> Stack {
+    pub fn stack<'b>(&'b self, area_id: AreaId) -> Stack<'b> {
         self.areas.get_by_area_id(area_id).as_stack()
     }
 
-    pub fn move_to(mut self, area_id: AreaId) -> Game<'a> {
-        let moves = once(area_id);
-        self.make_first_valid_move(moves);
-
-        self
+    pub fn move_to(self, area_id: AreaId) -> Game<'a> {
+        let moves = vec![area_id];
+        self.make_first_valid_move(moves)
     }
 
-    pub fn move_to_foundation(mut self) -> Game<'a> {
+    pub fn move_to_foundation(self) -> Game<'a> {
         let moves = self.settings.foundation_indices().map(AreaId::Foundation);
-        self.make_first_valid_move(moves);
-
-        self
+        self.make_first_valid_move(moves)
     }
 
-    pub fn move_left(mut self) -> Game<'a> {
+    pub fn move_left(self) -> Game<'a> {
         // Skip the first (selected) area id, then iterate the remainder in reverse order (right-to-
         // left).
-        let moves = self.areas.area_ids_selected_first().skip(1).rev();
-        self.make_first_valid_move(moves);
+        let moves = self
+            .areas
+            .iter_from_selected()
+            .skip(1)
+            .rev()
+            .map(|area| area.id())
+            .collect::<Vec<_>>();
 
-        self
+        self.make_first_valid_move(moves)
     }
 
-    pub fn move_right(mut self) -> Game<'a> {
+    pub fn move_right(self) -> Game<'a> {
         // Skip the first (selected) area id.
-        let moves = self.areas.area_ids_selected_first().skip(1);
-        self.make_first_valid_move(moves);
+        let moves = self
+            .areas
+            .iter_from_selected()
+            .skip(1)
+            .map(|area| area.id())
+            .collect::<Vec<_>>();
 
-        self
+        self.make_first_valid_move(moves)
     }
 
-    pub fn move_up(mut self) -> Game<'a> {
+    pub fn move_up(self) -> Game<'a> {
         // if let SelectionMode::Cards(len) = self.selection.mode {
         //     let mode = SelectionMode::Cards(len + 1);
         //     let moves_iter = once(self.selection.target);
@@ -91,7 +94,7 @@ impl<'a> Game<'a> {
         self
     }
 
-    pub fn move_down(mut self) -> Game<'a> {
+    pub fn move_down(self) -> Game<'a> {
         // if let SelectionMode::Cards(len) = self.selection.mode {
         //     if len > 1 {
         //         let mode = SelectionMode::Cards(len - 1);
@@ -106,19 +109,25 @@ impl<'a> Game<'a> {
         self
     }
 
-    fn make_first_valid_move<I>(&mut self, mut moves: I)
+    fn make_first_valid_move<I>(mut self, moves: I) -> Self
     where
         I: IntoIterator<Item = AreaId>,
     {
         for area_id in moves {
             debug!("Attempting to move selection to {:?}", area_id);
-            if self.areas.move_selection(area_id) {
+
+            let (areas, success) = self.areas.move_selection(area_id);
+            self.areas = areas;
+
+            if success {
                 break;
             }
         }
+
+        self
     }
 
-    pub fn activate(mut self) -> Game<'a> {
+    pub fn activate(self) -> Game<'a> {
         // let selected_area = self.areas.area_mut(self.selection.target);
 
         // match selected_area.activate(&mut self.selection.mode) {
@@ -135,5 +144,7 @@ impl<'a> Game<'a> {
         //     }
         //     None => self,
         // }
+
+        self
     }
 }
