@@ -11,7 +11,7 @@ use super::{Action, Area, AreaId, Held, SelectedArea, UnselectedArea};
 
 #[derive(Copy, Clone, Debug)]
 pub struct Selection {
-    held: bool,
+    held_from: Option<AreaId>,
 }
 
 #[derive(Debug)]
@@ -40,14 +40,11 @@ impl<'a, S> Talon<'a, S> {
         }
     }
 
-    fn take_cards(&mut self, len: usize) -> Held {
+    fn take_cards(&mut self, len: usize, source: AreaId) -> Held {
         let cards = self.cards.split_off_bounded(len);
         self.fanned_len = self.fanned_len.bounded_sub(len);
 
-        Held {
-            source: AreaId::Talon,
-            cards,
-        }
+        Held { source, cards }
     }
 
     fn as_stack(&self, mode: Option<Selection>) -> Stack {
@@ -103,11 +100,11 @@ impl<'a> Area<'a> for UnselectedTalon<'a> {
     }
 
     fn take_cards(&mut self, len: usize) -> Held {
-        Talon::take_cards(self, len)
+        self.take_cards(len, self.id())
     }
 
     fn take_all_cards(&mut self) -> Held {
-        Talon::take_cards(self, self.cards.len())
+        self.take_cards(self.cards.len(), self.id())
     }
 
     fn as_stack(&self) -> Stack {
@@ -121,18 +118,18 @@ impl<'a> Area<'a> for SelectedTalon<'a> {
     }
 
     fn give_cards(&mut self, held: Held) -> Result<(), Held> {
-        self.selection.held = false;
+        self.selection.held_from = None;
         Talon::give_cards(self, held)
     }
 
     fn take_cards(&mut self, len: usize) -> Held {
-        self.selection.held = false;
-        Talon::take_cards(self, len)
+        let source = self.selection.held_from.take().unwrap_or_else(|| self.id());
+        self.take_cards(len, source)
     }
 
     fn take_all_cards(&mut self) -> Held {
-        self.selection.held = false;
-        Talon::take_cards(self, self.cards.len())
+        let source = self.selection.held_from.take().unwrap_or_else(|| self.id());
+        self.take_cards(self.cards.len(), source)
     }
 
     fn as_stack(&self) -> Stack {
@@ -148,7 +145,7 @@ impl<'a> UnselectedArea<'a> for UnselectedTalon<'a> {
         'a: 'b,
     {
         if !self.cards.is_empty() {
-            Ok(Box::new(self.with_selection(Selection { held: false })))
+            Ok(Box::new(self.with_selection(Selection { held_from: None })))
         } else {
             Err(self)
         }
@@ -161,8 +158,12 @@ impl<'a> UnselectedArea<'a> for UnselectedTalon<'a> {
     where
         'a: 'b,
     {
+        let source = held.source;
+
         match self.give_cards(held) {
-            Ok(()) => Ok(Box::new(self.with_selection(Selection { held: true }))),
+            Ok(()) => Ok(Box::new(self.with_selection(Selection {
+                held_from: Some(source),
+            }))),
             Err(held) => Err((self, held)),
         }
     }
@@ -187,8 +188,8 @@ impl<'a> SelectedArea<'a> for SelectedTalon<'a> {
     where
         'a: 'b,
     {
-        let held = if self.selection.held {
-            Some(self.take_cards(1))
+        let held = if let Some(source) = self.selection.held_from {
+            Some(self.take_cards(1, source))
         } else {
             None
         };
@@ -199,7 +200,12 @@ impl<'a> SelectedArea<'a> for SelectedTalon<'a> {
     }
 
     fn activate(&mut self) -> Option<Action> {
-        self.selection.held = !self.selection.held;
+        if self.selection.held_from.is_some() {
+            self.selection.held_from = None;
+        } else {
+            self.selection.held_from = Some(self.id());
+        }
+
         None
     }
 

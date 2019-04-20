@@ -11,7 +11,7 @@ use super::{Action, Area, AreaId, Held, SelectedArea, UnselectedArea};
 
 #[derive(Copy, Clone, Debug)]
 pub struct Selection {
-    held: bool,
+    held_from: Option<AreaId>,
     len: usize,
 }
 
@@ -60,14 +60,11 @@ impl<'a, S> Tableaux<'a, S> {
         }
     }
 
-    fn take_cards(&mut self, len: usize) -> Held {
+    fn take_cards(&mut self, len: usize, source: AreaId) -> Held {
         let cards = self.cards.split_off_bounded(len);
         self.revealed_len -= cards.len();
 
-        Held {
-            source: self.id(),
-            cards,
-        }
+        Held { source, cards }
     }
 
     fn as_stack(&self, mode: Option<Selection>) -> Stack {
@@ -124,11 +121,11 @@ impl<'a> Area<'a> for UnselectedTableaux<'a> {
     }
 
     fn take_cards(&mut self, len: usize) -> Held {
-        Tableaux::take_cards(self, len)
+        self.take_cards(len, self.id())
     }
 
     fn take_all_cards(&mut self) -> Held {
-        Tableaux::take_cards(self, self.cards.len())
+        self.take_cards(self.cards.len(), self.id())
     }
 
     fn as_stack(&self) -> Stack {
@@ -142,27 +139,24 @@ impl<'a> Area<'a> for SelectedTableaux<'a> {
     }
 
     fn give_cards(&mut self, held: Held) -> Result<(), Held> {
-        self.selection = Selection {
-            held: false,
-            len: 1,
-        };
+        self.selection.held_from = None;
+        self.selection.len = 1;
+
         Tableaux::give_cards(self, held)
     }
 
     fn take_cards(&mut self, len: usize) -> Held {
-        self.selection = Selection {
-            held: false,
-            len: 1,
-        };
-        Tableaux::take_cards(self, len)
+        let source = self.selection.held_from.take().unwrap_or_else(|| self.id());
+        self.selection.len = 1;
+
+        self.take_cards(len, source)
     }
 
     fn take_all_cards(&mut self) -> Held {
-        self.selection = Selection {
-            held: false,
-            len: 1,
-        };
-        Tableaux::take_cards(self, self.cards.len())
+        let source = self.selection.held_from.take().unwrap_or_else(|| self.id());
+        self.selection.len = 1;
+
+        self.take_cards(self.cards.len(), source)
     }
 
     fn as_stack(&self) -> Stack {
@@ -179,7 +173,7 @@ impl<'a> UnselectedArea<'a> for UnselectedTableaux<'a> {
     {
         if !self.cards.is_empty() {
             Ok(Box::new(self.with_selection(Selection {
-                held: false,
+                held_from: None,
                 len: 1,
             })))
         } else {
@@ -194,12 +188,13 @@ impl<'a> UnselectedArea<'a> for UnselectedTableaux<'a> {
     where
         'a: 'b,
     {
-        let held_len = held.cards.len();
+        let source = held.source;
+        let len = held.cards.len();
 
         match self.give_cards(held) {
             Ok(()) => Ok(Box::new(self.with_selection(Selection {
-                held: true,
-                len: held_len,
+                held_from: Some(source),
+                len,
             }))),
             Err(held) => Err((self, held)),
         }
@@ -225,8 +220,8 @@ impl<'a> SelectedArea<'a> for SelectedTableaux<'a> {
     where
         'a: 'b,
     {
-        let held = if self.selection.held {
-            Some(self.take_cards(self.selection.len))
+        let held = if let Some(source) = self.selection.held_from {
+            Some(self.take_cards(self.selection.len, source))
         } else {
             None
         };
@@ -238,8 +233,12 @@ impl<'a> SelectedArea<'a> for SelectedTableaux<'a> {
 
     fn activate(&mut self) -> Option<Action> {
         if self.revealed_len > 0 {
-            self.selection.held = !self.selection.held;
-        } else {
+            if self.selection.held_from.is_some() {
+                self.selection.held_from = None;
+            } else {
+                self.selection.held_from = Some(self.id());
+            }
+        } else if !self.cards.is_empty() {
             self.revealed_len += 1;
         }
 
@@ -274,9 +273,9 @@ impl<'a> SelectedArea<'a> for SelectedTableaux<'a> {
 }
 
 fn selection_to_stack_selection(selection: Selection) -> StackSelection {
-    let Selection { held, len } = selection;
+    let len = selection.len;
 
-    if held {
+    if selection.held_from.is_some() {
         StackSelection::Stack(len)
     } else {
         StackSelection::Cards(len)
