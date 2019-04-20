@@ -1,7 +1,10 @@
-use crate::model::{
-    card::Card,
-    settings::Settings,
-    stack::{Stack, StackDetails, StackSelection},
+use crate::{
+    model::{
+        card::Card,
+        settings::Settings,
+        stack::{Stack, StackDetails, StackSelection},
+    },
+    utils::vec::SplitOffBounded,
 };
 
 use super::{Action, Area, AreaId, Held, SelectedArea, UnselectedArea};
@@ -20,6 +23,24 @@ pub type UnselectedStock<'a> = Stock<'a, ()>;
 pub type SelectedStock<'a> = Stock<'a, Selection>;
 
 impl<'a, S> Stock<'a, S> {
+    fn give_cards(&mut self, mut held: Held) -> Result<(), Held> {
+        if held.source == AreaId::Stock || held.source == AreaId::Talon {
+            self.cards.append(&mut held.cards);
+            Ok(())
+        } else {
+            Err(held)
+        }
+    }
+
+    fn take_cards(&mut self, len: usize) -> Held {
+        let cards = self.cards.split_off_bounded(len);
+
+        Held {
+            source: AreaId::Stock,
+            cards,
+        }
+    }
+
     fn as_stack(&self, mode: Option<Selection>) -> Stack {
         Stack {
             cards: &self.cards,
@@ -30,6 +51,14 @@ impl<'a, S> Stock<'a, S> {
                 spread_len: 1,
                 selection: mode.map(|_| StackSelection::Cards(1)),
             },
+        }
+    }
+
+    fn with_selection<T>(self, selection: T) -> Stock<'a, T> {
+        Stock {
+            cards: self.cards,
+            settings: self.settings,
+            selection,
         }
     }
 }
@@ -52,6 +81,18 @@ impl<'a> Area<'a> for UnselectedStock<'a> {
         AreaId::Stock
     }
 
+    fn give_cards(&mut self, held: Held) -> Result<(), Held> {
+        Stock::give_cards(self, held)
+    }
+
+    fn take_cards(&mut self, len: usize) -> Held {
+        Stock::take_cards(self, len)
+    }
+
+    fn take_all_cards(&mut self) -> Held {
+        Stock::take_cards(self, self.cards.len())
+    }
+
     fn as_stack(&self) -> Stack {
         self.as_stack(None)
     }
@@ -60,6 +101,18 @@ impl<'a> Area<'a> for UnselectedStock<'a> {
 impl<'a> Area<'a> for SelectedStock<'a> {
     fn id(&self) -> AreaId {
         AreaId::Stock
+    }
+
+    fn give_cards(&mut self, held: Held) -> Result<(), Held> {
+        Stock::give_cards(self, held)
+    }
+
+    fn take_cards(&mut self, len: usize) -> Held {
+        Stock::take_cards(self, len)
+    }
+
+    fn take_all_cards(&mut self) -> Held {
+        Stock::take_cards(self, self.cards.len())
     }
 
     fn as_stack(&self) -> Stack {
@@ -74,11 +127,7 @@ impl<'a> UnselectedArea<'a> for UnselectedStock<'a> {
     where
         'a: 'b,
     {
-        Ok(Box::new(Stock {
-            cards: self.cards,
-            settings: self.settings,
-            selection: Selection,
-        }))
+        Ok(Box::new(self.with_selection(Selection)))
     }
 
     fn select_with_held<'b>(
@@ -97,6 +146,13 @@ impl<'a> UnselectedArea<'a> for UnselectedStock<'a> {
     {
         self
     }
+
+    fn as_area_mut<'b>(&'b mut self) -> &'b mut Area<'a>
+    where
+        'a: 'b,
+    {
+        self
+    }
 }
 
 impl<'a> SelectedArea<'a> for SelectedStock<'a> {
@@ -104,28 +160,15 @@ impl<'a> SelectedArea<'a> for SelectedStock<'a> {
     where
         'a: 'b,
     {
-        let unselected = Box::new(Stock {
-            cards: self.cards,
-            settings: self.settings,
-            selection: (),
-        });
-
+        let unselected = Box::new(self.with_selection(()));
         (unselected, None)
     }
 
     fn activate(&mut self) -> Option<Action> {
         if self.cards.is_empty() {
-            Some(Action::SendTo {
-                area: AreaId::Talon,
-                held: Held {
-                    source: self.id(),
-                    cards: vec![], // TODO: Take from the stock's cards
-                },
-            })
+            Some(Action::Restock)
         } else {
-            Some(Action::TakeFrom {
-                area: AreaId::Talon,
-            })
+            Some(Action::Draw(self.settings.draw_from_stock_len))
         }
     }
 
@@ -133,6 +176,13 @@ impl<'a> SelectedArea<'a> for SelectedStock<'a> {
     fn select_less(&mut self) {}
 
     fn as_area<'b>(&'b self) -> &'b dyn Area<'a>
+    where
+        'a: 'b,
+    {
+        self
+    }
+
+    fn as_area_mut<'b>(&'b mut self) -> &'b mut Area<'a>
     where
         'a: 'b,
     {

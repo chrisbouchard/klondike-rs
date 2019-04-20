@@ -43,9 +43,16 @@ pub type UnselectedFoundation<'a> = Foundation<'a, ()>;
 pub type SelectedFoundation<'a> = Foundation<'a, Selection>;
 
 impl<'a, S> Foundation<'a, S> {
-    fn accepts_cards(&'a self, cards: &[Card]) -> bool {
+    fn id(&self) -> AreaId {
+        AreaId::Foundation(self.index)
+    }
+
+    fn accepts_cards(&self, held: &Held) -> bool {
+        if held.source == self.id() {
+            true
+        }
         // We only accept one card at a time.
-        if let [card] = cards {
+        else if let [card] = held.cards.as_slice() {
             if let Some(foundation_card) = self.cards.last() {
                 // If there are already cards in this foundation, only accept the next card in
                 // sequence.
@@ -57,6 +64,24 @@ impl<'a, S> Foundation<'a, S> {
         } else {
             // Reject too many or too few cards.
             false
+        }
+    }
+
+    fn give_cards(&mut self, mut held: Held) -> Result<(), Held> {
+        if self.accepts_cards(&held) {
+            self.cards.append(&mut held.cards);
+            Ok(())
+        } else {
+            Err(held)
+        }
+    }
+
+    fn take_cards(&mut self, len: usize) -> Held {
+        let cards = self.cards.split_off_bounded(len);
+
+        Held {
+            source: self.id(),
+            cards,
         }
     }
 
@@ -72,6 +97,15 @@ impl<'a, S> Foundation<'a, S> {
                 spread_len: 1,
                 selection: selection.map(|_| StackSelection::Cards(1)),
             },
+        }
+    }
+
+    fn with_selection<T>(self, selection: T) -> Foundation<'a, T> {
+        Foundation {
+            index: self.index,
+            cards: self.cards,
+            settings: self.settings,
+            selection,
         }
     }
 }
@@ -96,7 +130,19 @@ impl<'a> UnselectedFoundation<'a> {
 
 impl<'a> Area<'a> for UnselectedFoundation<'a> {
     fn id(&self) -> AreaId {
-        AreaId::Foundation(self.index)
+        Foundation::id(self)
+    }
+
+    fn give_cards(&mut self, held: Held) -> Result<(), Held> {
+        Foundation::give_cards(self, held)
+    }
+
+    fn take_cards(&mut self, len: usize) -> Held {
+        Foundation::take_cards(self, len)
+    }
+
+    fn take_all_cards(&mut self) -> Held {
+        Foundation::take_cards(self, self.cards.len())
     }
 
     fn as_stack(&self) -> Stack {
@@ -106,7 +152,22 @@ impl<'a> Area<'a> for UnselectedFoundation<'a> {
 
 impl<'a> Area<'a> for SelectedFoundation<'a> {
     fn id(&self) -> AreaId {
-        AreaId::Foundation(self.index)
+        Foundation::id(self)
+    }
+
+    fn give_cards(&mut self, held: Held) -> Result<(), Held> {
+        self.selection.held = false;
+        Foundation::give_cards(self, held)
+    }
+
+    fn take_cards(&mut self, len: usize) -> Held {
+        self.selection.held = false;
+        Foundation::take_cards(self, len)
+    }
+
+    fn take_all_cards(&mut self) -> Held {
+        self.selection.held = false;
+        Foundation::take_cards(self, self.cards.len())
     }
 
     fn as_stack(&self) -> Stack {
@@ -122,12 +183,7 @@ impl<'a> UnselectedArea<'a> for UnselectedFoundation<'a> {
         'a: 'b,
     {
         if !self.cards.is_empty() {
-            Ok(Box::new(Foundation {
-                index: self.index,
-                cards: self.cards,
-                settings: self.settings,
-                selection: Selection { held: false },
-            }))
+            Ok(Box::new(self.with_selection(Selection { held: false })))
         } else {
             Err(self)
         }
@@ -135,25 +191,25 @@ impl<'a> UnselectedArea<'a> for UnselectedFoundation<'a> {
 
     fn select_with_held<'b>(
         mut self: Box<Self>,
-        mut held: Held,
+        held: Held,
     ) -> Result<Box<dyn SelectedArea<'a> + 'b>, (Box<dyn UnselectedArea<'a> + 'b>, Held)>
     where
         'a: 'b,
     {
-        if self.id() == held.source || self.accepts_cards(&held.cards) {
-            self.cards.append(&mut held.cards);
-            Ok(Box::new(Foundation {
-                index: self.index,
-                cards: self.cards,
-                settings: self.settings,
-                selection: Selection { held: true },
-            }))
-        } else {
-            Err((self, held))
+        match self.give_cards(held) {
+            Ok(()) => Ok(Box::new(self.with_selection(Selection { held: true }))),
+            Err(held) => Err((self, held)),
         }
     }
 
     fn as_area<'b>(&'b self) -> &'b dyn Area<'a>
+    where
+        'a: 'b,
+    {
+        self
+    }
+
+    fn as_area_mut<'b>(&'b mut self) -> &'b mut Area<'a>
     where
         'a: 'b,
     {
@@ -167,23 +223,13 @@ impl<'a> SelectedArea<'a> for SelectedFoundation<'a> {
         'a: 'b,
     {
         let held = if self.selection.held {
-            // Our selection size is implicitly one, so we split off the last card as a new Vec.
-            let cards = self.cards.split_off_bounded(1);
-
-            Some(Held {
-                source: self.id(),
-                cards,
-            })
+            // Our selection size is implicitly one
+            Some(self.take_cards(1))
         } else {
             None
         };
 
-        let unselected = Box::new(Foundation {
-            index: self.index,
-            cards: self.cards,
-            settings: self.settings,
-            selection: (),
-        });
+        let unselected = Box::new(self.with_selection(()));
 
         (unselected, held)
     }
@@ -202,6 +248,13 @@ impl<'a> SelectedArea<'a> for SelectedFoundation<'a> {
     fn select_less(&mut self) {}
 
     fn as_area<'b>(&'b self) -> &'b dyn Area<'a>
+    where
+        'a: 'b,
+    {
+        self
+    }
+
+    fn as_area_mut<'b>(&'b mut self) -> &'b mut Area<'a>
     where
         'a: 'b,
     {

@@ -4,7 +4,7 @@ use crate::{
         settings::Settings,
         stack::{Stack, StackDetails, StackSelection},
     },
-    utils::vec::SplitOffBounded,
+    utils::{usize::BoundedSub, vec::SplitOffBounded},
 };
 
 use super::{Action, Area, AreaId, Held, SelectedArea, UnselectedArea};
@@ -26,6 +26,30 @@ pub type UnselectedTalon<'a> = Talon<'a, ()>;
 pub type SelectedTalon<'a> = Talon<'a, Selection>;
 
 impl<'a, S> Talon<'a, S> {
+    fn give_cards(&mut self, mut held: Held) -> Result<(), Held> {
+        if held.source == AreaId::Talon {
+            self.fanned_len += held.cards.len();
+            self.cards.append(&mut held.cards);
+            Ok(())
+        } else if held.source == AreaId::Stock {
+            self.fanned_len = held.cards.len();
+            self.cards.append(&mut held.cards);
+            Ok(())
+        } else {
+            Err(held)
+        }
+    }
+
+    fn take_cards(&mut self, len: usize) -> Held {
+        let cards = self.cards.split_off_bounded(len);
+        self.fanned_len = self.fanned_len.bounded_sub(len);
+
+        Held {
+            source: AreaId::Talon,
+            cards,
+        }
+    }
+
     fn as_stack(&self, mode: Option<Selection>) -> Stack {
         let cards_len = self.cards.len();
 
@@ -38,6 +62,15 @@ impl<'a, S> Talon<'a, S> {
                 spread_len: self.fanned_len,
                 selection: mode.map(|_| StackSelection::Cards(1)),
             },
+        }
+    }
+
+    fn with_selection<T>(self, selection: T) -> Talon<'a, T> {
+        Talon {
+            cards: self.cards,
+            fanned_len: self.fanned_len,
+            settings: self.settings,
+            selection,
         }
     }
 }
@@ -65,6 +98,18 @@ impl<'a> Area<'a> for UnselectedTalon<'a> {
         AreaId::Talon
     }
 
+    fn give_cards(&mut self, held: Held) -> Result<(), Held> {
+        Talon::give_cards(self, held)
+    }
+
+    fn take_cards(&mut self, len: usize) -> Held {
+        Talon::take_cards(self, len)
+    }
+
+    fn take_all_cards(&mut self) -> Held {
+        Talon::take_cards(self, self.cards.len())
+    }
+
     fn as_stack(&self) -> Stack {
         self.as_stack(None)
     }
@@ -73,6 +118,21 @@ impl<'a> Area<'a> for UnselectedTalon<'a> {
 impl<'a> Area<'a> for SelectedTalon<'a> {
     fn id(&self) -> AreaId {
         AreaId::Talon
+    }
+
+    fn give_cards(&mut self, held: Held) -> Result<(), Held> {
+        self.selection.held = false;
+        Talon::give_cards(self, held)
+    }
+
+    fn take_cards(&mut self, len: usize) -> Held {
+        self.selection.held = false;
+        Talon::take_cards(self, len)
+    }
+
+    fn take_all_cards(&mut self) -> Held {
+        self.selection.held = false;
+        Talon::take_cards(self, self.cards.len())
     }
 
     fn as_stack(&self) -> Stack {
@@ -88,12 +148,7 @@ impl<'a> UnselectedArea<'a> for UnselectedTalon<'a> {
         'a: 'b,
     {
         if !self.cards.is_empty() {
-            Ok(Box::new(Talon {
-                cards: self.cards,
-                fanned_len: self.fanned_len,
-                settings: self.settings,
-                selection: Selection { held: false },
-            }))
+            Ok(Box::new(self.with_selection(Selection { held: false })))
         } else {
             Err(self)
         }
@@ -101,26 +156,25 @@ impl<'a> UnselectedArea<'a> for UnselectedTalon<'a> {
 
     fn select_with_held<'b>(
         mut self: Box<Self>,
-        mut held: Held,
+        held: Held,
     ) -> Result<Box<dyn SelectedArea<'a> + 'b>, (Box<dyn UnselectedArea<'a> + 'b>, Held)>
     where
         'a: 'b,
     {
-        if self.id() == held.source {
-            self.fanned_len += held.cards.len();
-            self.cards.append(&mut held.cards);
-            Ok(Box::new(Talon {
-                cards: self.cards,
-                fanned_len: self.fanned_len,
-                settings: self.settings,
-                selection: Selection { held: true },
-            }))
-        } else {
-            Err((self, held))
+        match self.give_cards(held) {
+            Ok(()) => Ok(Box::new(self.with_selection(Selection { held: true }))),
+            Err(held) => Err((self, held)),
         }
     }
 
     fn as_area<'b>(&'b self) -> &'b dyn Area<'a>
+    where
+        'a: 'b,
+    {
+        self
+    }
+
+    fn as_area_mut<'b>(&'b mut self) -> &'b mut Area<'a>
     where
         'a: 'b,
     {
@@ -134,23 +188,12 @@ impl<'a> SelectedArea<'a> for SelectedTalon<'a> {
         'a: 'b,
     {
         let held = if self.selection.held {
-            let cards = self.cards.split_off_bounded(1);
-            self.fanned_len -= 1;
-
-            Some(Held {
-                source: self.id(),
-                cards,
-            })
+            Some(self.take_cards(1))
         } else {
             None
         };
 
-        let unselected = Box::new(Talon {
-            cards: self.cards,
-            fanned_len: self.fanned_len,
-            settings: self.settings,
-            selection: (),
-        });
+        let unselected = Box::new(self.with_selection(()));
 
         (unselected, held)
     }
@@ -164,6 +207,13 @@ impl<'a> SelectedArea<'a> for SelectedTalon<'a> {
     fn select_less(&mut self) {}
 
     fn as_area<'b>(&'b self) -> &'b dyn Area<'a>
+    where
+        'a: 'b,
+    {
+        self
+    }
+
+    fn as_area_mut<'b>(&'b mut self) -> &'b mut Area<'a>
     where
         'a: 'b,
     {

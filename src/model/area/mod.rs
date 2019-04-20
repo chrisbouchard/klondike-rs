@@ -22,12 +22,17 @@ pub struct Held {
 
 #[derive(Debug)]
 pub enum Action {
-    SendTo { area: AreaId, held: Held },
-    TakeFrom { area: AreaId },
+    Draw(usize),
+    Restock,
 }
 
 pub trait Area<'a> {
     fn id(&self) -> AreaId;
+
+    fn give_cards(&mut self, held: Held) -> Result<(), Held>;
+    fn take_cards(&mut self, len: usize) -> Held;
+    fn take_all_cards(&mut self) -> Held;
+
     fn as_stack(&self) -> Stack;
 }
 
@@ -47,6 +52,10 @@ pub trait UnselectedArea<'a>: Area<'a> {
     fn as_area<'b>(&'b self) -> &'b dyn Area<'a>
     where
         'a: 'b;
+
+    fn as_area_mut<'b>(&'b mut self) -> &'b mut dyn Area<'a>
+    where
+        'a: 'b;
 }
 
 pub trait SelectedArea<'a>: Area<'a> {
@@ -59,6 +68,10 @@ pub trait SelectedArea<'a>: Area<'a> {
     fn select_less(&mut self);
 
     fn as_area<'b>(&'b self) -> &'b dyn Area<'a>
+    where
+        'a: 'b;
+
+    fn as_area_mut<'b>(&'b mut self) -> &'b mut dyn Area<'a>
     where
         'a: 'b;
 }

@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 use std::fmt;
 
-use super::{move_selection, Area, AreaId, SelectedArea, UnselectedArea};
+use super::{move_selection, Action, Area, AreaId, SelectedArea, UnselectedArea};
 use crate::utils::vec::SplitOffAround;
+use std::iter::once;
 
 /// A list of [areas](Area) with one [selected](SelectedArea) and the rest
 /// [unselected](UnselectedArea) that can efficiently move the selection and map [area ids](AreaId)
@@ -84,9 +85,30 @@ impl<'a> AreaList<'a> {
         } else if index < selected_index {
             self.before_areas[index].as_area()
         } else {
+            debug!(
+                "index: {:?}, selected_index: {:?}, self: {:?}",
+                index, selected_index, self
+            );
+            let effective_index = index - selected_index - 1;
             // Since after_areas is reversed, we have to get an index "from the end".
-            let actual_index = self.after_areas.len() - index - 1;
+            let actual_index = self.after_areas.len() - effective_index - 1;
             self.after_areas[actual_index].as_area()
+        }
+    }
+
+    pub fn get_by_index_mut(&mut self, index: usize) -> &mut dyn Area<'a> {
+        let selected_area_id = self.selected_area.id();
+        let selected_index = self.get_index(selected_area_id);
+
+        if index == selected_index {
+            self.selected_area.as_area_mut()
+        } else if index < selected_index {
+            self.before_areas[index].as_area_mut()
+        } else {
+            let effective_index = index - selected_index - 1;
+            // Since after_areas is reversed, we have to get an index "from the end".
+            let actual_index = self.after_areas.len() - effective_index - 1;
+            self.after_areas[actual_index].as_area_mut()
         }
     }
 
@@ -95,20 +117,53 @@ impl<'a> AreaList<'a> {
         self.get_by_index(index)
     }
 
-    pub fn iter<'b>(&'b self) -> Iter<'a, 'b>
-    where
-        'a: 'b,
-    {
-        Iter::new(self)
+    pub fn get_by_area_id_mut(&mut self, area_id: AreaId) -> &mut dyn Area<'a> {
+        let index = self.get_index(area_id);
+        self.get_by_index_mut(index)
     }
 
-    pub fn iter_from_selected<'b>(&'b self) -> Iter<'a, 'b>
+    pub fn selected(&self) -> &dyn SelectedArea<'a> {
+        self.selected_area.as_ref()
+    }
+
+    pub fn selected_mut(&mut self) -> &mut dyn SelectedArea<'a> {
+        self.selected_area.as_mut()
+    }
+
+    pub fn iter<'b>(&'b self) -> impl Iterator<Item = &'b Area<'a>>
     where
         'a: 'b,
     {
-        let selected_area_id = self.selected_area.id();
-        let selected_index = self.get_index(selected_area_id);
-        Iter::new_at_index(self, selected_index)
+        let before_iter = self.before_areas.iter().map(|area| area.as_area());
+        let after_iter = self.after_areas.iter().map(|area| area.as_area()).rev();
+
+        before_iter
+            .chain(once(self.selected_area.as_area()))
+            .chain(after_iter)
+    }
+
+    pub fn iter_left_from_selection<'b>(&'b self) -> impl Iterator<Item = &'b Area<'a>>
+    where
+        'a: 'b,
+    {
+        let before_iter = self.before_areas.iter().map(|area| area.as_area()).rev();
+        let after_iter = self.after_areas.iter().map(|area| area.as_area());
+
+        before_iter
+            .chain(after_iter)
+            .chain(once(self.selected_area.as_area()))
+    }
+
+    pub fn iter_right_from_selection<'b>(&'b self) -> impl Iterator<Item = &'b Area<'a>>
+    where
+        'a: 'b,
+    {
+        let before_iter = self.before_areas.iter().map(|area| area.as_area());
+        let after_iter = self.after_areas.iter().map(|area| area.as_area()).rev();
+
+        after_iter
+            .chain(before_iter)
+            .chain(once(self.selected_area.as_area()))
     }
 
     pub fn move_selection(mut self, target_area_id: AreaId) -> (Self, bool) {
@@ -169,6 +224,37 @@ impl<'a> AreaList<'a> {
         }
     }
 
+    pub fn activate_selected(mut self) -> Self {
+        if let Some(action) = self.selected_area.activate() {
+            match action {
+                Action::Draw(len) => {
+                    let held = self.get_by_area_id_mut(AreaId::Stock).take_cards(len);
+
+                    match self.get_by_area_id_mut(AreaId::Talon).give_cards(held) {
+                        Ok(()) => {}
+                        Err(held) => self
+                            .get_by_area_id_mut(AreaId::Stock)
+                            .give_cards(held)
+                            .expect("Unable to replace held cards on the stock"),
+                    }
+                }
+                Action::Restock => {
+                    let held = self.get_by_area_id_mut(AreaId::Talon).take_all_cards();
+
+                    match self.get_by_area_id_mut(AreaId::Stock).give_cards(held) {
+                        Ok(()) => {}
+                        Err(held) => self
+                            .get_by_area_id_mut(AreaId::Talon)
+                            .give_cards(held)
+                            .expect("Unable to replace held cards on the talon"),
+                    }
+                }
+            }
+        }
+
+        self
+    }
+
     fn get_index(&self, area_id: AreaId) -> usize {
         *self
             .area_ids
@@ -180,107 +266,26 @@ impl<'a> AreaList<'a> {
 impl<'a> fmt::Debug for AreaList<'a> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         // We don't assume that Areas implement Debug, so we'll just format them as their area ids.
-        let before_areas_formatted = fmt
-            .debug_list()
-            .entries(self.before_areas.iter().map(|area| area.id()))
-            .finish();
-        let after_areas_formatted = fmt
-            .debug_list()
-            .entries(self.after_areas.iter().map(|area| area.id()))
-            .finish();
+        // Clippy 0.0.212 wants to replace the following closures with Area::id, but that is not
+        // valid because our value is &Box<...>, which requires dereferencing.
+        #[allow(clippy::redundant_closure)]
+        let before_area_ids = self
+            .before_areas
+            .iter()
+            .map(|area| area.id())
+            .collect::<Vec<_>>();
+        #[allow(clippy::redundant_closure)]
+        let after_area_ids = self
+            .after_areas
+            .iter()
+            .map(|area| area.id())
+            .collect::<Vec<_>>();
 
         fmt.debug_struct("AreaList")
             .field("area_ids", &self.area_ids)
-            .field("before_areas", &before_areas_formatted)
+            .field("before_areas", &before_area_ids)
             .field("selected_area", &self.selected_area.id())
-            .field("after_areas", &after_areas_formatted)
+            .field("after_areas", &after_area_ids)
             .finish()
     }
 }
-
-#[derive(Debug)]
-pub struct Iter<'a, 'b> {
-    len: usize,
-    forward_index: usize,
-    reverse_index: usize,
-    visited_count: usize,
-    area_list: &'b AreaList<'a>,
-}
-
-impl<'a, 'b> Iter<'a, 'b>
-where
-    'a: 'b,
-{
-    fn new(area_list: &'b AreaList<'a>) -> Iter<'a, 'b> {
-        Iter::new_at_index(area_list, 0)
-    }
-
-    fn new_at_index(area_list: &'b AreaList<'a>, index: usize) -> Iter<'a, 'b> {
-        let len = area_list.len();
-
-        let reverse_index = if index == 0 { len - 1 } else { index - 1 };
-
-        Iter {
-            len,
-            forward_index: index,
-            reverse_index,
-            visited_count: 0,
-            area_list,
-        }
-    }
-}
-
-impl<'a, 'b> Iterator for Iter<'a, 'b>
-where
-    'a: 'b,
-{
-    type Item = &'b Area<'a>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.visited_count < self.len {
-            let item = self.area_list.get_by_index(self.forward_index);
-
-            self.visited_count += 1;
-
-            if self.forward_index < self.len - 1 {
-                self.forward_index += 1;
-            } else {
-                self.forward_index = 0;
-            }
-
-            Some(item)
-        } else {
-            None
-        }
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        let remaining = self.len - self.visited_count;
-        (remaining, Some(remaining))
-    }
-}
-
-impl<'a, 'b> DoubleEndedIterator for Iter<'a, 'b>
-where
-    'a: 'b,
-{
-    fn next_back(&mut self) -> Option<Self::Item> {
-        if self.visited_count < self.len {
-            let item = self.area_list.get_by_index(self.reverse_index);
-
-            self.visited_count += 1;
-
-            if self.reverse_index > 0 {
-                self.reverse_index -= 1;
-            } else {
-                self.reverse_index = self.len - 1;
-            }
-
-            Some(item)
-        } else {
-            None
-        }
-    }
-}
-
-impl<'a, 'b> ExactSizeIterator for Iter<'a, 'b> where 'a: 'b {}

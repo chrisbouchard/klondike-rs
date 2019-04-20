@@ -21,7 +21,7 @@ impl<'a> Game<'a> {
             .tableaux_indices()
             .map(|index| {
                 let cards = deck.deal(index + 1);
-                UnselectedTableaux::create(index, index, cards, settings)
+                UnselectedTableaux::create(index, 1, cards, settings)
             })
             .collect::<Vec<_>>();
 
@@ -65,9 +65,7 @@ impl<'a> Game<'a> {
         // left).
         let moves = self
             .areas
-            .iter_from_selected()
-            .skip(1)
-            .rev()
+            .iter_left_from_selection()
             .map(Area::id)
             .collect::<Vec<_>>();
 
@@ -78,39 +76,20 @@ impl<'a> Game<'a> {
         // Skip the first (selected) area id.
         let moves = self
             .areas
-            .iter_from_selected()
-            .skip(1)
+            .iter_right_from_selection()
             .map(Area::id)
             .collect::<Vec<_>>();
 
         self.make_first_valid_move(moves)
     }
 
-    pub fn move_up(self) -> Game<'a> {
-        // if let SelectionMode::Cards(len) = self.selection.mode {
-        //     let mode = SelectionMode::Cards(len + 1);
-        //     let moves_iter = once(self.selection.target);
-
-        //     if self.make_first_valid_move(&mode, moves_iter).is_some() {
-        //         self.selection = self.selection.select(mode);
-        //     }
-        // }
-
+    pub fn move_up(mut self) -> Game<'a> {
+        self.areas.selected_mut().select_more();
         self
     }
 
-    pub fn move_down(self) -> Game<'a> {
-        // if let SelectionMode::Cards(len) = self.selection.mode {
-        //     if len > 1 {
-        //         let mode = SelectionMode::Cards(len - 1);
-        //         let moves_iter = once(self.selection.target);
-
-        //         if self.make_first_valid_move(&mode, moves_iter).is_some() {
-        //             self.selection = self.selection.select(mode);
-        //         }
-        //     }
-        // }
-
+    pub fn move_down(mut self) -> Game<'a> {
+        self.areas.selected_mut().select_less();
         self
     }
 
@@ -132,24 +111,8 @@ impl<'a> Game<'a> {
         self
     }
 
-    pub fn activate(self) -> Game<'a> {
-        // let selected_area = self.areas.area_mut(self.selection.target);
-
-        // match selected_area.activate(&mut self.selection.mode) {
-        //     Some(Action::Draw) => {
-        //         let cards = self.areas.stock.draw();
-        //         self.areas.talon.place(cards);
-        //         self
-        //     }
-        //     Some(Action::MoveTo(area_id)) => self.move_to(area_id),
-        //     Some(Action::Restock) => {
-        //         let cards = self.areas.talon.flip();
-        //         self.areas.stock.place(cards);
-        //         self
-        //     }
-        //     None => self,
-        // }
-
+    pub fn activate(mut self) -> Game<'a> {
+        self.areas = self.areas.activate_selected();
         self
     }
 }
