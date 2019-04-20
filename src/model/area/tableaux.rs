@@ -92,15 +92,12 @@ impl<'a, S> Tableaux<'a, S> {
 }
 
 impl<'a> UnselectedTableaux<'a> {
-    pub fn create<'b>(
+    pub fn create(
         index: usize,
         revealed_len: usize,
         cards: Vec<Card>,
         settings: &'a Settings,
-    ) -> Box<dyn UnselectedArea<'a> + 'b>
-    where
-        'a: 'b,
-    {
+    ) -> Box<dyn UnselectedArea<'a> + 'a> {
         Box::new(Tableaux {
             index,
             cards,

@@ -73,14 +73,11 @@ impl<'a, S> Talon<'a, S> {
 }
 
 impl<'a> UnselectedTalon<'a> {
-    pub fn create<'b>(
+    pub fn create(
         cards: Vec<Card>,
         fanned_len: usize,
         settings: &'a Settings,
-    ) -> Box<dyn UnselectedArea<'a> + 'b>
-    where
-        'a: 'b,
-    {
+    ) -> Box<dyn UnselectedArea<'a> + 'a> {
         Box::new(Talon {
             cards,
             fanned_len,

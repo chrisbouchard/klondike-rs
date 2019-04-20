@@ -107,14 +107,11 @@ impl<'a, S> Foundation<'a, S> {
 }
 
 impl<'a> UnselectedFoundation<'a> {
-    pub fn create<'b>(
+    pub fn create(
         index: usize,
         cards: Vec<Card>,
         settings: &'a Settings,
-    ) -> Box<dyn UnselectedArea<'a> + 'b>
-    where
-        'a: 'b,
-    {
+    ) -> Box<dyn UnselectedArea<'a> + 'a> {
         Box::new(Foundation {
             index,
             cards,
