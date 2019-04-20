@@ -193,7 +193,7 @@ impl<'a> UnselectedArea<'a> for UnselectedFoundation<'a> {
         'a: 'b,
     {
         let source = held.source;
-        
+
         match self.give_cards(held) {
             Ok(()) => Ok(Box::new(self.with_selection(Selection {
                 held_from: Some(source),

@@ -130,6 +130,7 @@ impl<'a> AreaList<'a> {
         self.selected_area.as_mut()
     }
 
+    #[allow(clippy::redundant_closure)]
     pub fn iter<'b>(&'b self) -> impl Iterator<Item = &'b Area<'a>>
     where
         'a: 'b,
@@ -142,6 +143,7 @@ impl<'a> AreaList<'a> {
             .chain(after_iter)
     }
 
+    #[allow(clippy::redundant_closure)]
     pub fn iter_left_from_selection<'b>(&'b self) -> impl Iterator<Item = &'b Area<'a>>
     where
         'a: 'b,
@@ -154,6 +156,7 @@ impl<'a> AreaList<'a> {
             .chain(once(self.selected_area.as_area()))
     }
 
+    #[allow(clippy::redundant_closure)]
     pub fn iter_right_from_selection<'b>(&'b self) -> impl Iterator<Item = &'b Area<'a>>
     where
         'a: 'b,
