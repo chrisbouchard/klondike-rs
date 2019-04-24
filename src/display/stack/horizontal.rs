@@ -1,5 +1,6 @@
 use crate::{
     display::{
+        bounds::Bounds,
         card::{CardPainter, CARD_SIZE},
         coords::Coords,
         selector::SelectorPainter,
@@ -20,31 +21,23 @@ static OFFSETS: Offsets = Offsets {
 static SELECTOR_OFFSET: Coords = Coords::from_y(0);
 
 pub trait HorizontalStackPainter {
-    fn draw_horizontal_card_stack<'a, 'b>(
-        &mut self,
-        coords: Coords,
-        stack: &'a Stack<'b>,
-    ) -> Result
-    where
-        'b: 'a;
+    fn draw_horizontal_stack(&mut self, coords: Coords, stack: &Stack) -> Result<Bounds>;
 }
 
 impl<T> HorizontalStackPainter for T
 where
     T: CardPainter + SelectorPainter,
 {
-    fn draw_horizontal_card_stack<'a, 'b>(&mut self, coords: Coords, stack: &'a Stack<'b>) -> Result
-    where
-        'b: 'a,
-    {
+    fn draw_horizontal_stack(&mut self, coords: Coords, stack: &Stack) -> Result<Bounds> {
         let face_up_index = stack.details.face_up_index();
+        let mut bounds = Bounds::new(coords, coords);
 
         for (i, card) in stack.into_iter().enumerate() {
             if let Some(coords) = card_coords(coords, i, &OFFSETS, &stack.details) {
                 if i < face_up_index {
-                    self.draw_card_face_down(coords, card)?;
+                    bounds += self.draw_card_face_down(coords, card)?;
                 } else {
-                    self.draw_card_face_up(coords, card)?;
+                    bounds += self.draw_card_face_up(coords, card)?;
                 }
             }
         }
@@ -73,9 +66,9 @@ where
             debug!("end_coords: {:?}", end_coords);
             debug!("selector_len: {:?}", selector_len);
 
-            self.draw_horizontal_selector(start_coords, selector_len)?;
+            bounds += self.draw_horizontal_selector(start_coords, selector_len)?;
         }
 
-        Ok(())
+        Ok(bounds)
     }
 }

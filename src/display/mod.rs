@@ -1,9 +1,8 @@
-use std::fmt;
-use std::io;
+use std::{fmt, io};
 
-pub use self::coords::Coords;
-pub use self::game::GamePainter;
+pub use self::{coords::Coords, game::GamePainter};
 
+pub mod bounds;
 pub mod card;
 pub mod coords;
 pub mod game;

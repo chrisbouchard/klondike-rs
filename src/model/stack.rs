@@ -5,6 +5,12 @@ use crate::utils::usize::BoundedSub;
 use super::card::Card;
 
 #[derive(Copy, Clone, Debug)]
+pub enum Orientation {
+    Horizontal,
+    Vertical,
+}
+
+#[derive(Copy, Clone, Debug)]
 pub enum StackSelection {
     Cards(usize),
     Stack(usize),
@@ -13,6 +19,7 @@ pub enum StackSelection {
 
 #[derive(Copy, Clone, Debug)]
 pub struct StackDetails {
+    pub orientation: Orientation,
     pub len: usize,
     pub face_up_len: usize,
     pub visible_len: usize,

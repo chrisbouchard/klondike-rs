@@ -1,12 +1,17 @@
-use std::fmt::{self, Formatter};
-use std::io::Write;
+use std::{
+    fmt::{self, Formatter},
+    io::Write
+};
 
 use termion::{color, cursor};
 
 use crate::model::{Card, Color};
 
-use super::coords::Coords;
-use super::Result;
+use super::{
+    bounds::Bounds,
+    coords::Coords,
+    Result
+};
 
 pub static CARD_SIZE: Coords = Coords::from_xy(8, 4);
 
@@ -27,15 +32,15 @@ impl color::Color for Color {
 }
 
 pub trait CardPainter {
-    fn draw_card_face_up(&mut self, coords: Coords, card: &Card) -> Result;
-    fn draw_card_face_down(&mut self, coords: Coords, card: &Card) -> Result;
+    fn draw_card_face_up(&mut self, coords: Coords, card: &Card) -> Result<Bounds>;
+    fn draw_card_face_down(&mut self, coords: Coords, card: &Card) -> Result<Bounds>;
 }
 
 impl<W> CardPainter for W
 where
     W: Write,
 {
-    fn draw_card_face_up(&mut self, coords: Coords, card: &Card) -> Result {
+    fn draw_card_face_up(&mut self, coords: Coords, card: &Card) -> Result<Bounds> {
         draw_card_frame(self, coords)?;
 
         let interior_coords = coords + Coords::from_xy(2, 1);
@@ -53,10 +58,10 @@ where
         write!(self, "{}{}{}{}", rank_str, offset, suit_str, next)?;
         write!(self, "{}{}{}{}", suit_str, offset, rank_str, next)?;
 
-        Ok(())
+        Ok(Bounds::with_size(coords, CARD_SIZE))
     }
 
-    fn draw_card_face_down(&mut self, coords: Coords, _: &Card) -> Result {
+    fn draw_card_face_down(&mut self, coords: Coords, _: &Card) -> Result<Bounds> {
         draw_card_frame(self, coords)?;
 
         let interior_coords = coords + Coords::from_xy(2, 1);
@@ -69,7 +74,7 @@ where
         write!(self, "░░░░{}", next)?;
         write!(self, "░░░░{}", next)?;
 
-        Ok(())
+        Ok(Bounds::with_size(coords, CARD_SIZE))
     }
 }
 

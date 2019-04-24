@@ -2,7 +2,7 @@ use crate::{
     model::{
         card::Card,
         settings::Settings,
-        stack::{Stack, StackDetails, StackSelection},
+        stack::{Orientation, Stack, StackDetails, StackSelection},
     },
     utils::vec::SplitOffBounded,
 };
@@ -45,6 +45,7 @@ impl<'a, S> Stock<'a, S> {
         Stack {
             cards: &self.cards,
             details: StackDetails {
+                orientation: Orientation::Horizontal,
                 len: self.cards.len(),
                 face_up_len: 0,
                 visible_len: 2,

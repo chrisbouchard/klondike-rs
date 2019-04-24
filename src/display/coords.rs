@@ -1,6 +1,6 @@
-use std::ops;
+use std::{cmp::Ordering, ops};
 
-#[derive(Copy, Clone, Debug, Default, PartialOrd, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
 pub struct Coords {
     pub x: i32,
     pub y: i32,
@@ -29,6 +29,20 @@ impl Coords {
 
     pub const fn as_row_col(self) -> (u16, u16) {
         (self.y as u16 + 1, self.x as u16 + 1)
+    }
+}
+
+impl PartialOrd for Coords {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        if self == other {
+            Some(Ordering::Equal)
+        } else if self.x < other.x && self.y < other.y {
+            Some(Ordering::Less)
+        } else if self.x > other.x && self.y > other.y {
+            Some(Ordering::Greater)
+        } else {
+            None
+        }
     }
 }
 

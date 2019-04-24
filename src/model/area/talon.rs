@@ -2,7 +2,7 @@ use crate::{
     model::{
         card::Card,
         settings::Settings,
-        stack::{Stack, StackDetails, StackSelection},
+        stack::{Orientation, Stack, StackDetails, StackSelection},
     },
     utils::{usize::BoundedSub, vec::SplitOffBounded},
 };
@@ -53,6 +53,7 @@ impl<'a, S> Talon<'a, S> {
         Stack {
             cards: &self.cards,
             details: StackDetails {
+                orientation: Orientation::Horizontal,
                 len: cards_len,
                 face_up_len: cards_len,
                 visible_len: self.fanned_len + 1,

@@ -1,5 +1,6 @@
 use crate::{
     display::{
+        bounds::Bounds,
         card::{CardPainter, CARD_SIZE},
         coords::Coords,
         selector::SelectorPainter,
@@ -21,22 +22,23 @@ static CARD_SELECTOR_OFFSET: Coords = Coords::from_x(-2);
 static STACK_SELECTOR_OFFSET: Coords = Coords::from_y(0);
 
 pub trait VerticalStackPainter {
-    fn draw_vertical_card_stack(&mut self, coords: Coords, stack: &Stack) -> Result;
+    fn draw_vertical_stack(&mut self, coords: Coords, stack: &Stack) -> Result<Bounds>;
 }
 
 impl<T> VerticalStackPainter for T
 where
     T: CardPainter + SelectorPainter,
 {
-    fn draw_vertical_card_stack(&mut self, coords: Coords, stack: &Stack) -> Result {
+    fn draw_vertical_stack(&mut self, coords: Coords, stack: &Stack) -> Result<Bounds> {
         let face_up_index = stack.details.face_up_index();
+        let mut bounds = Bounds::new(coords, coords);
 
         for (i, card) in stack.into_iter().enumerate() {
             if let Some(coords) = card_coords(coords, i, &OFFSETS, &stack.details) {
                 if i < face_up_index {
-                    self.draw_card_face_down(coords, card)?;
+                    bounds += self.draw_card_face_down(coords, card)?;
                 } else {
-                    self.draw_card_face_up(coords, card)?;
+                    bounds += self.draw_card_face_up(coords, card)?;
                 }
             }
         }
@@ -61,7 +63,7 @@ where
 
                     let selector_len = end_coords.y - start_coords.y;
 
-                    self.draw_vertical_selector(start_coords, selector_len)?;
+                    bounds += self.draw_vertical_selector(start_coords, selector_len)?;
                 }
                 StackSelection::Stack(_) | StackSelection::FullStack => {
                     let start_coords = card_coords(coords, end_index, &OFFSETS, &stack.details)
@@ -71,11 +73,11 @@ where
 
                     let selector_len = CARD_SIZE.x;
 
-                    self.draw_horizontal_selector(start_coords, selector_len)?;
+                    bounds += self.draw_horizontal_selector(start_coords, selector_len)?;
                 }
             }
         }
 
-        Ok(())
+        Ok(bounds)
     }
 }

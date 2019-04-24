@@ -2,19 +2,20 @@ use std::io::Write;
 
 use termion::{color, cursor};
 
-use super::coords::Coords;
-use super::Result;
+use super::{bounds::Bounds, coords::Coords, Result};
 
 pub trait SelectorPainter {
-    fn draw_horizontal_selector(&mut self, coords: Coords, len: i32) -> Result;
-    fn draw_vertical_selector(&mut self, coords: Coords, len: i32) -> Result;
+    fn draw_horizontal_selector(&mut self, coords: Coords, len: i32) -> Result<Bounds>;
+    fn draw_vertical_selector(&mut self, coords: Coords, len: i32) -> Result<Bounds>;
 }
 
 impl<W> SelectorPainter for W
 where
     W: Write,
 {
-    fn draw_horizontal_selector(&mut self, coords: Coords, len: i32) -> Result {
+    fn draw_horizontal_selector(&mut self, coords: Coords, len: i32) -> Result<Bounds> {
+        assert!(len > 0);
+
         let (row, col) = coords.as_row_col();
 
         let start = cursor::Goto(col, row);
@@ -29,10 +30,12 @@ where
         write!(self, "╛")?;
 
         debug!("coords: {:?}, len: {}", coords, len);
-        Ok(())
+        Ok(Bounds::with_size(coords, Coords::from_xy(len, 1)))
     }
 
-    fn draw_vertical_selector(&mut self, coords: Coords, len: i32) -> Result {
+    fn draw_vertical_selector(&mut self, coords: Coords, len: i32) -> Result<Bounds> {
+        assert!(len > 0);
+
         let (row, col) = coords.as_row_col();
 
         let start = cursor::Goto(col, row);
@@ -48,6 +51,6 @@ where
         write!(self, "╙{}", next)?;
 
         debug!("coords: {:?}, len: {}", coords, len);
-        Ok(())
+        Ok(Bounds::with_size(coords, Coords::from_xy(1, len)))
     }
 }
