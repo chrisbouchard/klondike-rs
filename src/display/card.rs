@@ -1,17 +1,13 @@
 use std::{
     fmt::{self, Formatter},
-    io::Write
+    io::Write,
 };
 
 use termion::{color, cursor};
 
 use crate::model::{Card, Color};
 
-use super::{
-    bounds::Bounds,
-    coords::Coords,
-    Result
-};
+use super::{bounds::Bounds, coords::Coords, Result};
 
 pub static CARD_SIZE: Coords = Coords::from_xy(8, 4);
 

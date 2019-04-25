@@ -61,9 +61,16 @@ where
                         + CARD_SIZE.to_y()
                         + CARD_SELECTOR_OFFSET;
 
-                    let selector_len = end_coords.y - start_coords.y;
+                    let full_len = bounds.height() as u16;
+                    let selected_index = (start_coords.y - coords.y) as u16;
+                    let selected_len = (end_coords.y - start_coords.y) as u16;
 
-                    bounds += self.draw_vertical_selector(start_coords, selector_len)?;
+                    bounds += self.draw_vertical_selector(
+                        coords,
+                        full_len,
+                        selected_index,
+                        selected_len,
+                    )?;
                 }
                 StackSelection::Stack(_) | StackSelection::FullStack => {
                     let start_coords = card_coords(coords, end_index, &OFFSETS, &stack.details)
@@ -71,9 +78,16 @@ where
                         + CARD_SIZE.to_y()
                         + STACK_SELECTOR_OFFSET;
 
-                    let selector_len = CARD_SIZE.x;
+                    let full_len = bounds.width() as u16;
+                    let selected_index = (start_coords.x - coords.x) as u16;
+                    let selected_len = CARD_SIZE.x as u16;
 
-                    bounds += self.draw_horizontal_selector(start_coords, selector_len)?;
+                    bounds += self.draw_horizontal_selector(
+                        coords,
+                        full_len,
+                        selected_index,
+                        selected_len,
+                    )?;
                 }
             }
         }

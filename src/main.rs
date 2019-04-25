@@ -10,7 +10,7 @@ use simplelog::{Config, WriteLogger};
 use termion::{clear, event::Key, input::TermRead};
 
 use klondike_lib::{
-    display::GamePainter,
+    display::GameDisplay,
     model::{AreaId, Deck, Game, Settings},
     terminal::Terminal,
 };
@@ -79,14 +79,14 @@ fn main() -> Result {
     Ok(())
 }
 
-fn clear_and_draw_game<'a, 'b, W>(output: &mut W, game: &'a mut Game<'b>) -> Result
+fn clear_and_draw_game<W>(display: &mut GameDisplay<W>, game: &mut Game) -> Result
 where
-    'b: 'a,
     W: Write,
 {
-    write!(output, "{}", clear::All)?;
-    output.draw_game(&game)?;
-    output.flush()?;
+    write!(display, "{}", clear::All)?;
+    // TODO: Get the areas to display
+    display.draw_game(&game, [])?;
+    display.flush()?;
 
     Ok(())
 }

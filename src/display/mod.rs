@@ -1,6 +1,6 @@
 use std::{fmt, io};
 
-pub use self::{coords::Coords, game::GamePainter};
+pub use self::{coords::Coords, game::GameDisplay};
 
 pub mod bounds;
 pub mod card;

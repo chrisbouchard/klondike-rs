@@ -1,7 +1,9 @@
-use std::cmp::{max, min, Ordering};
-use std::ops;
+use std::{
+    cmp::{max, min, Ordering},
+    ops,
+};
 
-use crate::display::Coords;
+use super::coords::Coords;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Bounds {
@@ -29,8 +31,25 @@ impl Bounds {
         }
     }
 
+    pub fn width(&self) -> i32 {
+        self.bottom_right.x - self.top_left.x + 1
+    }
+
+    pub fn height(&self) -> i32 {
+        self.bottom_right.y - self.top_left.y + 1
+    }
+
     pub fn contains(&self, coords: Coords) -> bool {
         self.top_left <= coords && coords <= self.bottom_right
+    }
+
+    pub fn intersects(&self, other: Bounds) -> bool {
+        self.contains(other.top_left) || self.contains(other.bottom_right)
+    }
+
+    pub fn squares(&self, other: Bounds) -> bool {
+        self.top_left.y == other.top_left.y && self.bottom_right.y == other.bottom_right.y
+            || self.top_left.x == other.top_left.x && self.bottom_right.x == other.bottom_right.x
     }
 
     pub fn coords_iter(&self) -> impl Iterator<Item = Coords> {
