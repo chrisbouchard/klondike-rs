@@ -1,8 +1,12 @@
+use std::collections::HashMap;
 use std::fmt;
 
 use crate::model::{AreaId, Game};
 
-use super::{card::CARD_SIZE, coords::Coords, stack::StackPainter, Result};
+use super::{
+    blank::BlankPainter, bounds::Bounds, card::CARD_SIZE, coords::Coords, stack::StackPainter,
+    Result,
+};
 
 static STOCK_COORDS: Coords = Coords::from_xy(2, 0);
 static TALON_COORDS: Coords = Coords::from_xy(13, 0);
@@ -12,23 +16,31 @@ static TABLEAUX_COORDS: Coords = Coords::from_xy(2, 5);
 static COLUMN_OFFSET: Coords = Coords::from_x(3);
 
 pub struct GameDisplay<'a, P> {
-    stack_painter: &'a mut P,
+    painter: &'a mut P,
+    area_bounds: HashMap<AreaId, Bounds>,
 }
 
 impl<'a, P> GameDisplay<'a, P>
 where
-    P: StackPainter,
+    P: BlankPainter + StackPainter,
 {
-    pub fn new(stack_painter: &'a mut P) -> GameDisplay<'a, P> {
-        GameDisplay { stack_painter }
+    pub fn new(painter: &'a mut P) -> GameDisplay<'a, P> {
+        GameDisplay {
+            painter,
+            area_bounds: HashMap::new(),
+        }
     }
 
-    pub fn draw_game(&mut self, game: &Game, area_ids: impl IntoIterator<Item = AreaId>) -> Result {
-        for area_id in area_ids {
-            let coords = coords_for_area(area_id);
-            info!("Printing {:?} at {:?}", area_id, coords);
-            self.stack_painter
-                .draw_stack(coords, &game.stack(area_id))?;
+    pub fn draw_area(&mut self, game: &Game, area_id: AreaId) -> Result {
+        let coords = coords_for_area(area_id);
+        let stack = game.stack(area_id);
+
+        info!("Printing {:?} at {:?}", area_id, coords);
+
+        let new_bounds = self.painter.draw_stack(coords, &stack)?;
+
+        if let Some(old_bounds) = self.area_bounds.insert(area_id, new_bounds) {
+            self.painter.draw_blank_excess(old_bounds, new_bounds)?;
         }
 
         Ok(())

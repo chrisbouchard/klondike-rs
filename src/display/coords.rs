@@ -32,6 +32,18 @@ impl Coords {
     }
 }
 
+impl From<(u16, u16)> for Coords {
+    fn from((row, col): (u16, u16)) -> Self {
+        Coords::from_xy(col as i32 - 1, row as i32 - 1)
+    }
+}
+
+impl From<Coords> for (u16, u16) {
+    fn from(coords: Coords) -> Self {
+        coords.as_row_col()
+    }
+}
+
 impl PartialOrd for Coords {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         if self == other {

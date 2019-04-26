@@ -85,7 +85,7 @@ where
 {
     write!(display, "{}", clear::All)?;
     // TODO: Get the areas to display
-    display.draw_game(&game, [])?;
+    display.draw_area(&game, AreaId::Stock)?;
     display.flush()?;
 
     Ok(())

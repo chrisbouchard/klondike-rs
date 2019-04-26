@@ -2,6 +2,7 @@ use std::{fmt, io};
 
 pub use self::{coords::Coords, game::GameDisplay};
 
+pub mod blank;
 pub mod bounds;
 pub mod card;
 pub mod coords;
