@@ -63,12 +63,8 @@ where
             debug!("start_coords: {:?}", start_coords);
             debug!("end_coords: {:?}", end_coords);
 
-            let full_len = bounds.width() as u16;
-            let selected_index = (start_coords.x - coords.x) as u16;
-            let selected_len = (end_coords.x - start_coords.x) as u16;
-
-            bounds +=
-                self.draw_horizontal_selector(coords, full_len, selected_index, selected_len)?;
+            let len = (end_coords.x - start_coords.x) as u16;
+            bounds += self.draw_horizontal_selector(start_coords, len)?;
         }
 
         Ok(bounds)

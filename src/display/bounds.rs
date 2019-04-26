@@ -57,8 +57,8 @@ impl Bounds {
             top_left,
             bottom_right,
         } = *self;
-        (top_left.y..bottom_right.y)
-            .flat_map(move |y| (top_left.x..bottom_right.x).map(move |x| Coords::from_xy(x, y)))
+        (top_left.y..=bottom_right.y)
+            .flat_map(move |y| (top_left.x..=bottom_right.x).map(move |x| Coords::from_xy(x, y)))
     }
 }
 

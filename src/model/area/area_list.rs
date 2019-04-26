@@ -1,9 +1,8 @@
-use std::collections::HashMap;
-use std::fmt;
+use std::{collections::HashMap, fmt, iter::once};
+
+use crate::utils::vec::SplitOffAround;
 
 use super::{move_selection, Action, Area, AreaId, SelectedArea, UnselectedArea};
-use crate::utils::vec::SplitOffAround;
-use std::iter::once;
 
 /// A list of [areas](Area) with one [selected](SelectedArea) and the rest
 /// [unselected](UnselectedArea) that can efficiently move the selection and map [area ids](AreaId)
@@ -130,8 +129,12 @@ impl<'a> AreaList<'a> {
         self.selected_area.as_mut()
     }
 
+    pub fn area_ids(&self) -> Vec<AreaId> {
+        self.area_ids.keys().cloned().collect::<Vec<_>>()
+    }
+
     #[allow(clippy::redundant_closure)]
-    pub fn iter<'b>(&'b self) -> impl Iterator<Item = &'b Area<'a>>
+    pub fn iter<'b>(&'b self) -> impl Iterator<Item = &'b dyn Area<'a>> + 'b
     where
         'a: 'b,
     {
@@ -144,7 +147,7 @@ impl<'a> AreaList<'a> {
     }
 
     #[allow(clippy::redundant_closure)]
-    pub fn iter_left_from_selection<'b>(&'b self) -> impl Iterator<Item = &'b Area<'a>>
+    pub fn iter_left_from_selection<'b>(&'b self) -> impl Iterator<Item = &'b dyn Area<'a>> + 'b
     where
         'a: 'b,
     {
@@ -157,7 +160,7 @@ impl<'a> AreaList<'a> {
     }
 
     #[allow(clippy::redundant_closure)]
-    pub fn iter_right_from_selection<'b>(&'b self) -> impl Iterator<Item = &'b Area<'a>>
+    pub fn iter_right_from_selection<'b>(&'b self) -> impl Iterator<Item = &'b dyn Area<'a>> + 'b
     where
         'a: 'b,
     {

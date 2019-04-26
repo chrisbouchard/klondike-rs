@@ -1,5 +1,4 @@
-use std::collections::HashMap;
-use std::fmt;
+use std::{collections::HashMap, fmt, io};
 
 use crate::model::{AreaId, Game};
 
@@ -20,11 +19,11 @@ pub struct GameDisplay<'a, P> {
     area_bounds: HashMap<AreaId, Bounds>,
 }
 
-impl<'a, P> GameDisplay<'a, P>
+impl<'a, W> GameDisplay<'a, W>
 where
-    P: BlankPainter + StackPainter,
+    W: io::Write,
 {
-    pub fn new(painter: &'a mut P) -> GameDisplay<'a, P> {
+    pub fn new(painter: &'a mut W) -> GameDisplay<'a, W> {
         GameDisplay {
             painter,
             area_bounds: HashMap::new(),
@@ -37,19 +36,40 @@ where
 
         info!("Printing {:?} at {:?}", area_id, coords);
 
+        if let Some(&bounds) = self.area_bounds.get(&area_id) {
+            self.painter.draw_blank_excess(bounds)?;
+        }
+
         let new_bounds = self.painter.draw_stack(coords, &stack)?;
 
-        if let Some(old_bounds) = self.area_bounds.insert(area_id, new_bounds) {
-            self.painter.draw_blank_excess(old_bounds, new_bounds)?;
+        self.area_bounds.insert(area_id, new_bounds);
+
+        Ok(())
+    }
+
+    pub fn draw_all_areas(&mut self, game: &Game) -> Result {
+        for area_id in game.area_ids() {
+            self.draw_area(game, area_id)?;
         }
 
         Ok(())
     }
+
+    pub fn flush(&mut self) -> Result {
+        self.painter.flush()?;
+        Ok(())
+    }
 }
 
-impl<'a, P> fmt::Display for GameDisplay<'a, P> {
+impl<'a, P> fmt::Debug for GameDisplay<'a, P>
+where
+    P: fmt::Debug,
+{
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "GameDisplay {..}")
+        fmt.debug_struct("GameDisplay")
+            .field("painter", self.painter)
+            .field("area_bounds", &self.area_bounds)
+            .finish()
     }
 }
 

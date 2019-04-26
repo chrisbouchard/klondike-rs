@@ -1,4 +1,5 @@
 use std::{cmp::Ordering, ops};
+use termion::cursor;
 
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
 pub struct Coords {
@@ -33,14 +34,20 @@ impl Coords {
 }
 
 impl From<(u16, u16)> for Coords {
-    fn from((row, col): (u16, u16)) -> Self {
-        Coords::from_xy(col as i32 - 1, row as i32 - 1)
+    fn from((x, y): (u16, u16)) -> Self {
+        Coords::from_xy(x as i32 - 1, y as i32 - 1)
     }
 }
 
 impl From<Coords> for (u16, u16) {
     fn from(coords: Coords) -> Self {
-        coords.as_row_col()
+        (coords.x as u16 + 1, coords.y as u16 + 1)
+    }
+}
+
+impl From<Coords> for cursor::Goto {
+    fn from(coords: Coords) -> Self {
+        cursor::Goto(coords.x as u16 + 1, coords.y as u16 + 1)
     }
 }
 

@@ -1,8 +1,4 @@
-use std::{
-    fmt::{self, Formatter},
-    io::Write,
-};
-
+use std::{fmt, io};
 use termion::{color, cursor};
 
 use crate::model::{Card, Color};
@@ -12,14 +8,14 @@ use super::{bounds::Bounds, coords::Coords, Result};
 pub static CARD_SIZE: Coords = Coords::from_xy(8, 4);
 
 impl color::Color for Color {
-    fn write_fg(&self, f: &mut Formatter) -> fmt::Result {
+    fn write_fg(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Color::Black => color::White.write_fg(f),
             Color::Red => color::Red.write_fg(f),
         }
     }
 
-    fn write_bg(&self, f: &mut Formatter) -> fmt::Result {
+    fn write_bg(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Color::Black => color::White.write_bg(f),
             Color::Red => color::Red.write_bg(f),
@@ -34,15 +30,14 @@ pub trait CardPainter {
 
 impl<W> CardPainter for W
 where
-    W: Write,
+    W: io::Write,
 {
     fn draw_card_face_up(&mut self, coords: Coords, card: &Card) -> Result<Bounds> {
         draw_card_frame(self, coords)?;
 
         let interior_coords = coords + Coords::from_xy(2, 1);
-        let (row, col) = interior_coords.as_row_col();
 
-        let start = cursor::Goto(col, row);
+        let start: cursor::Goto = interior_coords.into();
         let next = format!("{}{}", cursor::Left(4), cursor::Down(1));
 
         let rank_str = card.rank.label();
@@ -61,9 +56,8 @@ where
         draw_card_frame(self, coords)?;
 
         let interior_coords = coords + Coords::from_xy(2, 1);
-        let (row, col) = interior_coords.as_row_col();
 
-        let start = cursor::Goto(col, row);
+        let start: cursor::Goto = interior_coords.into();
         let next = format!("{}{}", cursor::Left(4), cursor::Down(1));
 
         write!(self, "{}{}", start, color::Fg(color::Blue))?;
@@ -76,7 +70,7 @@ where
 
 fn draw_card_frame<W>(writer: &mut W, coords: Coords) -> Result
 where
-    W: Write,
+    W: io::Write,
 {
     let (row, col) = coords.as_row_col();
 

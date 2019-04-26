@@ -46,21 +46,25 @@ impl<'a> Game<'a> {
         Game { areas, settings }
     }
 
+    pub fn area_ids(&self) -> Vec<AreaId> {
+        self.areas.area_ids()
+    }
+
     pub fn stack(&self, area_id: AreaId) -> Stack {
         self.areas.get_by_area_id(area_id).as_stack()
     }
 
-    pub fn move_to(self, area_id: AreaId) -> Game<'a> {
+    pub fn move_to(self, area_id: AreaId) -> GameResult<'a> {
         let moves = vec![area_id];
         self.make_first_valid_move(moves)
     }
 
-    pub fn move_to_foundation(self) -> Game<'a> {
+    pub fn move_to_foundation(self) -> GameResult<'a> {
         let moves = self.settings.foundation_indices().map(AreaId::Foundation);
         self.make_first_valid_move(moves)
     }
 
-    pub fn move_left(self) -> Game<'a> {
+    pub fn move_left(self) -> GameResult<'a> {
         // Skip the first (selected) area id, then iterate the remainder in reverse order (right-to-
         // left).
         let moves = self
@@ -72,7 +76,7 @@ impl<'a> Game<'a> {
         self.make_first_valid_move(moves)
     }
 
-    pub fn move_right(self) -> Game<'a> {
+    pub fn move_right(self) -> GameResult<'a> {
         // Skip the first (selected) area id.
         let moves = self
             .areas
@@ -83,36 +87,60 @@ impl<'a> Game<'a> {
         self.make_first_valid_move(moves)
     }
 
-    pub fn move_up(mut self) -> Game<'a> {
+    pub fn move_up(mut self) -> GameResult<'a> {
         self.areas.selected_mut().select_more();
-        self
+        GameResult::new_with_selected(self)
     }
 
-    pub fn move_down(mut self) -> Game<'a> {
+    pub fn move_down(mut self) -> GameResult<'a> {
         self.areas.selected_mut().select_less();
-        self
+        GameResult::new_with_selected(self)
     }
 
-    fn make_first_valid_move<I>(mut self, moves: I) -> Self
+    fn make_first_valid_move<I>(mut self, moves: I) -> GameResult<'a>
     where
         I: IntoIterator<Item = AreaId>,
     {
-        for area_id in moves {
-            debug!("Attempting to move selection to {:?}", area_id);
+        let old_area_id = self.areas.selected().id();
 
-            let (areas, success) = self.areas.move_selection(area_id);
+        for new_area_id in moves {
+            debug!("Attempting to move selection to {:?}", new_area_id);
+
+            let (areas, success) = self.areas.move_selection(new_area_id);
             self.areas = areas;
 
             if success {
-                break;
+                return GameResult::new(self, vec![old_area_id, new_area_id]);
             }
         }
 
-        self
+        GameResult::new_with_none(self)
     }
 
-    pub fn activate(mut self) -> Game<'a> {
+    pub fn activate(mut self) -> GameResult<'a> {
         self.areas = self.areas.activate_selected();
-        self
+        GameResult::new_with_selected(self)
+    }
+}
+
+#[derive(Debug)]
+pub struct GameResult<'a>(pub Game<'a>, pub Vec<AreaId>);
+
+impl<'a> GameResult<'a> {
+    pub fn new(game: Game<'a>, area_ids: impl IntoIterator<Item = AreaId>) -> GameResult<'a> {
+        GameResult(game, area_ids.into_iter().collect())
+    }
+
+    pub fn new_with_none(game: Game<'a>) -> GameResult<'a> {
+        GameResult(game, vec![])
+    }
+
+    pub fn new_with_one(game: Game<'a>, area_id: AreaId) -> GameResult<'a> {
+        GameResult(game, vec![area_id])
+    }
+
+    pub fn new_with_selected(game: Game<'a>) -> GameResult<'a> {
+        let selected_area_id = game.areas.selected().id();
+        GameResult(game, vec![selected_area_id])
     }
 }

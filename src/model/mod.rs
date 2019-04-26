@@ -1,7 +1,7 @@
 pub use self::area::AreaId;
 pub use self::card::{Card, Color, Rank, Suit};
 pub use self::deck::Deck;
-pub use self::game::Game;
+pub use self::game::{Game, GameResult};
 pub use self::settings::Settings;
 
 pub mod area;
