@@ -35,7 +35,7 @@ impl Coords {
 
 impl From<(u16, u16)> for Coords {
     fn from((x, y): (u16, u16)) -> Self {
-        Coords::from_xy(x as i32 - 1, y as i32 - 1)
+        Coords::from_xy(i32::from(x) - 1, i32::from(y) - 1)
     }
 }
 

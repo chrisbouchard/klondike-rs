@@ -30,7 +30,10 @@ where
         }
 
         debug!("coords: {:?}, len: {}", coords, len);
-        Ok(Bounds::with_size(coords, Coords::from_xy(len as i32, 1)))
+        Ok(Bounds::with_size(
+            coords,
+            Coords::from_xy(i32::from(len), 1),
+        ))
     }
 
     fn draw_vertical_selector(&mut self, coords: Coords, len: u16) -> Result<Bounds> {
@@ -53,6 +56,9 @@ where
         }
 
         debug!("coords: {:?}, len: {}", coords, len);
-        Ok(Bounds::with_size(coords, Coords::from_xy(1, len as i32)))
+        Ok(Bounds::with_size(
+            coords,
+            Coords::from_xy(1, i32::from(len)),
+        ))
     }
 }

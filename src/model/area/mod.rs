@@ -76,19 +76,20 @@ pub trait SelectedArea<'a>: Area<'a> {
         'a: 'b;
 }
 
+pub type SuccessfulMove<'a, 'b> = (
+    Box<dyn UnselectedArea<'a> + 'b>,
+    Box<dyn SelectedArea<'a> + 'b>,
+);
+
+pub type UnsuccessfulMove<'a, 'b> = (
+    Box<dyn SelectedArea<'a> + 'b>,
+    Box<dyn UnselectedArea<'a> + 'b>,
+);
+
 pub fn move_selection<'a, 'b>(
     source: Box<dyn SelectedArea<'a> + 'b>,
     target: Box<dyn UnselectedArea<'a> + 'b>,
-) -> Result<
-    (
-        Box<dyn UnselectedArea<'a> + 'b>,
-        Box<dyn SelectedArea<'a> + 'b>,
-    ),
-    (
-        Box<dyn SelectedArea<'a> + 'b>,
-        Box<dyn UnselectedArea<'a> + 'b>,
-    ),
->
+) -> Result<SuccessfulMove<'a, 'b>, UnsuccessfulMove<'a, 'b>>
 where
     'a: 'b,
 {
