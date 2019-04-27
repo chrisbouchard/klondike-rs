@@ -6,7 +6,7 @@ use std::fs::File;
 use log::LevelFilter;
 use rand::{seq::SliceRandom, thread_rng};
 use simplelog::{Config, WriteLogger};
-use termion::{event::Key, input::TermRead};
+use termion::{event::Key, input::TermRead, terminal_size};
 
 use klondike_lib::{
     display::GameDisplay,
@@ -43,6 +43,8 @@ fn main() -> Result {
     game_display.draw_all_areas(&game)?;
     game_display.flush()?;
 
+    let mut current_terminal_size = terminal_size()?;
+
     'event_loop: for key in input.keys() {
         debug!("Read key: {:?}", key);
         let GameResult(new_game, area_ids) = match key? {
@@ -77,8 +79,15 @@ fn main() -> Result {
 
         game = new_game;
 
-        for area_id in area_ids {
-            game_display.draw_area(&game, area_id)?;
+        let new_terminal_size = terminal_size()?;
+
+        if current_terminal_size == new_terminal_size {
+            for area_id in area_ids {
+                game_display.draw_area(&game, area_id)?;
+            }
+        } else {
+            current_terminal_size = new_terminal_size;
+            game_display.draw_all_areas(&game)?;
         }
 
         game_display.flush()?;
