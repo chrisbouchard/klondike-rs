@@ -1,18 +1,19 @@
 use std::io::Write;
 
-use termion::{color, cursor};
+use termion::{clear, color, cursor};
 
 use super::{bounds::Bounds, coords::Coords, Result};
 
 pub trait BlankPainter {
-    fn draw_blank_excess(&mut self, bounds: Bounds) -> Result;
+    fn draw_blank_bounds(&mut self, bounds: Bounds) -> Result;
+    fn draw_blank_all(&mut self) -> Result;
 }
 
 impl<W> BlankPainter for W
 where
     W: Write,
 {
-    fn draw_blank_excess(&mut self, bounds: Bounds) -> Result {
+    fn draw_blank_bounds(&mut self, bounds: Bounds) -> Result {
         let color = color::Fg(color::Reset);
         write!(self, "{}", color)?;
 
@@ -27,6 +28,11 @@ where
 
         debug!("Blanked {:?}", bounds);
 
+        Ok(())
+    }
+
+    fn draw_blank_all(&mut self) -> Result {
+        write!(self, "{}", clear::All)?;
         Ok(())
     }
 }

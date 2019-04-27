@@ -37,18 +37,21 @@ where
         info!("Printing {:?} at {:?}", area_id, coords);
 
         if let Some(&bounds) = self.area_bounds.get(&area_id) {
-            self.painter.draw_blank_excess(bounds)?;
+            self.painter.draw_blank_bounds(bounds)?;
         }
 
         let new_bounds = self.painter.draw_stack(coords, &stack)?;
 
-        // Ignore return value, because we dont need the old value.
+        // Ignore return value, because we don't need the old value.
         let _ = self.area_bounds.insert(area_id, new_bounds);
 
         Ok(())
     }
 
     pub fn draw_all_areas(&mut self, game: &Game) -> Result {
+        self.painter.draw_blank_all()?;
+        self.area_bounds.clear();
+
         for area_id in game.area_ids() {
             self.draw_area(game, area_id)?;
         }
