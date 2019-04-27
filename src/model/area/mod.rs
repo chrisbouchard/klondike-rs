@@ -1,4 +1,7 @@
-use super::{card::Card, stack::Stack};
+use super::{
+    card::{Card, Suit},
+    stack::Stack,
+};
 
 pub mod area_list;
 pub mod foundation;
@@ -10,8 +13,8 @@ pub mod talon;
 pub enum AreaId {
     Stock,
     Talon,
-    Foundation(usize),
-    Tableaux(usize),
+    Foundation(Suit),
+    Tableaux(u8),
 }
 
 #[derive(Debug)]

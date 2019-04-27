@@ -5,13 +5,13 @@ use super::{
         stock::UnselectedStock,
         tableaux::UnselectedTableaux,
         talon::UnselectedTalon,
-        Area, AreaId,
+        Area, AreaId, UnselectedArea,
     },
+    card::Suit,
     deck::Deck,
     settings::Settings,
     stack::Stack,
 };
-use crate::model::area::UnselectedArea;
 
 #[derive(Debug)]
 pub struct Game<'a> {
@@ -25,7 +25,7 @@ impl<'a> Game<'a> {
         let mut tableaux = settings
             .tableaux_indices()
             .map(|index| {
-                let cards = deck.deal(index + 1);
+                let cards = deck.deal(index as usize + 1);
                 UnselectedTableaux::create(index, 1, cards, settings)
             })
             .collect::<Vec<_>>();
@@ -37,8 +37,7 @@ impl<'a> Game<'a> {
 
         let talon = UnselectedTalon::create(vec![], 0, settings);
 
-        let mut foundation = settings
-            .foundation_indices()
+        let mut foundation = Suit::values()
             .map(|index| UnselectedFoundation::create(index, vec![], settings))
             .collect::<Vec<_>>();
 
@@ -54,6 +53,15 @@ impl<'a> Game<'a> {
             last_area,
             settings,
         }
+    }
+
+    pub fn is_win(&self) -> bool {
+        Suit::values().all(|suit| {
+            self.areas
+                .get_by_area_id(AreaId::Foundation(suit))
+                .peek_top_card()
+                .map_or(false, |suit| suit.rank.is_king())
+        })
     }
 
     pub fn area_ids(&self) -> Vec<AreaId> {
@@ -75,7 +83,7 @@ impl<'a> Game<'a> {
     }
 
     pub fn move_to_foundation(self) -> GameResult<'a> {
-        let moves = self.settings.foundation_indices().map(AreaId::Foundation);
+        let moves = Suit::values().map(AreaId::Foundation);
         self.make_first_valid_move(moves)
     }
 

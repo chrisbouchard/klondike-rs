@@ -60,6 +60,9 @@ pub enum Suit {
     Spades,
 }
 
+/// Canonical order
+static SUITS: [Suit; 4] = [Suit::Spades, Suit::Hearts, Suit::Clubs, Suit::Diamonds];
+
 impl Suit {
     pub fn color(self) -> Color {
         match self {
@@ -78,19 +81,21 @@ impl Suit {
         .to_string()
     }
 
-    pub fn values() -> impl Iterator<Item = Suit> {
-        /* Canonical order. */
-        static SUITS: [Suit; 4] = [Suit::Spades, Suit::Hearts, Suit::Clubs, Suit::Diamonds];
-        SUITS.iter().cloned()
-    }
-
-    pub fn index(self) -> usize {
+    pub fn index(self) -> u8 {
         match self {
             Suit::Clubs => 0,
             Suit::Spades => 1,
             Suit::Hearts => 2,
             Suit::Diamonds => 3,
         }
+    }
+
+    pub fn values() -> impl Iterator<Item = Suit> {
+        SUITS.iter().cloned()
+    }
+
+    pub fn from_index(index: u8) -> Suit {
+        SUITS[index as usize]
     }
 }
 

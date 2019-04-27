@@ -10,7 +10,7 @@ use termion::{event::Key, input::TermRead, terminal_size};
 
 use klondike_lib::{
     display::GameDisplay,
-    model::{AreaId, Deck, Game, GameResult, Settings},
+    model::{AreaId, Deck, Game, GameResult, Settings, Suit},
     terminal::Terminal,
 };
 
@@ -62,13 +62,13 @@ fn main() -> Result {
 
             Key::Char(c @ '1'...'7') => {
                 if let Some(index) = c.to_digit(10) {
-                    game.move_to(AreaId::Tableaux(index as usize - 1))
+                    game.move_to(AreaId::Tableaux(index as u8 - 1))
                 } else {
                     GameResult::new_with_none(game)
                 }
             }
 
-            Key::F(i @ 1...4) => game.move_to(AreaId::Foundation(i as usize - 1)),
+            Key::F(i @ 1...4) => game.move_to(AreaId::Foundation(Suit::from_index(i as u8 - 1))),
 
             Key::Char('-') => game.move_back(),
 

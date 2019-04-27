@@ -17,7 +17,7 @@ pub struct Selection {
 
 #[derive(Debug)]
 pub struct Tableaux<'a, S> {
-    index: usize,
+    index: u8,
     cards: Vec<Card>,
     revealed_len: usize,
     settings: &'a Settings,
@@ -94,7 +94,7 @@ impl<'a, S> Tableaux<'a, S> {
 
 impl<'a> UnselectedTableaux<'a> {
     pub fn create(
-        index: usize,
+        index: u8,
         revealed_len: usize,
         cards: Vec<Card>,
         settings: &'a Settings,

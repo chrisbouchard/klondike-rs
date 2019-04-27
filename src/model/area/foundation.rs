@@ -1,6 +1,6 @@
 use crate::{
     model::{
-        card::Card,
+        card::{Card, Suit},
         settings::Settings,
         stack::{Orientation, Stack, StackDetails, StackSelection},
     },
@@ -21,9 +21,8 @@ pub struct Selection {
 /// creating piles by suit, starting with aces and ending with kings.
 #[derive(Debug)]
 pub struct Foundation<'a, S> {
-    /// The index of this foundation area in the list of foundation areas. In Klondike there is one
-    /// foundation for each suit.
-    index: usize,
+    /// The suit of this foundation. In Klondike there is one foundation for each suit.
+    suit: Suit,
     /// The cards in this area
     cards: Vec<Card>,
     /// The game settings
@@ -43,7 +42,7 @@ pub type SelectedFoundation<'a> = Foundation<'a, Selection>;
 
 impl<'a, S> Foundation<'a, S> {
     fn id(&self) -> AreaId {
-        AreaId::Foundation(self.index)
+        AreaId::Foundation(self.suit)
     }
 
     fn accepts_cards(&self, held: &Held) -> bool {
@@ -55,10 +54,11 @@ impl<'a, S> Foundation<'a, S> {
             if let Some(foundation_card) = self.cards.last() {
                 // If there are already cards in this foundation, only accept the next card in
                 // sequence.
-                self.index == card.suit.index() && foundation_card.rank.is_followed_by(card.rank)
+                self.suit.index() == card.suit.index()
+                    && foundation_card.rank.is_followed_by(card.rank)
             } else {
                 // If there are no cards in this foundation yet, we have to start with the ace.
-                self.index == card.suit.index() && card.rank.is_ace()
+                self.suit.index() == card.suit.index() && card.rank.is_ace()
             }
         } else {
             // Reject too many or too few cards.
@@ -99,7 +99,7 @@ impl<'a, S> Foundation<'a, S> {
 
     fn with_selection<T>(self, selection: T) -> Foundation<'a, T> {
         Foundation {
-            index: self.index,
+            suit: self.suit,
             cards: self.cards,
             settings: self.settings,
             selection,
@@ -109,12 +109,12 @@ impl<'a, S> Foundation<'a, S> {
 
 impl<'a> UnselectedFoundation<'a> {
     pub fn create(
-        index: usize,
+        suit: Suit,
         cards: Vec<Card>,
         settings: &'a Settings,
     ) -> Box<dyn UnselectedArea<'a> + 'a> {
         Box::new(Foundation {
-            index,
+            suit,
             cards,
             settings,
             selection: (),
