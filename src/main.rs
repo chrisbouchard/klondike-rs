@@ -68,6 +68,8 @@ fn main() -> Result {
 
             Key::F(i @ 1...4) => game.move_to(AreaId::Foundation(i as usize - 1)),
 
+            Key::Char('-') => game.move_back(),
+
             Key::Char(' ') => game.activate(),
 
             _ => GameResult::new_with_none(game),

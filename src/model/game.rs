@@ -16,6 +16,7 @@ use crate::model::area::UnselectedArea;
 #[derive(Debug)]
 pub struct Game<'a> {
     areas: AreaList<'a>,
+    last_area: AreaId,
     settings: &'a Settings,
 }
 
@@ -46,8 +47,13 @@ impl<'a> Game<'a> {
         areas.append(&mut tableaux);
 
         let areas = AreaList::new(areas);
+        let last_area = areas.selected().id();
 
-        Game { areas, settings }
+        Game {
+            areas,
+            last_area,
+            settings,
+        }
     }
 
     pub fn area_ids(&self) -> Vec<AreaId> {
@@ -60,6 +66,11 @@ impl<'a> Game<'a> {
 
     pub fn move_to(self, area_id: AreaId) -> GameResult<'a> {
         let moves = vec![area_id];
+        self.make_first_valid_move(moves)
+    }
+
+    pub fn move_back(self) -> GameResult<'a> {
+        let moves = vec![self.last_area];
         self.make_first_valid_move(moves)
     }
 
@@ -105,6 +116,8 @@ impl<'a> Game<'a> {
     where
         I: IntoIterator<Item = AreaId>,
     {
+        let new_last_area = self.areas.selected().id();
+
         for new_area_id in moves {
             debug!("Attempting to move selection to {:?}", new_area_id);
 
@@ -112,6 +125,7 @@ impl<'a> Game<'a> {
             self.areas = new_areas;
 
             if !area_ids.is_empty() {
+                self.last_area = new_last_area;
                 return GameResult::new(self, area_ids);
             }
         }
