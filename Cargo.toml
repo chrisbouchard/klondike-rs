@@ -1,6 +1,6 @@
 [package]
 name = "klondike-rs"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Chris Bouchard <chris@upliftinglemma.net>"]
 edition = "2018"
 
