@@ -105,8 +105,6 @@ impl<'a> Game<'a> {
     where
         I: IntoIterator<Item = AreaId>,
     {
-        let old_area_id = self.areas.selected().id();
-
         for new_area_id in moves {
             debug!("Attempting to move selection to {:?}", new_area_id);
 

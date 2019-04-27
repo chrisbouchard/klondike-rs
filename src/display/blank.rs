@@ -1,6 +1,6 @@
 use std::io::Write;
 
-use termion::{color, cursor, cursor::DetectCursorPos};
+use termion::{color, cursor};
 
 use super::{bounds::Bounds, coords::Coords, Result};
 

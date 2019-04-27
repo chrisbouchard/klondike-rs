@@ -42,7 +42,8 @@ where
 
         let new_bounds = self.painter.draw_stack(coords, &stack)?;
 
-        self.area_bounds.insert(area_id, new_bounds);
+        // Ignore return value, because we dont need the old value.
+        let _ = self.area_bounds.insert(area_id, new_bounds);
 
         Ok(())
     }
