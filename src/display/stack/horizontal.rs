@@ -14,7 +14,8 @@ use super::common::*;
 
 static OFFSETS: Offsets = Offsets {
     unspread: Coords::from_x(1),
-    spread: Coords::from_x(4),
+    collapsed_spread: Coords::from_x(4),
+    uncollapsed_spread: Coords::from_x(4),
     selected: Coords::from_x(1),
     collapse_unspread_len: 0,
     collapse_spread_len: 0,

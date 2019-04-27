@@ -1,3 +1,4 @@
+use std::cmp::min;
 use termion;
 
 use crate::{
@@ -16,7 +17,8 @@ use super::common::*;
 
 static UNCOLLAPSED_OFFSETS: Offsets = Offsets {
     unspread: Coords::from_y(1),
-    spread: Coords::from_y(2),
+    collapsed_spread: Coords::from_y(1),
+    uncollapsed_spread: Coords::from_y(2),
     selected: Coords::from_x(1),
     collapse_unspread_len: 0,
     collapse_spread_len: 0,
@@ -40,6 +42,8 @@ where
         let collapsed_unspread_index =
             stack.details.visible_index() + offsets.collapse_unspread_len;
 
+        let uncollapsed_spread_index = stack.details.spread_index() + offsets.collapse_spread_len;
+
         // First index of a face up card. All cards before this are face down.
         let face_up_index = stack.details.face_up_index();
 
@@ -53,6 +57,8 @@ where
                     bounds += self.draw_card_face_down_with_count(coords, count)?;
                 } else if i < face_up_index {
                     bounds += self.draw_card_face_down(coords)?;
+                } else if offsets.collapse_spread_len > 0 && i < uncollapsed_spread_index {
+                    bounds += self.draw_card_face_up_slice(coords, card)?;
                 } else {
                     bounds += self.draw_card_face_up(coords, card)?;
                 }
@@ -116,7 +122,7 @@ fn offset_with_collapse(coords: Coords, stack: &Stack) -> Result<Offsets> {
     }
 
     if collapse_len > 0 {
-        offsets.collapse_spread_len = collapse_len;
+        offsets.collapse_spread_len = min(stack.details.spread_len.bounded_sub(1), collapse_len);
     }
 
     Ok(offsets)

@@ -25,6 +25,7 @@ impl color::Color for Color {
 
 pub trait CardPainter {
     fn draw_card_face_up(&mut self, coords: Coords, card: &Card) -> Result<Bounds>;
+    fn draw_card_face_up_slice(&mut self, coords: Coords, card: &Card) -> Result<Bounds>;
     fn draw_card_face_down(&mut self, coords: Coords) -> Result<Bounds>;
     fn draw_card_face_down_with_count(&mut self, coords: Coords, count: usize) -> Result<Bounds>;
 }
@@ -51,6 +52,35 @@ where
         write!(self, "{}{}{}{}", suit_str, offset, rank_str, next)?;
 
         Ok(Bounds::with_size(coords, CARD_SIZE))
+    }
+
+    fn draw_card_face_up_slice(&mut self, coords: Coords, card: &Card) -> Result<Bounds> {
+        draw_card_frame(self, coords)?;
+
+        let interior_coords = coords + Coords::from_x(1);
+
+        let start: cursor::Goto = interior_coords.into();
+
+        let rank_str = card.rank.label();
+        let suit_str = card.suit.symbol();
+
+        let spacer = if card.rank.label().len() == 2 {
+            " "
+        } else {
+            "╶╴"
+        };
+
+        let color = color::Fg(card.color());
+        let white = color::Fg(color::White);
+
+        write!(self, "{}{}", start, color::Fg(card.color()))?;
+        write!(
+            self,
+            "{}{}╴{}{}{}{}{}{}{}╶",
+            start, white, color, rank_str, white, spacer, color, suit_str, white
+        )?;
+
+        Ok(Bounds::with_size(coords, Coords::from_xy(CARD_SIZE.x, 1)))
     }
 
     fn draw_card_face_down(&mut self, coords: Coords) -> Result<Bounds> {
