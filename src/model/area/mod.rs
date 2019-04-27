@@ -33,6 +33,8 @@ pub trait Area<'a> {
     fn take_cards(&mut self, len: usize) -> Held;
     fn take_all_cards(&mut self) -> Held;
 
+    fn peek_top_card(&self) -> Option<&Card>;
+
     fn as_stack(&self) -> Stack;
 }
 

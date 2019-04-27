@@ -126,6 +126,10 @@ impl<'a> Area<'a> for UnselectedTableaux<'a> {
         self.take_cards(self.cards.len(), self.id())
     }
 
+    fn peek_top_card(&self) -> Option<&Card> {
+        self.cards.first()
+    }
+
     fn as_stack(&self) -> Stack {
         self.as_stack(None)
     }
@@ -155,6 +159,10 @@ impl<'a> Area<'a> for SelectedTableaux<'a> {
         self.selection.len = 1;
 
         self.take_cards(self.cards.len(), source)
+    }
+
+    fn peek_top_card(&self) -> Option<&Card> {
+        self.cards.first()
     }
 
     fn as_stack(&self) -> Stack {

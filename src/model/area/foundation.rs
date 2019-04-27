@@ -139,6 +139,10 @@ impl<'a> Area<'a> for UnselectedFoundation<'a> {
         self.take_cards(self.cards.len(), self.id())
     }
 
+    fn peek_top_card(&self) -> Option<&Card> {
+        self.cards.first()
+    }
+
     fn as_stack(&self) -> Stack {
         self.as_stack(None)
     }
@@ -162,6 +166,10 @@ impl<'a> Area<'a> for SelectedFoundation<'a> {
     fn take_all_cards(&mut self) -> Held {
         let source = self.selection.held_from.take().unwrap_or_else(|| self.id());
         self.take_cards(self.cards.len(), source)
+    }
+
+    fn peek_top_card(&self) -> Option<&Card> {
+        self.cards.first()
     }
 
     fn as_stack(&self) -> Stack {

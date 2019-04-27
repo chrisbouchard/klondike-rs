@@ -91,6 +91,10 @@ impl<'a> Area<'a> for UnselectedStock<'a> {
         Stock::take_cards(self, self.cards.len())
     }
 
+    fn peek_top_card(&self) -> Option<&Card> {
+        self.cards.first()
+    }
+
     fn as_stack(&self) -> Stack {
         self.as_stack(None)
     }
@@ -111,6 +115,10 @@ impl<'a> Area<'a> for SelectedStock<'a> {
 
     fn take_all_cards(&mut self) -> Held {
         Stock::take_cards(self, self.cards.len())
+    }
+
+    fn peek_top_card(&self) -> Option<&Card> {
+        self.cards.first()
     }
 
     fn as_stack(&self) -> Stack {
