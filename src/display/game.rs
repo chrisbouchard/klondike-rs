@@ -3,8 +3,8 @@ use std::{collections::HashMap, fmt, io};
 use crate::model::{AreaId, Game};
 
 use super::{
-    blank::BlankPainter, bounds::Bounds, card::CARD_SIZE, coords::Coords, stack::StackPainter,
-    Result,
+    blank::BlankPainter, bounds::Bounds, card::CARD_SIZE, coords::Coords, help::HelpPainter,
+    stack::StackPainter, Result,
 };
 
 static STOCK_COORDS: Coords = Coords::from_xy(2, 0);
@@ -56,6 +56,11 @@ where
             self.draw_area(game, area_id)?;
         }
 
+        Ok(())
+    }
+
+    pub fn draw_help(&mut self) -> Result {
+        self.painter.draw_help_message()?;
         Ok(())
     }
 

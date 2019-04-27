@@ -9,7 +9,7 @@ use simplelog::{Config, WriteLogger};
 use termion::{event::Key, input::TermRead, terminal_size};
 
 use klondike_lib::{
-    display::GameDisplay,
+    display::{DisplayState, GameDisplay},
     model::{AreaId, Deck, Game, Settings, Suit},
     terminal::Terminal,
 };
@@ -39,6 +39,8 @@ fn main() -> Result {
 
     let mut game_display = GameDisplay::new(&mut output);
 
+    let mut state = DisplayState::Playing;
+
     let mut game = Game::new(&mut deck, &settings);
     game_display.draw_all_areas(&game)?;
     game_display.flush()?;
@@ -47,35 +49,7 @@ fn main() -> Result {
 
     'event_loop: for key in input.keys() {
         debug!("Read key: {:?}", key);
-        let area_ids = match key? {
-            Key::Char('q') => break 'event_loop,
-
-            Key::Char('s') => game.move_to(AreaId::Stock),
-            Key::Char('t') => game.move_to(AreaId::Talon),
-
-            Key::Char('f') => game.move_to_foundation(),
-
-            Key::Char('h') | Key::Left => game.move_left(),
-            Key::Char('j') | Key::Down => game.move_down(),
-            Key::Char('k') | Key::Up => game.move_up(),
-            Key::Char('l') | Key::Right => game.move_right(),
-
-            Key::Char(c @ '1'...'7') => {
-                if let Some(index) = c.to_digit(10) {
-                    game.move_to(AreaId::Tableaux(index as u8 - 1))
-                } else {
-                    vec![]
-                }
-            }
-
-            Key::F(i @ 1...4) => game.move_to(AreaId::Foundation(Suit::from_index(i as u8 - 1))),
-
-            Key::Char('-') => game.move_back(),
-
-            Key::Char(' ') => game.activate(),
-
-            _ => vec![],
-        };
+        handle_playing_input(&mut game, key);
 
         let new_terminal_size = terminal_size()?;
 
@@ -94,4 +68,46 @@ fn main() -> Result {
     info!("QUITTING KLONDIKE");
 
     Ok(())
+}
+
+fn handle_playing_input(mut game: Game, key: Key) -> DisplayResult {
+    match key {
+        Key::Char('q') => DisplayResult::with_new_state(game, DisplayState::Quitting),
+        Key::Char('?') => DisplayResult::with_new_state(game, DisplayState::HelpMessageOpen),
+
+        Key::Char('s') => DisplayResult::with_game_result(game.move_to(AreaId::Stock)),
+        Key::Char('t') => DisplayResult::with_game_result(game.move_to(AreaId::Talon)),
+
+        Key::Char('f') => DisplayResult::with_game_result(game.move_to_foundation()),
+
+        Key::Char('h') | Key::Left => DisplayResult::with_game_result(game.move_left()),
+        Key::Char('j') | Key::Down => DisplayResult::with_game_result(game.move_down()),
+        Key::Char('k') | Key::Up => DisplayResult::with_game_result(game.move_up()),
+        Key::Char('l') | Key::Right => DisplayResult::with_game_result(game.move_right()),
+
+        Key::Char(c @ '1'...'7') => {
+            if let Some(index) = c.to_digit(10) {
+                DisplayResult::with_game_result(game.move_to(AreaId::Tableaux(index as u8 - 1)))
+            } else {
+                DisplayResult::with_no_change(game)
+            }
+        }
+
+        Key::F(i @ 1...4) => {
+            let area_id = AreaId::Foundation(Suit::from_index(i as u8 - 1));
+            DisplayResult::with_game_result(game.move_to(area_id))
+        }
+
+        Key::Char('-') => DisplayResult::with_game_result(game.move_back()),
+
+        Key::Char(' ') => DisplayResult::with_game_result(game.activate()),
+
+        _ => DisplayResult::with_no_change(game),
+    }
+}
+
+fn handle_help_input(mut game: Game, key: Key) -> DisplayResult {
+    match key {
+        _ => DisplayResult::with_new_state(game, DisplayState::Playing),
+    }
 }
