@@ -233,30 +233,30 @@ impl<'a> AreaList<'a> {
     pub fn activate_selected(mut self) -> AreaListResult<'a> {
         match self.selected_area.activate() {
             Some(Action::Draw(len)) => {
-                let held = self.get_by_area_id_mut(AreaId::Stock).take_cards(len);
+                // Take the next `len` cards from the stock. We reverse the held cards because they're
+                // being drawn one-by-one into the talon, so the first drawn is at the bottom of the
+                // pile.
+                let mut held = self.get_by_area_id_mut(AreaId::Stock).take_cards(len);
+                held.cards.reverse();
 
-                match self.get_by_area_id_mut(AreaId::Talon).give_cards(held) {
-                    Ok(()) => AreaListResult::new(self, vec![AreaId::Stock, AreaId::Talon]),
-                    Err(held) => {
-                        self.get_by_area_id_mut(AreaId::Stock)
-                            .give_cards(held)
-                            .expect("Unable to replace held cards on the stock");
-                        AreaListResult::new_with_none(self)
-                    }
-                }
+                // The talon should always accept cards from the stock, so no need to handle putting
+                // them back on failure; just blow up.
+                self.get_by_area_id_mut(AreaId::Talon)
+                    .give_cards(held)
+                    .expect("Unable to draw cards from the stock onto the talon.");
+                AreaListResult::new(self, vec![AreaId::Stock, AreaId::Talon])
             }
             Some(Action::Restock) => {
-                let held = self.get_by_area_id_mut(AreaId::Talon).take_all_cards();
+                // Flip the talon onto the stock.
+                let mut held = self.get_by_area_id_mut(AreaId::Talon).take_all_cards();
+                held.cards.reverse();
 
-                match self.get_by_area_id_mut(AreaId::Stock).give_cards(held) {
-                    Ok(()) => AreaListResult::new(self, vec![AreaId::Stock, AreaId::Talon]),
-                    Err(held) => {
-                        self.get_by_area_id_mut(AreaId::Talon)
-                            .give_cards(held)
-                            .expect("Unable to replace held cards on the talon");
-                        AreaListResult::new_with_none(self)
-                    }
-                }
+                // The stock should always accept cards from the talon, so no need to handle putting
+                // them back on failure; just blow up.
+                self.get_by_area_id_mut(AreaId::Stock)
+                    .give_cards(held)
+                    .expect("Unable to restock from the talon onto the stock.");
+                AreaListResult::new(self, vec![AreaId::Stock, AreaId::Talon])
             }
             None => AreaListResult::new_with_selected(self),
         }
