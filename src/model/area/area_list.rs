@@ -172,12 +172,12 @@ impl<'a> AreaList<'a> {
             .chain(once(self.selected_area.as_area()))
     }
 
-    pub fn move_selection(mut self, target_area_id: AreaId) -> (Self, bool) {
+    pub fn move_selection(mut self, target_area_id: AreaId) -> AreaListResult<'a> {
         let selected_area_id = self.selected_area.id();
 
         // No work to do if we're already where we want to end up.
         if selected_area_id == target_area_id {
-            return (self, true);
+            return AreaListResult::new_with_selected(self);
         }
 
         let selected_index = self.get_index(selected_area_id);
@@ -216,7 +216,7 @@ impl<'a> AreaList<'a> {
                 other_vec.push(unselected_area);
                 other_vec.extend(areas_to_move.into_iter().rev());
 
-                (self, true)
+                AreaListResult::new(self, vec![selected_area_id, target_area_id])
             }
 
             // If we were *un*able to move the selection, put everything back where we found it.
@@ -225,40 +225,41 @@ impl<'a> AreaList<'a> {
                 target_vec.push(target_area);
                 target_vec.extend(areas_to_move.into_iter());
 
-                (self, false)
+                AreaListResult::new_with_none(self)
             }
         }
     }
 
-    pub fn activate_selected(mut self) -> Self {
-        if let Some(action) = self.selected_area.activate() {
-            match action {
-                Action::Draw(len) => {
-                    let held = self.get_by_area_id_mut(AreaId::Stock).take_cards(len);
+    pub fn activate_selected(mut self) -> AreaListResult<'a> {
+        match self.selected_area.activate() {
+            Some(Action::Draw(len)) => {
+                let held = self.get_by_area_id_mut(AreaId::Stock).take_cards(len);
 
-                    match self.get_by_area_id_mut(AreaId::Talon).give_cards(held) {
-                        Ok(()) => {}
-                        Err(held) => self
-                            .get_by_area_id_mut(AreaId::Stock)
+                match self.get_by_area_id_mut(AreaId::Talon).give_cards(held) {
+                    Ok(()) => AreaListResult::new(self, vec![AreaId::Stock, AreaId::Talon]),
+                    Err(held) => {
+                        self.get_by_area_id_mut(AreaId::Stock)
                             .give_cards(held)
-                            .expect("Unable to replace held cards on the stock"),
-                    }
-                }
-                Action::Restock => {
-                    let held = self.get_by_area_id_mut(AreaId::Talon).take_all_cards();
-
-                    match self.get_by_area_id_mut(AreaId::Stock).give_cards(held) {
-                        Ok(()) => {}
-                        Err(held) => self
-                            .get_by_area_id_mut(AreaId::Talon)
-                            .give_cards(held)
-                            .expect("Unable to replace held cards on the talon"),
+                            .expect("Unable to replace held cards on the stock");
+                        AreaListResult::new_with_none(self)
                     }
                 }
             }
-        }
+            Some(Action::Restock) => {
+                let held = self.get_by_area_id_mut(AreaId::Talon).take_all_cards();
 
-        self
+                match self.get_by_area_id_mut(AreaId::Stock).give_cards(held) {
+                    Ok(()) => AreaListResult::new(self, vec![AreaId::Stock, AreaId::Talon]),
+                    Err(held) => {
+                        self.get_by_area_id_mut(AreaId::Talon)
+                            .give_cards(held)
+                            .expect("Unable to replace held cards on the talon");
+                        AreaListResult::new_with_none(self)
+                    }
+                }
+            }
+            None => AreaListResult::new_with_selected(self),
+        }
     }
 
     fn get_index(&self, area_id: AreaId) -> usize {
@@ -293,5 +294,30 @@ impl<'a> fmt::Debug for AreaList<'a> {
             .field("selected_area", &self.selected_area.id())
             .field("after_areas", &after_area_ids)
             .finish()
+    }
+}
+
+#[derive(Debug)]
+pub struct AreaListResult<'a>(pub AreaList<'a>, pub Vec<AreaId>);
+
+impl<'a> AreaListResult<'a> {
+    pub fn new(
+        area_list: AreaList<'a>,
+        area_ids: impl IntoIterator<Item = AreaId>,
+    ) -> AreaListResult<'a> {
+        AreaListResult(area_list, area_ids.into_iter().collect())
+    }
+
+    pub fn new_with_none(area_list: AreaList<'a>) -> AreaListResult<'a> {
+        AreaListResult(area_list, vec![])
+    }
+
+    pub fn new_with_one(area_list: AreaList<'a>, area_id: AreaId) -> AreaListResult<'a> {
+        AreaListResult(area_list, vec![area_id])
+    }
+
+    pub fn new_with_selected(area_list: AreaList<'a>) -> AreaListResult<'a> {
+        let selected_area_id = area_list.selected().id();
+        AreaListResult(area_list, vec![selected_area_id])
     }
 }

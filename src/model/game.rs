@@ -1,7 +1,11 @@
 use super::{
     area::{
-        area_list::AreaList, foundation::UnselectedFoundation, stock::UnselectedStock,
-        tableaux::UnselectedTableaux, talon::UnselectedTalon, Area, AreaId,
+        area_list::{AreaList, AreaListResult},
+        foundation::UnselectedFoundation,
+        stock::UnselectedStock,
+        tableaux::UnselectedTableaux,
+        talon::UnselectedTalon,
+        Area, AreaId,
     },
     deck::Deck,
     settings::Settings,
@@ -106,11 +110,11 @@ impl<'a> Game<'a> {
         for new_area_id in moves {
             debug!("Attempting to move selection to {:?}", new_area_id);
 
-            let (areas, success) = self.areas.move_selection(new_area_id);
-            self.areas = areas;
+            let AreaListResult(new_areas, area_ids) = self.areas.move_selection(new_area_id);
+            self.areas = new_areas;
 
-            if success {
-                return GameResult::new(self, vec![old_area_id, new_area_id]);
+            if !area_ids.is_empty() {
+                return GameResult::new(self, area_ids);
             }
         }
 
@@ -118,8 +122,9 @@ impl<'a> Game<'a> {
     }
 
     pub fn activate(mut self) -> GameResult<'a> {
-        self.areas = self.areas.activate_selected();
-        GameResult::new_with_selected(self)
+        let AreaListResult(new_areas, area_ids) = self.areas.activate_selected();
+        self.areas = new_areas;
+        GameResult::new(self, area_ids)
     }
 }
 
