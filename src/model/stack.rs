@@ -47,6 +47,10 @@ impl StackDetails {
             StackSelection::FullStack => None,
         })
     }
+
+    pub fn unspread_len(&self) -> usize {
+        self.visible_len.bounded_sub(self.spread_len)
+    }
 }
 
 #[derive(Debug)]

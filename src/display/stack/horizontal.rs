@@ -16,6 +16,8 @@ static OFFSETS: Offsets = Offsets {
     unspread: Coords::from_x(1),
     spread: Coords::from_x(4),
     selected: Coords::from_x(1),
+    collapse_unspread_len: 0,
+    collapse_spread_len: 0,
 };
 
 static SELECTOR_OFFSET: Coords = Coords::from_y(0);
@@ -35,7 +37,7 @@ where
         for (i, card) in stack.into_iter().enumerate() {
             if let Some(coords) = card_coords(coords, i, &OFFSETS, &stack.details) {
                 if i < face_up_index {
-                    bounds += self.draw_card_face_down(coords, card)?;
+                    bounds += self.draw_card_face_down(coords)?;
                 } else {
                     bounds += self.draw_card_face_up(coords, card)?;
                 }

@@ -1,10 +1,12 @@
 use crate::{display::Coords, model::stack::StackDetails};
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Offsets {
     pub unspread: Coords,
     pub spread: Coords,
     pub selected: Coords,
+    pub collapse_unspread_len: usize,
+    pub collapse_spread_len: usize,
 }
 
 pub fn card_coords(
@@ -13,7 +15,7 @@ pub fn card_coords(
     offsets: &Offsets,
     stack_details: &StackDetails,
 ) -> Option<Coords> {
-    let visible_index = stack_details.visible_index();
+    let visible_index = stack_details.visible_index() + offsets.collapse_unspread_len;
     let spread_index = stack_details.spread_index();
 
     if index >= spread_index {
@@ -37,7 +39,7 @@ pub fn card_coords(
     }
 }
 
-pub fn card_shift(index: usize, offsets: &Offsets, stack_details: &StackDetails) -> Coords {
+fn card_shift(index: usize, offsets: &Offsets, stack_details: &StackDetails) -> Coords {
     stack_details
         .selection_index()
         .filter(|&selection_index| index >= selection_index)

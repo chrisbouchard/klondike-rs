@@ -25,7 +25,8 @@ impl color::Color for Color {
 
 pub trait CardPainter {
     fn draw_card_face_up(&mut self, coords: Coords, card: &Card) -> Result<Bounds>;
-    fn draw_card_face_down(&mut self, coords: Coords, card: &Card) -> Result<Bounds>;
+    fn draw_card_face_down(&mut self, coords: Coords) -> Result<Bounds>;
+    fn draw_card_face_down_with_count(&mut self, coords: Coords, count: usize) -> Result<Bounds>;
 }
 
 impl<W> CardPainter for W
@@ -52,7 +53,7 @@ where
         Ok(Bounds::with_size(coords, CARD_SIZE))
     }
 
-    fn draw_card_face_down(&mut self, coords: Coords, _: &Card) -> Result<Bounds> {
+    fn draw_card_face_down(&mut self, coords: Coords) -> Result<Bounds> {
         draw_card_frame(self, coords)?;
 
         let interior_coords = coords + Coords::from_xy(2, 1);
@@ -65,6 +66,27 @@ where
         write!(self, "░░░░{}", next)?;
 
         Ok(Bounds::with_size(coords, CARD_SIZE))
+    }
+
+    fn draw_card_face_down_with_count(&mut self, coords: Coords, count: usize) -> Result<Bounds> {
+        let bounds = self.draw_card_face_down(coords)?;
+
+        let formatted_count = format!("{}×", count);
+
+        let count_coords =
+            coords + CARD_SIZE.to_x() - Coords::from_x(formatted_count.chars().count() as i32 + 3);
+        let goto: cursor::Goto = count_coords.into();
+
+        let gray = color::Fg(color::LightBlack);
+        let white = color::Fg(color::White);
+
+        write!(
+            self,
+            "{}{}╴{}{}{}╶",
+            goto, white, gray, formatted_count, white
+        )?;
+
+        Ok(bounds)
     }
 }
 

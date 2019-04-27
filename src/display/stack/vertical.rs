@@ -1,3 +1,5 @@
+use termion;
+
 use crate::{
     display::{
         bounds::Bounds,
@@ -12,10 +14,12 @@ use crate::{
 
 use super::common::*;
 
-static OFFSETS: Offsets = Offsets {
+static UNCOLLAPSED_OFFSETS: Offsets = Offsets {
     unspread: Coords::from_y(1),
     spread: Coords::from_y(2),
     selected: Coords::from_x(1),
+    collapse_unspread_len: 0,
+    collapse_spread_len: 0,
 };
 
 static CARD_SELECTOR_OFFSET: Coords = Coords::from_x(-2);
@@ -30,13 +34,25 @@ where
     T: CardPainter + SelectorPainter,
 {
     fn draw_vertical_stack(&mut self, coords: Coords, stack: &Stack) -> Result<Bounds> {
+        let offsets = offset_with_collapse(coords, stack)?;
+
+        // Index at which the collapsed unspread cards will be represented.
+        let collapsed_unspread_index =
+            stack.details.visible_index() + offsets.collapse_unspread_len;
+
+        // First index of a face up card. All cards before this are face down.
         let face_up_index = stack.details.face_up_index();
+
         let mut bounds = Bounds::new(coords, coords);
 
         for (i, card) in stack.into_iter().enumerate() {
-            if let Some(coords) = card_coords(coords, i, &OFFSETS, &stack.details) {
-                if i < face_up_index {
-                    bounds += self.draw_card_face_down(coords, card)?;
+            if let Some(coords) = card_coords(coords, i, &offsets, &stack.details) {
+                if offsets.collapse_unspread_len > 0 && i <= collapsed_unspread_index {
+                    // Add 1 for the one visible card.
+                    let count = offsets.collapse_unspread_len + 1;
+                    bounds += self.draw_card_face_down_with_count(coords, count)?;
+                } else if i < face_up_index {
+                    bounds += self.draw_card_face_down(coords)?;
                 } else {
                     bounds += self.draw_card_face_up(coords, card)?;
                 }
@@ -53,10 +69,10 @@ where
                     let selection_index = stack.details.selection_index().unwrap_or_default();
 
                     let start_coords =
-                        card_coords(coords, selection_index, &OFFSETS, &stack.details)
+                        card_coords(coords, selection_index, &offsets, &stack.details)
                             .unwrap_or(coords)
                             + CARD_SELECTOR_OFFSET;
-                    let end_coords = card_coords(coords, end_index, &OFFSETS, &stack.details)
+                    let end_coords = card_coords(coords, end_index, &offsets, &stack.details)
                         .unwrap_or(coords)
                         + CARD_SIZE.to_y()
                         + CARD_SELECTOR_OFFSET;
@@ -65,7 +81,7 @@ where
                     bounds += self.draw_vertical_selector(start_coords, len)?;
                 }
                 StackSelection::Stack(_) | StackSelection::FullStack => {
-                    let start_coords = card_coords(coords, end_index, &OFFSETS, &stack.details)
+                    let start_coords = card_coords(coords, end_index, &offsets, &stack.details)
                         .unwrap_or(coords)
                         + CARD_SIZE.to_y()
                         + STACK_SELECTOR_OFFSET;
@@ -78,4 +94,47 @@ where
 
         Ok(bounds)
     }
+}
+
+fn offset_with_collapse(coords: Coords, stack: &Stack) -> Result<Offsets> {
+    let mut offsets = UNCOLLAPSED_OFFSETS.clone();
+    let mut collapse_len = collapse_len(coords, &offsets, stack)?;
+
+    debug!("collapse_len: {}", collapse_len);
+
+    if collapse_len > 0 {
+        let reserve_unspread_len = if stack.details.spread_len > 0 { 0 } else { 1 };
+        let unspread_len = stack.details.unspread_len();
+        let collapse_unspread_len = unspread_len.bounded_sub(reserve_unspread_len + 1);
+        debug!(
+            "unspread_len: {}, collapse_unspread_len: {}",
+            unspread_len, collapse_unspread_len
+        );
+
+        offsets.collapse_unspread_len = collapse_unspread_len;
+        collapse_len = collapse_len.bounded_sub(collapse_unspread_len);
+    }
+
+    if collapse_len > 0 {
+        offsets.collapse_spread_len = collapse_len;
+    }
+
+    Ok(offsets)
+}
+
+fn collapse_len(coords: Coords, offsets: &Offsets, stack: &Stack) -> Result<usize> {
+    let terminal_height = usize::from(termion::terminal_size()?.1);
+    debug!("terminal_height: {}", terminal_height);
+
+    let stack_height: usize = (0..stack.cards.len())
+        .flat_map(|i| card_coords(coords, i, offsets, &stack.details))
+        .map(|coords| coords + CARD_SIZE)
+        .map(|coords| coords.y)
+        .max()
+        // Add 1 for the selector, and 1 to turn the coord into a length.
+        .unwrap_or(0) as usize
+        + 2;
+    debug!("stack_height: {}", stack_height);
+
+    Ok(stack_height.bounded_sub(terminal_height))
 }
