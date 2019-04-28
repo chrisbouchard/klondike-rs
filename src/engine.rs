@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt};
 
 use crate::{
     display::{DisplayState, Result},
@@ -97,6 +97,15 @@ where
     }
 }
 
+impl<'a, I, R> fmt::Debug for GameEngine<'a, I, R> {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        fmt.debug_struct("GameEngine")
+            .field("game", &self.game)
+            .field("state", &self.state)
+            .finish()
+    }
+}
+
 pub struct GameEngineBuilder<'a, I, R = ()> {
     game: Game<'a>,
     state: DisplayState,
@@ -160,5 +169,14 @@ impl<'a, I, R> GameEngineBuilder<'a, I, R> {
             repainter: self.repainter,
             repaint_watchers: self.repaint_watchers,
         })
+    }
+}
+
+impl<'a, I, R> fmt::Debug for GameEngineBuilder<'a, I, R> {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        fmt.debug_struct("GameEngineBuilder")
+            .field("game", &self.game)
+            .field("state", &self.state)
+            .finish()
     }
 }
