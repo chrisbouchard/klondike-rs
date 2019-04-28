@@ -55,6 +55,9 @@ where
 
         let inner_top_left = top_left + BORDER + PADDING;
         let inner_bottom_right = bottom_right - BORDER - PADDING;
+        let inner_bounds = Bounds::new(inner_top_left, inner_bottom_right);
+
+        let inner_top_middle = inner_top_left + Coords::from_x(inner_bounds.width() / 2);
 
         write!(
             self,
@@ -76,7 +79,7 @@ where
 
         write!(
             self,
-            "{goto}{cyan}s {reset}:  {white}Move to Stock (Deck)",
+            "{goto}{cyan}s{reset} :  {white}Move to Stock/Deck",
             goto = cursor::Goto::from(inner_top_left + Coords::from_y(3)),
             cyan = cyan,
             reset = reset,
@@ -85,8 +88,71 @@ where
 
         write!(
             self,
-            "{goto}{cyan}t {reset}:  {white}Move to Talon (Waste)",
+            "{goto}{cyan}t{reset} :  {white}Move to Talon/Waste",
             goto = cursor::Goto::from(inner_top_left + Coords::from_y(4)),
+            cyan = cyan,
+            reset = reset,
+            white = white
+        )?;
+
+        write!(
+            self,
+            "{goto}{cyan}f{reset} :  {white}Move to Next Foundation",
+            goto = cursor::Goto::from(inner_top_left + Coords::from_y(5)),
+            cyan = cyan,
+            reset = reset,
+            white = white
+        )?;
+
+        write!(
+            self,
+            "{goto}{cyan}-{reset} :  {white}Move to Previous",
+            goto = cursor::Goto::from(inner_top_left + Coords::from_y(6)),
+            cyan = cyan,
+            reset = reset,
+            white = white
+        )?;
+
+        write!(
+            self,
+            "{goto}{cyan}F1{reset} ... {cyan}F4{reset} :  {white}Move to Foundation",
+            goto = cursor::Goto::from(inner_top_middle),
+            cyan = cyan,
+            reset = reset,
+            white = white
+        )?;
+
+        write!(
+            self,
+            "{goto}{cyan}1{reset} ... {cyan}7{reset} :  {white}Move to Tableaux",
+            goto = cursor::Goto::from(inner_top_middle + Coords::from_y(1)),
+            cyan = cyan,
+            reset = reset,
+            white = white
+        )?;
+
+        write!(
+            self,
+            "{goto}{cyan}SPACE{reset} :  {white}Pick Up/Activate",
+            goto = cursor::Goto::from(inner_top_middle + Coords::from_y(3)),
+            cyan = cyan,
+            reset = reset,
+            white = white
+        )?;
+
+        write!(
+            self,
+            "{goto}{cyan}?{reset} :  {white}Display Help",
+            goto = cursor::Goto::from(inner_top_middle + Coords::from_y(5)),
+            cyan = cyan,
+            reset = reset,
+            white = white
+        )?;
+
+        write!(
+            self,
+            "{goto}{cyan}q{reset} :  {white}Quit",
+            goto = cursor::Goto::from(inner_top_middle + Coords::from_y(6)),
             cyan = cyan,
             reset = reset,
             white = white
