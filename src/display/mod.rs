@@ -6,6 +6,7 @@ pub mod blank;
 pub mod bounds;
 pub mod card;
 pub mod coords;
+pub mod frame;
 pub mod game;
 pub mod help;
 pub mod selector;

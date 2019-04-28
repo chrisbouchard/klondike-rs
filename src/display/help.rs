@@ -1,8 +1,12 @@
 use std::io;
 use termion::{color, cursor, terminal_size};
 
-use super::{bounds::Bounds, coords::Coords, Result};
-use crate::utils::usize::BoundedSub;
+use super::{
+    bounds::Bounds,
+    coords::Coords,
+    frame::{self, Direction, FramePainter, Title},
+    Result,
+};
 
 static MARGIN: Coords = Coords::from_xy(2, 1);
 static BORDER: Coords = Coords::from_xy(1, 1);
@@ -21,37 +25,15 @@ where
         let bottom_right = Coords::from(terminal_size()?) - MARGIN;
         let bounds = Bounds::new(top_left, bottom_right);
 
+        self.draw_frame(
+            bounds,
+            Some(Title("H E L P".to_string(), Direction::Center)),
+            Some(Title("Press any key to continue . . .".to_string(), Direction::Right)),
+            &frame::DOUBLE)?;
+
         let cyan = color::Fg(color::Cyan);
         let white = color::Fg(color::White);
         let reset = color::Fg(color::Reset);
-
-        write!(
-            self,
-            "{goto}{white}╔{title:═^width$}╗",
-            goto = cursor::Goto::from(top_left),
-            white = white,
-            title = "╡ H E L P ╞",
-            width = (bounds.width() as usize).bounded_sub(2)
-        )?;
-
-        for i in 1..(bounds.height() - 1) {
-            write!(
-                self,
-                "{goto}{white}║{skip}║",
-                goto = cursor::Goto::from(top_left + Coords::from_y(i)),
-                white = white,
-                skip = cursor::Right((bounds.width() as usize).bounded_sub(2) as u16)
-            )?;
-        }
-
-        write!(
-            self,
-            "{goto}{white}╚{empty:═^width$}╝",
-            goto = cursor::Goto::from(top_left.to_x() + bottom_right.to_y()),
-            white = white,
-            empty = "",
-            width = (bounds.width() as usize).bounded_sub(2),
-        )?;
 
         let inner_top_left = top_left + BORDER + PADDING;
         let inner_bottom_right = bottom_right - BORDER - PADDING;
@@ -133,7 +115,7 @@ where
 
         write!(
             self,
-            "{goto}{cyan}SPACE{reset} :  {white}Pick Up/Activate",
+            "{goto}{cyan}SPACE{reset} / {cyan}RETURN{reset} :  {white}Pick Up/Activate",
             goto = cursor::Goto::from(inner_top_middle + Coords::from_y(3)),
             cyan = cyan,
             reset = reset,
@@ -156,13 +138,6 @@ where
             cyan = cyan,
             reset = reset,
             white = white
-        )?;
-
-        write!(
-            self,
-            "{goto}{reset}Press any key to continue . . .",
-            goto = cursor::Goto::from(inner_top_left.to_x() + inner_bottom_right.to_y()),
-            reset = reset,
         )?;
 
         Ok(())

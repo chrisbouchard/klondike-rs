@@ -101,7 +101,7 @@ fn handle_playing_input(key: Key) -> Option<Update> {
 
         Key::Char('-') => Some(Update::Action(Action::MoveBack)),
 
-        Key::Char(' ') => Some(Update::Action(Action::Activate)),
+        Key::Char(' ') | Key::Char('\n') => Some(Update::Action(Action::Activate)),
 
         _ => None,
     }
