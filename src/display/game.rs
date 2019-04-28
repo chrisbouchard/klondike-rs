@@ -85,7 +85,7 @@ fn coords_for_area(area_id: AreaId) -> Coords {
             FOUNDATION_COORDS + (index as i32) * (CARD_SIZE.to_x() + COLUMN_OFFSET)
         }
         AreaId::Tableaux(index) => {
-            TABLEAUX_COORDS + (index as i32) * (CARD_SIZE.to_x() + COLUMN_OFFSET)
+            TABLEAUX_COORDS + i32::from(index) * (CARD_SIZE.to_x() + COLUMN_OFFSET)
         }
     }
 }
