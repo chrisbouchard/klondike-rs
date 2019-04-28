@@ -1,12 +1,12 @@
 use std::io;
-use termion::{color, cursor};
+use termion::{color, cursor, terminal_size};
 
-use super::{coords::Coords, Result};
+use super::{bounds::Bounds, coords::Coords, Result};
 use crate::utils::usize::BoundedSub;
 
-static TOP_LEFT: Coords = Coords::from_xy(2, 2);
-static INSET: Coords = Coords::from_xy(2, 2);
-static BOX_SIZE: Coords = Coords::from_xy(17, 6);
+static MARGIN: Coords = Coords::from_xy(2, 1);
+static BORDER: Coords = Coords::from_xy(1, 1);
+static PADDING: Coords = Coords::from_xy(2, 1);
 
 pub trait HelpPainter {
     fn draw_help_message(&mut self) -> Result;
@@ -17,40 +17,56 @@ where
     W: io::Write,
 {
     fn draw_help_message(&mut self) -> Result {
+        let top_left = MARGIN;
+        let bottom_right = Coords::from(terminal_size()?) - MARGIN;
+        let bounds = Bounds::new(top_left, bottom_right);
+
         let cyan = color::Fg(color::Cyan);
         let white = color::Fg(color::White);
         let reset = color::Fg(color::Reset);
 
         write!(
             self,
-            "{goto}{white}╔{bar}╗",
-            goto = cursor::Goto::from(TOP_LEFT),
-            white = white,
-            bar = "═".repeat((BOX_SIZE.x as usize).bounded_sub(2))
+            "{goto}{reset}{size:?}",
+            goto = cursor::Goto(1, 1),
+            reset = reset,
+            size = terminal_size()?
         )?;
 
-        for i in 1..(BOX_SIZE.y - 1) {
+        write!(
+            self,
+            "{goto}{white}╔{title:═^width$}╗",
+            goto = cursor::Goto::from(top_left),
+            white = white,
+            title = "╡ H E L P ╞",
+            width = (bounds.width() as usize).bounded_sub(2)
+        )?;
+
+        for i in 1..(bounds.height() - 1) {
             write!(
                 self,
-                "{goto}{white}║{space}║",
-                goto = cursor::Goto::from(TOP_LEFT + Coords::from_y(i)),
+                "{goto}{white}║{skip}║",
+                goto = cursor::Goto::from(top_left + Coords::from_y(i)),
                 white = white,
-                space = " ".repeat((BOX_SIZE.x as usize).bounded_sub(2))
+                skip = cursor::Right((bounds.width() as usize).bounded_sub(2) as u16)
             )?;
         }
 
         write!(
             self,
-            "{goto}{white}╚{bar}╝",
-            goto = cursor::Goto::from(TOP_LEFT + BOX_SIZE.to_y() - Coords::from_y(1)),
+            "{goto}{white}╚{empty:═^width$}╝",
+            goto = cursor::Goto::from(top_left.to_x() + bottom_right.to_y()),
             white = white,
-            bar = "═".repeat((BOX_SIZE.x as usize).bounded_sub(2))
+            empty = "",
+            width = (bounds.width() as usize).bounded_sub(2),
         )?;
+
+        let inner_top_left = top_left + BORDER + PADDING;
 
         write!(
             self,
-            "{goto}{cyan}h{reset}/{cyan}j{reset}/{cyan}k{reset}/{cyan}l{reset}: {white}Move",
-            goto = cursor::Goto::from(TOP_LEFT + INSET),
+            "{goto}{cyan}h{reset} / {cyan}j{reset} / {cyan}k{reset} / {cyan}l{reset} :  {white}Move",
+            goto = cursor::Goto::from(inner_top_left),
             cyan = cyan,
             reset = reset,
             white = white
@@ -58,8 +74,26 @@ where
 
         write!(
             self,
-            "{goto}{cyan}←{reset}/{cyan}↓{reset}/{cyan}↑{reset}/{cyan}→{reset}: {white}Move",
-            goto = cursor::Goto::from(TOP_LEFT + INSET + Coords::from_y(1)),
+            "{goto}{cyan}←{reset} / {cyan}↓{reset} / {cyan}↑{reset} / {cyan}→{reset} :  {white}Move",
+            goto = cursor::Goto::from(inner_top_left + Coords::from_y(1)),
+            cyan = cyan,
+            reset = reset,
+            white = white
+        )?;
+
+        write!(
+            self,
+            "{goto}{cyan}s {reset}:  {white}Move to Stock (Deck)",
+            goto = cursor::Goto::from(inner_top_left + Coords::from_y(3)),
+            cyan = cyan,
+            reset = reset,
+            white = white
+        )?;
+
+        write!(
+            self,
+            "{goto}{cyan}t {reset}:  {white}Move to Talon (Waste)",
+            goto = cursor::Goto::from(inner_top_left + Coords::from_y(4)),
             cyan = cyan,
             reset = reset,
             white = white

@@ -1,7 +1,5 @@
 use std::{fmt, io};
 
-use crate::model::{Game, GameResult};
-
 pub use self::{coords::Coords, game::GameDisplay};
 
 pub mod blank;
@@ -36,30 +34,9 @@ impl From<io::Error> for Error {
     }
 }
 
-#[derive(Clone, Copy, Debug, Hash)]
+#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq)]
 pub enum DisplayState {
     Playing,
     HelpMessageOpen,
     Quitting,
-}
-
-#[derive(Debug)]
-pub struct DisplayResult<'a>(pub GameResult<'a>, pub Option<DisplayState>);
-
-impl<'a> DisplayResult<'a> {
-    pub fn new(game_result: GameResult<'a>, new_state: DisplayState) -> DisplayResult<'a> {
-        DisplayResult(game_result, Some(new_state))
-    }
-
-    pub fn with_game_result(game_result: GameResult<'a>) -> DisplayResult<'a> {
-        DisplayResult(game_result, None)
-    }
-
-    pub fn with_new_state(game: Game<'a>, new_state: DisplayState) -> DisplayResult<'a> {
-        DisplayResult(GameResult::new_with_none(game), Some(new_state))
-    }
-
-    pub fn with_no_change(game: Game<'a>) -> DisplayResult<'a> {
-        DisplayResult(GameResult::new_with_none(game), None)
-    }
 }

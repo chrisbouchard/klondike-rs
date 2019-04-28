@@ -1,7 +1,5 @@
 use std::cmp::Ordering;
 
-use super::{Error, Result};
-
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum Color {
     Black,
@@ -9,19 +7,18 @@ pub enum Color {
 }
 
 #[derive(Copy, Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
-pub struct Rank(pub u8);
+pub struct Rank(u8);
 
 impl Rank {
-    pub fn new(value: u8) -> Result<Rank> {
+    pub fn new(value: u8) -> Rank {
         match value {
-            1...13 => Ok(Rank(value)),
-            _ => Err(Error::InvalidRank { value }),
+            1...13 => Rank(value),
+            _ => panic!("Invalid rank {}", value),
         }
     }
 
     pub fn value(self) -> u8 {
-        let Rank(value) = self;
-        value
+        self.0
     }
 
     pub fn is_followed_by(self, other: Rank) -> bool {
@@ -39,16 +36,15 @@ impl Rank {
     pub fn label(self) -> String {
         match self {
             Rank(1) => "A".to_string(),
-            Rank(value @ 2...10) => format!("{}", value),
             Rank(11) => "J".to_string(),
             Rank(12) => "Q".to_string(),
             Rank(13) => "K".to_string(),
-            _ => "E".to_string(),
+            Rank(value) => format!("{}", value),
         }
     }
 
     pub fn values() -> impl Iterator<Item = Rank> {
-        (1..14).map(Rank)
+        (1..14).map(Rank::new)
     }
 }
 
