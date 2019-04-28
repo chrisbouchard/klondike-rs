@@ -1,3 +1,5 @@
+//! Module to manage a TTY in alternate mode.
+
 use std::fmt::{self, Debug, Formatter};
 use std::fs::File;
 use std::io::{self, Write};

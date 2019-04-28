@@ -1,3 +1,5 @@
+//! Module to clear part of all of the display.
+
 use std::io::Write;
 
 use termion::{clear, color, cursor};

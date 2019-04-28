@@ -1,3 +1,5 @@
+//! Module for things related to displaying a Klondike game in the terminal.
+
 use std::{fmt, io};
 
 pub use self::{coords::Coords, game::GameDisplay};

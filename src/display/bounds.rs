@@ -1,3 +1,5 @@
+//! Bounds represent an area, defined by the top-left an bottom-right coordinates.
+
 use std::{
     cmp::{max, min, Ordering},
     ops,

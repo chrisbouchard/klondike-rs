@@ -1,3 +1,5 @@
+//! Module tying together the Klondike model and display.
+
 use std::{collections::HashMap, fmt};
 
 use crate::{

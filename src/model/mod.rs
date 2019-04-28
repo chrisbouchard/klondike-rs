@@ -1,3 +1,5 @@
+//! Module for managing the state of a Klondike game.
+
 pub use self::area::AreaId;
 pub use self::card::{Card, Color, Rank, Suit};
 pub use self::deck::Deck;
