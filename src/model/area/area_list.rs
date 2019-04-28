@@ -297,14 +297,17 @@ impl<'a> AreaList<'a> {
 impl<'a> fmt::Debug for AreaList<'a> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         // We don't assume that Areas implement Debug, so we'll just format them as their area ids.
+        #[allow(clippy::redundant_closure)]
         let before_area_ids = self
             .before_areas
             .iter()
             .map(|area| area.id())
             .collect::<Vec<_>>();
 
+        #[allow(clippy::redundant_closure)]
         let selected_area_id = self.selected_area.as_ref().map(|area| area.id());
 
+        #[allow(clippy::redundant_closure)]
         let after_area_ids = self
             .after_areas
             .iter()
