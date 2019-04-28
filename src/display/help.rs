@@ -27,14 +27,6 @@ where
 
         write!(
             self,
-            "{goto}{reset}{size:?}",
-            goto = cursor::Goto(1, 1),
-            reset = reset,
-            size = terminal_size()?
-        )?;
-
-        write!(
-            self,
             "{goto}{white}╔{title:═^width$}╗",
             goto = cursor::Goto::from(top_left),
             white = white,
@@ -62,6 +54,7 @@ where
         )?;
 
         let inner_top_left = top_left + BORDER + PADDING;
+        let inner_bottom_right = bottom_right - BORDER - PADDING;
 
         write!(
             self,
@@ -97,6 +90,13 @@ where
             cyan = cyan,
             reset = reset,
             white = white
+        )?;
+
+        write!(
+            self,
+            "{goto}{reset}Press any key to continue . . .",
+            goto = cursor::Goto::from(inner_top_left.to_x() + inner_bottom_right.to_y()),
+            reset = reset,
         )?;
 
         Ok(())
