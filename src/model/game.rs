@@ -1,11 +1,7 @@
 use super::{
     area::{
-        area_list::{AreaList, AreaListResult},
-        foundation::UnselectedFoundation,
-        stock::UnselectedStock,
-        tableaux::UnselectedTableaux,
-        talon::UnselectedTalon,
-        Area, AreaId, UnselectedArea,
+        area_list::AreaList, foundation::UnselectedFoundation, stock::UnselectedStock,
+        tableaux::UnselectedTableaux, talon::UnselectedTalon, Area, AreaId, UnselectedArea,
     },
     card::Suit,
     deck::Deck,
@@ -72,22 +68,22 @@ impl<'a> Game<'a> {
         self.areas.get_by_area_id(area_id).as_stack()
     }
 
-    pub fn move_to(self, area_id: AreaId) -> GameResult<'a> {
+    pub fn move_to(&mut self, area_id: AreaId) -> Vec<AreaId> {
         let moves = vec![area_id];
         self.make_first_valid_move(moves)
     }
 
-    pub fn move_back(self) -> GameResult<'a> {
+    pub fn move_back(&mut self) -> Vec<AreaId> {
         let moves = vec![self.last_area];
         self.make_first_valid_move(moves)
     }
 
-    pub fn move_to_foundation(self) -> GameResult<'a> {
+    pub fn move_to_foundation(&mut self) -> Vec<AreaId> {
         let moves = Suit::values().map(AreaId::Foundation);
         self.make_first_valid_move(moves)
     }
 
-    pub fn move_left(self) -> GameResult<'a> {
+    pub fn move_left(&mut self) -> Vec<AreaId> {
         // Skip the first (selected) area id, then iterate the remainder in reverse order (right-to-
         // left).
         let moves = self
@@ -99,7 +95,7 @@ impl<'a> Game<'a> {
         self.make_first_valid_move(moves)
     }
 
-    pub fn move_right(self) -> GameResult<'a> {
+    pub fn move_right(&mut self) -> Vec<AreaId> {
         // Skip the first (selected) area id.
         let moves = self
             .areas
@@ -110,17 +106,17 @@ impl<'a> Game<'a> {
         self.make_first_valid_move(moves)
     }
 
-    pub fn move_up(mut self) -> GameResult<'a> {
+    pub fn move_up(&mut self) -> Vec<AreaId> {
         self.areas.selected_mut().select_more();
-        GameResult::new_with_selected(self)
+        vec![self.areas.selected().id()]
     }
 
-    pub fn move_down(mut self) -> GameResult<'a> {
+    pub fn move_down(&mut self) -> Vec<AreaId> {
         self.areas.selected_mut().select_less();
-        GameResult::new_with_selected(self)
+        vec![self.areas.selected().id()]
     }
 
-    fn make_first_valid_move<I>(mut self, moves: I) -> GameResult<'a>
+    fn make_first_valid_move<I>(&mut self, moves: I) -> Vec<AreaId>
     where
         I: IntoIterator<Item = AreaId>,
     {
@@ -129,43 +125,18 @@ impl<'a> Game<'a> {
         for new_area_id in moves {
             debug!("Attempting to move selection to {:?}", new_area_id);
 
-            let AreaListResult(new_areas, area_ids) = self.areas.move_selection(new_area_id);
-            self.areas = new_areas;
+            let area_ids = self.areas.move_selection(new_area_id);
 
             if !area_ids.is_empty() {
                 self.last_area = new_last_area;
-                return GameResult::new(self, area_ids);
+                return area_ids;
             }
         }
 
-        GameResult::new_with_none(self)
+        vec![]
     }
 
-    pub fn activate(mut self) -> GameResult<'a> {
-        let AreaListResult(new_areas, area_ids) = self.areas.activate_selected();
-        self.areas = new_areas;
-        GameResult::new(self, area_ids)
-    }
-}
-
-#[derive(Debug)]
-pub struct GameResult<'a>(pub Game<'a>, pub Vec<AreaId>);
-
-impl<'a> GameResult<'a> {
-    pub fn new(game: Game<'a>, area_ids: impl IntoIterator<Item = AreaId>) -> GameResult<'a> {
-        GameResult(game, area_ids.into_iter().collect())
-    }
-
-    pub fn new_with_none(game: Game<'a>) -> GameResult<'a> {
-        GameResult(game, vec![])
-    }
-
-    pub fn new_with_one(game: Game<'a>, area_id: AreaId) -> GameResult<'a> {
-        GameResult(game, vec![area_id])
-    }
-
-    pub fn new_with_selected(game: Game<'a>) -> GameResult<'a> {
-        let selected_area_id = game.areas.selected().id();
-        GameResult(game, vec![selected_area_id])
+    pub fn activate(&mut self) -> Vec<AreaId> {
+        self.areas.activate_selected()
     }
 }

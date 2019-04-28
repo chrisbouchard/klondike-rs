@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt, iter::once};
+use std::{collections::HashMap, fmt};
 
 use crate::utils::vec::SplitOffAround;
 
@@ -16,8 +16,9 @@ pub struct AreaList<'a> {
     area_ids: HashMap<AreaId, usize>,
     /// The list of areas before the selected area
     before_areas: Vec<Box<dyn UnselectedArea<'a> + 'a>>,
-    /// The selected area and head of the zipper
-    selected_area: Box<dyn SelectedArea<'a> + 'a>,
+    /// The selected area and head of the zipper. Empty if either the list is empty, or we are
+    /// currently moving the selection.
+    selected_area: Option<Box<dyn SelectedArea<'a> + 'a>>,
     /// The list of areas after the selected area. This list is kept in reverse order so we can
     /// efficiently push and pop to move left and right.
     after_areas: Vec<Box<dyn UnselectedArea<'a> + 'a>>,
@@ -50,24 +51,31 @@ impl<'a> AreaList<'a> {
             panic!("Conflicting area ids");
         }
 
-        // Reverse the list of areas, because we keep after_areas in reverse order for efficient
-        // pushing and popping (since areas will be coming and going from the "beginning").
-        areas.reverse();
+        if areas.is_empty() {
+            // If the area list is empty, everything is "before" the non-existent selected index.
+            AreaList {
+                area_ids,
+                before_areas: areas,
+                selected_area: None,
+                after_areas: vec![],
+            }
+        } else {
+            // Reverse the list of areas, because we keep after_areas in reverse order for efficient
+            // pushing and popping (since areas will be coming and going from the "beginning").
+            areas.reverse();
 
-        // Pop off the first area and select it. If anything goes wrong we'll immediately panic.
-        // TODO: Should we let the user specify a selected index?
-        let selected_area = areas
-            .pop()
-            .expect("Area list must not be empty")
-            .select()
-            .ok()
-            .expect("Unable to select first area");
+            // Pop off the first area and select it.
+            // TODO: Should we let the user specify a selected index?
+            let selected_area = areas
+                .pop()
+                .map(|area| area.select().ok().expect("Unable to select initial area"));
 
-        AreaList {
-            area_ids,
-            before_areas: vec![],
-            selected_area,
-            after_areas: areas,
+            AreaList {
+                area_ids,
+                before_areas: vec![],
+                selected_area,
+                after_areas: areas,
+            }
         }
     }
 
@@ -76,19 +84,18 @@ impl<'a> AreaList<'a> {
     }
 
     pub fn get_by_index(&self, index: usize) -> &dyn Area<'a> {
-        let selected_area_id = self.selected_area.id();
-        let selected_index = self.get_index(selected_area_id);
+        let selected_index = self.selected_area.as_ref().map(|selected_area| {
+            let selected_area_id = selected_area.id();
+            self.get_index(selected_area_id)
+        });
 
-        if index == selected_index {
-            self.selected_area.as_area()
-        } else if index < selected_index {
+        if Some(index) == selected_index {
+            self.selected().as_area()
+        } else if selected_index.is_none() || Some(index) < selected_index {
             self.before_areas[index].as_area()
         } else {
-            debug!(
-                "index: {:?}, selected_index: {:?}, self: {:?}",
-                index, selected_index, self
-            );
-            let effective_index = index - selected_index - 1;
+            // Unwrap is ok, because we handle None in the previous case.
+            let effective_index = index - selected_index.unwrap() - 1;
             // Since after_areas is reversed, we have to get an index "from the end".
             let actual_index = self.after_areas.len() - effective_index - 1;
             self.after_areas[actual_index].as_area()
@@ -96,15 +103,18 @@ impl<'a> AreaList<'a> {
     }
 
     pub fn get_by_index_mut(&mut self, index: usize) -> &mut dyn Area<'a> {
-        let selected_area_id = self.selected_area.id();
-        let selected_index = self.get_index(selected_area_id);
+        let selected_index = self.selected_area.as_ref().map(|selected_area| {
+            let selected_area_id = selected_area.id();
+            self.get_index(selected_area_id)
+        });
 
-        if index == selected_index {
-            self.selected_area.as_area_mut()
-        } else if index < selected_index {
+        if Some(index) == selected_index {
+            self.selected_mut().as_area_mut()
+        } else if selected_index.is_none() || Some(index) < selected_index {
             self.before_areas[index].as_area_mut()
         } else {
-            let effective_index = index - selected_index - 1;
+            // Unwrap is ok, because we handle None in the previous case.
+            let effective_index = index - selected_index.unwrap() - 1;
             // Since after_areas is reversed, we have to get an index "from the end".
             let actual_index = self.after_areas.len() - effective_index - 1;
             self.after_areas[actual_index].as_area_mut()
@@ -122,11 +132,17 @@ impl<'a> AreaList<'a> {
     }
 
     pub fn selected(&self) -> &dyn SelectedArea<'a> {
-        self.selected_area.as_ref()
+        self.selected_area
+            .as_ref()
+            .expect("Area list currently has no selected area")
+            .as_ref()
     }
 
     pub fn selected_mut(&mut self) -> &mut dyn SelectedArea<'a> {
-        self.selected_area.as_mut()
+        self.selected_area
+            .as_mut()
+            .expect("Area list currently has no selected area")
+            .as_mut()
     }
 
     pub fn area_ids(&self) -> Vec<AreaId> {
@@ -142,7 +158,7 @@ impl<'a> AreaList<'a> {
         let after_iter = self.after_areas.iter().map(|area| area.as_area()).rev();
 
         before_iter
-            .chain(once(self.selected_area.as_area()))
+            .chain(self.selected_area.iter().map(|area| area.as_area()))
             .chain(after_iter)
     }
 
@@ -156,7 +172,7 @@ impl<'a> AreaList<'a> {
 
         before_iter
             .chain(after_iter)
-            .chain(once(self.selected_area.as_area()))
+            .chain(self.selected_area.iter().map(|area| area.as_area()))
     }
 
     #[allow(clippy::redundant_closure)]
@@ -169,15 +185,15 @@ impl<'a> AreaList<'a> {
 
         after_iter
             .chain(before_iter)
-            .chain(once(self.selected_area.as_area()))
+            .chain(self.selected_area.iter().map(|area| area.as_area()))
     }
 
-    pub fn move_selection(mut self, target_area_id: AreaId) -> AreaListResult<'a> {
-        let selected_area_id = self.selected_area.id();
+    pub fn move_selection(&mut self, target_area_id: AreaId) -> Vec<AreaId> {
+        let selected_area_id = self.selected().id();
 
         // No work to do if we're already where we want to end up.
         if selected_area_id == target_area_id {
-            return AreaListResult::new_with_selected(self);
+            return vec![selected_area_id];
         }
 
         let selected_index = self.get_index(selected_area_id);
@@ -208,30 +224,36 @@ impl<'a> AreaList<'a> {
         let (target_area, areas_to_move) = target_vec.split_off_around(relative_index);
         let target_area = target_area.unwrap();
 
-        match move_selection(self.selected_area, target_area) {
+        let selected_area = self
+            .selected_area
+            .take()
+            .expect("Area list currently has no selected area");
+
+        match move_selection(selected_area, target_area) {
             // If we were able to move the selection, move the previously selected area and the
             // intermediate areas over to the other side.
             Ok((unselected_area, target_area)) => {
-                self.selected_area = target_area;
+                self.selected_area = Some(target_area);
                 other_vec.push(unselected_area);
                 other_vec.extend(areas_to_move.into_iter().rev());
 
-                AreaListResult::new(self, vec![selected_area_id, target_area_id])
+                vec![selected_area_id, target_area_id]
             }
 
             // If we were *un*able to move the selection, put everything back where we found it.
             Err((selected_area, target_area)) => {
-                self.selected_area = selected_area;
+                self.selected_area = Some(selected_area);
                 target_vec.push(target_area);
                 target_vec.extend(areas_to_move.into_iter());
 
-                AreaListResult::new_with_none(self)
+                vec![]
             }
         }
     }
 
-    pub fn activate_selected(mut self) -> AreaListResult<'a> {
-        match self.selected_area.activate() {
+    pub fn activate_selected(&mut self) -> Vec<AreaId> {
+        let selected_area = self.selected_mut();
+        match selected_area.activate() {
             Some(Action::Draw(len)) => {
                 // Take the next `len` cards from the stock. We reverse the held cards because they're
                 // being drawn one-by-one into the talon, so the first drawn is at the bottom of the
@@ -244,7 +266,8 @@ impl<'a> AreaList<'a> {
                 self.get_by_area_id_mut(AreaId::Talon)
                     .give_cards(held)
                     .expect("Unable to draw cards from the stock onto the talon.");
-                AreaListResult::new(self, vec![AreaId::Stock, AreaId::Talon])
+
+                vec![AreaId::Stock, AreaId::Talon]
             }
             Some(Action::Restock) => {
                 // Flip the talon onto the stock.
@@ -256,9 +279,10 @@ impl<'a> AreaList<'a> {
                 self.get_by_area_id_mut(AreaId::Stock)
                     .give_cards(held)
                     .expect("Unable to restock from the talon onto the stock.");
-                AreaListResult::new(self, vec![AreaId::Stock, AreaId::Talon])
+
+                vec![AreaId::Stock, AreaId::Talon]
             }
-            None => AreaListResult::new_with_selected(self),
+            None => vec![selected_area.id()],
         }
     }
 
@@ -273,14 +297,16 @@ impl<'a> AreaList<'a> {
 impl<'a> fmt::Debug for AreaList<'a> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         // We don't assume that Areas implement Debug, so we'll just format them as their area ids.
-        // Clippy 0.0.212 wants to replace the following closures with Area::id, but that is not
-        // valid because our value is &Box<...>, which requires dereferencing.
         #[allow(clippy::redundant_closure)]
         let before_area_ids = self
             .before_areas
             .iter()
             .map(|area| area.id())
             .collect::<Vec<_>>();
+
+        #[allow(clippy::redundant_closure)]
+        let selected_area_id = self.selected_area.as_ref().map(|area| area.id());
+
         #[allow(clippy::redundant_closure)]
         let after_area_ids = self
             .after_areas
@@ -291,33 +317,8 @@ impl<'a> fmt::Debug for AreaList<'a> {
         fmt.debug_struct("AreaList")
             .field("area_ids", &self.area_ids)
             .field("before_areas", &before_area_ids)
-            .field("selected_area", &self.selected_area.id())
+            .field("selected_area", &selected_area_id)
             .field("after_areas", &after_area_ids)
             .finish()
-    }
-}
-
-#[derive(Debug)]
-pub struct AreaListResult<'a>(pub AreaList<'a>, pub Vec<AreaId>);
-
-impl<'a> AreaListResult<'a> {
-    pub fn new(
-        area_list: AreaList<'a>,
-        area_ids: impl IntoIterator<Item = AreaId>,
-    ) -> AreaListResult<'a> {
-        AreaListResult(area_list, area_ids.into_iter().collect())
-    }
-
-    pub fn new_with_none(area_list: AreaList<'a>) -> AreaListResult<'a> {
-        AreaListResult(area_list, vec![])
-    }
-
-    pub fn new_with_one(area_list: AreaList<'a>, area_id: AreaId) -> AreaListResult<'a> {
-        AreaListResult(area_list, vec![area_id])
-    }
-
-    pub fn new_with_selected(area_list: AreaList<'a>) -> AreaListResult<'a> {
-        let selected_area_id = area_list.selected().id();
-        AreaListResult(area_list, vec![selected_area_id])
     }
 }

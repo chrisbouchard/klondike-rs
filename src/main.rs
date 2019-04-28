@@ -10,7 +10,7 @@ use termion::{event::Key, input::TermRead, terminal_size};
 
 use klondike_lib::{
     display::GameDisplay,
-    model::{AreaId, Deck, Game, GameResult, Settings, Suit},
+    model::{AreaId, Deck, Game, Settings, Suit},
     terminal::Terminal,
 };
 
@@ -47,7 +47,7 @@ fn main() -> Result {
 
     'event_loop: for key in input.keys() {
         debug!("Read key: {:?}", key);
-        let GameResult(new_game, area_ids) = match key? {
+        let area_ids = match key? {
             Key::Char('q') => break 'event_loop,
 
             Key::Char('s') => game.move_to(AreaId::Stock),
@@ -64,7 +64,7 @@ fn main() -> Result {
                 if let Some(index) = c.to_digit(10) {
                     game.move_to(AreaId::Tableaux(index as u8 - 1))
                 } else {
-                    GameResult::new_with_none(game)
+                    vec![]
                 }
             }
 
@@ -74,10 +74,8 @@ fn main() -> Result {
 
             Key::Char(' ') => game.activate(),
 
-            _ => GameResult::new_with_none(game),
+            _ => vec![],
         };
-
-        game = new_game;
 
         let new_terminal_size = terminal_size()?;
 
