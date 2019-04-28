@@ -7,6 +7,7 @@ pub mod bounds;
 pub mod card;
 pub mod coords;
 pub mod game;
+pub mod help;
 pub mod selector;
 pub mod stack;
 
@@ -31,4 +32,11 @@ impl From<io::Error> for Error {
     fn from(error: io::Error) -> Self {
         Error::IoError(error)
     }
+}
+
+#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq)]
+pub enum DisplayState {
+    Playing,
+    HelpMessageOpen,
+    Quitting,
 }

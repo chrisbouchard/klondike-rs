@@ -3,9 +3,10 @@ use std::{collections::HashMap, fmt, io};
 use crate::model::{AreaId, Game};
 
 use super::{
-    blank::BlankPainter, bounds::Bounds, card::CARD_SIZE, coords::Coords, stack::StackPainter,
-    Result,
+    blank::BlankPainter, bounds::Bounds, card::CARD_SIZE, coords::Coords, help::HelpPainter,
+    stack::StackPainter, DisplayState, Result,
 };
+use crate::engine::Repainter;
 
 static STOCK_COORDS: Coords = Coords::from_xy(2, 0);
 static TALON_COORDS: Coords = Coords::from_xy(13, 0);
@@ -14,16 +15,16 @@ static TABLEAUX_COORDS: Coords = Coords::from_xy(2, 5);
 
 static COLUMN_OFFSET: Coords = Coords::from_x(3);
 
-pub struct GameDisplay<'a, P> {
-    painter: &'a mut P,
+pub struct GameDisplay<P> {
+    painter: P,
     area_bounds: HashMap<AreaId, Bounds>,
 }
 
-impl<'a, W> GameDisplay<'a, W>
+impl<W> GameDisplay<W>
 where
     W: io::Write,
 {
-    pub fn new(painter: &'a mut W) -> GameDisplay<'a, W> {
+    pub fn new(painter: W) -> GameDisplay<W> {
         GameDisplay {
             painter,
             area_bounds: HashMap::new(),
@@ -59,19 +60,55 @@ where
         Ok(())
     }
 
+    pub fn draw_help(&mut self) -> Result {
+        self.painter.draw_blank_all()?;
+        self.area_bounds.clear();
+
+        self.painter.draw_help_message()?;
+
+        Ok(())
+    }
+
     pub fn flush(&mut self) -> Result {
         self.painter.flush()?;
         Ok(())
     }
 }
 
-impl<'a, P> fmt::Debug for GameDisplay<'a, P>
+impl<W> Repainter for GameDisplay<W>
 where
-    P: fmt::Debug,
+    W: io::Write,
+{
+    fn repaint_full(&mut self, game: &Game, state: DisplayState) -> Result {
+        match state {
+            DisplayState::Playing => {
+                self.draw_all_areas(game)?;
+            }
+            DisplayState::HelpMessageOpen => {
+                self.draw_help()?;
+            }
+            _ => {}
+        }
+
+        self.flush()
+    }
+
+    fn repaint_areas(&mut self, game: &Game, area_ids: &[AreaId]) -> Result {
+        for &area_id in area_ids {
+            self.draw_area(game, area_id)?;
+        }
+
+        self.flush()
+    }
+}
+
+impl<D> fmt::Debug for GameDisplay<D>
+where
+    D: fmt::Debug,
 {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.debug_struct("GameDisplay")
-            .field("painter", self.painter)
+            .field("painter", &self.painter)
             .field("area_bounds", &self.area_bounds)
             .finish()
     }

@@ -16,6 +16,7 @@ extern crate failure_derive;
 extern crate log;
 
 pub mod display;
+pub mod engine;
 pub mod model;
 pub mod terminal;
 mod utils;

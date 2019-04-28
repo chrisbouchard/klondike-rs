@@ -1,3 +1,5 @@
+use std::borrow::Borrow;
+
 use super::{
     area::{
         area_list::AreaList, foundation::UnselectedFoundation, stock::UnselectedStock,
@@ -68,75 +70,83 @@ impl<'a> Game<'a> {
         self.areas.get_by_area_id(area_id).as_stack()
     }
 
-    pub fn move_to(&mut self, area_id: AreaId) -> Vec<AreaId> {
-        let moves = vec![area_id];
-        self.make_first_valid_move(moves)
+    pub fn apply_action(&mut self, action: Action) -> Vec<AreaId> {
+        action.borrow().apply(self)
     }
+}
 
-    pub fn move_back(&mut self) -> Vec<AreaId> {
-        let moves = vec![self.last_area];
-        self.make_first_valid_move(moves)
-    }
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum Action {
+    MoveTo(AreaId),
+    MoveBack,
+    MoveToFoundation,
+    MoveLeft,
+    MoveRight,
+    SelectMore,
+    SelectLess,
+    Activate,
+}
 
-    pub fn move_to_foundation(&mut self) -> Vec<AreaId> {
-        let moves = Suit::values().map(AreaId::Foundation);
-        self.make_first_valid_move(moves)
-    }
-
-    pub fn move_left(&mut self) -> Vec<AreaId> {
-        // Skip the first (selected) area id, then iterate the remainder in reverse order (right-to-
-        // left).
-        let moves = self
-            .areas
-            .iter_left_from_selection()
-            .map(Area::id)
-            .collect::<Vec<_>>();
-
-        self.make_first_valid_move(moves)
-    }
-
-    pub fn move_right(&mut self) -> Vec<AreaId> {
-        // Skip the first (selected) area id.
-        let moves = self
-            .areas
-            .iter_right_from_selection()
-            .map(Area::id)
-            .collect::<Vec<_>>();
-
-        self.make_first_valid_move(moves)
-    }
-
-    pub fn move_up(&mut self) -> Vec<AreaId> {
-        self.areas.selected_mut().select_more();
-        vec![self.areas.selected().id()]
-    }
-
-    pub fn move_down(&mut self) -> Vec<AreaId> {
-        self.areas.selected_mut().select_less();
-        vec![self.areas.selected().id()]
-    }
-
-    fn make_first_valid_move<I>(&mut self, moves: I) -> Vec<AreaId>
-    where
-        I: IntoIterator<Item = AreaId>,
-    {
-        let new_last_area = self.areas.selected().id();
-
-        for new_area_id in moves {
-            debug!("Attempting to move selection to {:?}", new_area_id);
-
-            let area_ids = self.areas.move_selection(new_area_id);
-
-            if !area_ids.is_empty() {
-                self.last_area = new_last_area;
-                return area_ids;
+impl Action {
+    fn apply(self, game: &mut Game) -> Vec<AreaId> {
+        match self {
+            Action::MoveTo(area_id) => {
+                let moves = vec![area_id];
+                make_first_valid_move(game, moves)
             }
+            Action::MoveBack => {
+                let moves = vec![game.last_area];
+                make_first_valid_move(game, moves)
+            }
+            Action::MoveToFoundation => {
+                let moves = Suit::values().map(AreaId::Foundation);
+                make_first_valid_move(game, moves)
+            }
+            Action::MoveLeft => {
+                let moves = game
+                    .areas
+                    .iter_left_from_selection()
+                    .map(Area::id)
+                    .collect::<Vec<_>>();
+                make_first_valid_move(game, moves)
+            }
+            Action::MoveRight => {
+                let moves = game
+                    .areas
+                    .iter_right_from_selection()
+                    .map(Area::id)
+                    .collect::<Vec<_>>();
+                make_first_valid_move(game, moves)
+            }
+            Action::SelectMore => {
+                game.areas.selected_mut().select_more();
+                vec![game.areas.selected().id()]
+            }
+            Action::SelectLess => {
+                game.areas.selected_mut().select_less();
+                vec![game.areas.selected().id()]
+            }
+            Action::Activate => game.areas.activate_selected(),
         }
+    }
+}
 
-        vec![]
+fn make_first_valid_move<I>(game: &mut Game, moves: I) -> Vec<AreaId>
+where
+    I: IntoIterator<Item = AreaId>,
+{
+    let new_last_area = game.areas.selected().id();
+
+    for new_area_id in moves {
+        debug!("Attempting to move selection to {:?}", new_area_id);
+
+        let area_ids = game.areas.move_selection(new_area_id);
+
+        if !area_ids.is_empty() {
+            game.last_area = new_last_area;
+            return area_ids;
+        }
     }
 
-    pub fn activate(&mut self) -> Vec<AreaId> {
-        self.areas.activate_selected()
-    }
+    vec![]
 }

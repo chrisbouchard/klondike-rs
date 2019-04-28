@@ -43,13 +43,11 @@ impl Bounds {
         self.top_left <= coords && coords <= self.bottom_right
     }
 
-    pub fn intersects(&self, other: Bounds) -> bool {
-        self.contains(other.top_left) || self.contains(other.bottom_right)
-    }
+    pub fn inset(&self, delta: i32) -> Bounds {
+        let inset_top_left = self.top_left + Coords::from_xy(delta, delta);
+        let inset_bottom_right = self.bottom_right - Coords::from_xy(delta, delta);
 
-    pub fn squares(&self, other: Bounds) -> bool {
-        self.top_left.y == other.top_left.y && self.bottom_right.y == other.bottom_right.y
-            || self.top_left.x == other.top_left.x && self.bottom_right.x == other.bottom_right.x
+        Bounds::new(inset_top_left, inset_bottom_right)
     }
 
     pub fn coords_iter(&self) -> impl Iterator<Item = Coords> {

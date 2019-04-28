@@ -9,8 +9,9 @@ use simplelog::{Config, WriteLogger};
 use termion::{event::Key, input::TermRead, terminal_size};
 
 use klondike_lib::{
-    display::GameDisplay,
-    model::{AreaId, Deck, Game, Settings, Suit},
+    display::{DisplayState, GameDisplay},
+    engine::{GameEngineBuilder, Update},
+    model::{game::Action, AreaId, Deck, Game, Settings, Suit},
     terminal::Terminal,
 };
 
@@ -30,68 +31,84 @@ fn main() -> Result {
 
     let terminal = Terminal::new()?;
     let input = terminal.input()?;
-    let mut output = terminal.output()?;
+    let output = terminal.output()?;
 
     let settings = Settings::default();
 
-    let mut deck = Deck::new();
-    deck.cards_mut().shuffle(&mut thread_rng());
-
-    let mut game_display = GameDisplay::new(&mut output);
-
-    let mut game = Game::new(&mut deck, &settings);
-    game_display.draw_all_areas(&game)?;
-    game_display.flush()?;
+    let game = {
+        let mut deck = Deck::new();
+        deck.cards_mut().shuffle(&mut thread_rng());
+        Game::new(&mut deck, &settings)
+    };
 
     let mut current_terminal_size = terminal_size()?;
 
-    'event_loop: for key in input.keys() {
-        debug!("Read key: {:?}", key);
-        let area_ids = match key? {
-            Key::Char('q') => break 'event_loop,
-
-            Key::Char('s') => game.move_to(AreaId::Stock),
-            Key::Char('t') => game.move_to(AreaId::Talon),
-
-            Key::Char('f') => game.move_to_foundation(),
-
-            Key::Char('h') | Key::Left => game.move_left(),
-            Key::Char('j') | Key::Down => game.move_down(),
-            Key::Char('k') | Key::Up => game.move_up(),
-            Key::Char('l') | Key::Right => game.move_right(),
-
-            Key::Char(c @ '1'...'7') => {
-                if let Some(index) = c.to_digit(10) {
-                    game.move_to(AreaId::Tableaux(index as u8 - 1))
-                } else {
-                    vec![]
-                }
-            }
-
-            Key::F(i @ 1...4) => game.move_to(AreaId::Foundation(Suit::from_index(i as u8 - 1))),
-
-            Key::Char('-') => game.move_back(),
-
-            Key::Char(' ') => game.activate(),
-
-            _ => vec![],
-        };
-
-        let new_terminal_size = terminal_size()?;
-
-        if current_terminal_size == new_terminal_size {
-            for area_id in area_ids {
-                game_display.draw_area(&game, area_id)?;
-            }
-        } else {
+    let mut game_engine = GameEngineBuilder::playing(game)
+        .input_mapper(DisplayState::Playing, handle_playing_input)
+        .input_mapper(DisplayState::HelpMessageOpen, handle_help_input)
+        .repainter(GameDisplay::new(output))
+        .repaint_watcher(|| {
+            let new_terminal_size = terminal_size()?;
+            let resized = new_terminal_size != current_terminal_size;
             current_terminal_size = new_terminal_size;
-            game_display.draw_all_areas(&game)?;
-        }
+            Ok(resized)
+        })
+        .start()?;
 
-        game_display.flush()?;
+    for key in input.keys() {
+        let key = key?;
+        debug!("Read key: {:?}", key);
+        game_engine.handle_input(key)?;
+
+        if game_engine.state() == DisplayState::Quitting {
+            break;
+        }
     }
 
     info!("QUITTING KLONDIKE");
 
     Ok(())
+}
+
+fn handle_playing_input(key: Key) -> Option<Update> {
+    match key {
+        Key::Char('q') => Some(Update::State(DisplayState::Quitting)),
+        Key::Char('?') => Some(Update::State(DisplayState::HelpMessageOpen)),
+
+        Key::Char('s') => Some(Update::Action(Action::MoveTo(AreaId::Stock))),
+        Key::Char('t') => Some(Update::Action(Action::MoveTo(AreaId::Talon))),
+
+        Key::Char('f') => Some(Update::Action(Action::MoveToFoundation)),
+
+        Key::Char('h') | Key::Left => Some(Update::Action(Action::MoveLeft)),
+        Key::Char('j') | Key::Down => Some(Update::Action(Action::SelectLess)),
+        Key::Char('k') | Key::Up => Some(Update::Action(Action::SelectMore)),
+        Key::Char('l') | Key::Right => Some(Update::Action(Action::MoveRight)),
+
+        Key::Char(c @ '1'...'7') => {
+            if let Some(index) = c.to_digit(10) {
+                let area_id = AreaId::Tableaux(index as u8 - 1);
+                Some(Update::Action(Action::MoveTo(area_id)))
+            } else {
+                None
+            }
+        }
+
+        Key::F(i @ 1...4) => {
+            let area_id = AreaId::Foundation(Suit::from_index(i as u8 - 1));
+            Some(Update::Action(Action::MoveTo(area_id)))
+        }
+
+        Key::Char('-') => Some(Update::Action(Action::MoveBack)),
+
+        Key::Char(' ') => Some(Update::Action(Action::Activate)),
+
+        _ => None,
+    }
+}
+
+fn handle_help_input(key: Key) -> Option<Update> {
+    match key {
+        _ => Some(Update::State(DisplayState::Playing)),
+    }
 }
