@@ -119,7 +119,7 @@ fn coords_for_area(area_id: AreaId) -> Coords {
         AreaId::Stock => STOCK_COORDS,
         AreaId::Talon => TALON_COORDS,
         AreaId::Foundation(index) => {
-            FOUNDATION_COORDS + (index as i32) * (CARD_SIZE.to_x() + COLUMN_OFFSET)
+            FOUNDATION_COORDS + i32::from(index.index()) * (CARD_SIZE.to_x() + COLUMN_OFFSET)
         }
         AreaId::Tableaux(index) => {
             TABLEAUX_COORDS + i32::from(index) * (CARD_SIZE.to_x() + COLUMN_OFFSET)
