@@ -85,6 +85,7 @@ pub enum Action {
     SelectMore,
     SelectLess,
     Activate,
+    ReturnHeld,
 }
 
 impl Action {
@@ -127,6 +128,7 @@ impl Action {
                 vec![game.areas.selected().id()]
             }
             Action::Activate => game.areas.activate_selected(),
+            Action::ReturnHeld => game.areas.return_held(),
         }
     }
 }
