@@ -10,16 +10,13 @@ pub static CARD_SIZE: Coords = Coords::from_xy(8, 4);
 impl color::Color for Color {
     fn write_fg(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Color::Black => color::White.write_fg(f),
+            Color::Black => color::Reset.write_fg(f),
             Color::Red => color::Red.write_fg(f),
         }
     }
 
     fn write_bg(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Color::Black => color::White.write_bg(f),
-            Color::Red => color::Red.write_bg(f),
-        }
+        Ok(())
     }
 }
 
@@ -71,7 +68,7 @@ where
         };
 
         let color = color::Fg(card.color());
-        let white = color::Fg(color::White);
+        let white = color::Fg(color::Reset);
 
         write!(self, "{}{}", start, color::Fg(card.color()))?;
         write!(
@@ -108,7 +105,7 @@ where
         let goto: cursor::Goto = count_coords.into();
 
         let gray = color::Fg(color::LightBlack);
-        let white = color::Fg(color::White);
+        let white = color::Fg(color::Reset);
 
         write!(
             self,
@@ -130,7 +127,7 @@ where
     let start = cursor::Goto(col, row);
     let next = format!("{}{}", cursor::Left(8), cursor::Down(1));
 
-    write!(writer, "{}{}", start, color::Fg(color::White))?;
+    write!(writer, "{}{}", start, color::Fg(color::Reset))?;
     write!(writer, "╭──────╮{}", next)?;
     write!(writer, "│      │{}", next)?;
     write!(writer, "│      │{}", next)?;
