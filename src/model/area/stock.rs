@@ -181,8 +181,14 @@ impl<'a> SelectedArea<'a> for SelectedStock<'a> {
         }
     }
 
+    fn pick_up(&mut self) {}
+    fn put_down(&mut self) {}
     fn select_more(&mut self) {}
     fn select_less(&mut self) {}
+
+    fn held_from(&self) -> Option<AreaId> {
+        None
+    }
 
     fn as_area<'b>(&'b self) -> &'b dyn Area<'a>
     where

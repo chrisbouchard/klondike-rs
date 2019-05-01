@@ -241,17 +241,25 @@ impl<'a> SelectedArea<'a> for SelectedTableaux<'a> {
     }
 
     fn activate(&mut self) -> Option<Action> {
-        if self.revealed_len > 0 {
-            if self.selection.held_from.is_some() {
-                self.selection.held_from = None;
-            } else {
-                self.selection.held_from = Some(self.id());
-            }
+        if self.selection.held_from.is_some() {
+            self.put_down();
+        } else if self.revealed_len > 0 {
+            self.pick_up();
         } else if !self.cards.is_empty() {
             self.revealed_len += 1;
         }
 
         None
+    }
+
+    fn pick_up(&mut self) {
+        if self.revealed_len > 0 {
+            self.selection.held_from = Some(self.id());
+        }
+    }
+
+    fn put_down(&mut self) {
+        self.selection.held_from = None;
     }
 
     fn select_more(&mut self) {
@@ -264,6 +272,10 @@ impl<'a> SelectedArea<'a> for SelectedTableaux<'a> {
         if self.selection.len > 1 {
             self.selection.len -= 1;
         }
+    }
+
+    fn held_from(&self) -> Option<AreaId> {
+        self.selection.held_from
     }
 
     fn as_area<'b>(&'b self) -> &'b dyn Area<'a>

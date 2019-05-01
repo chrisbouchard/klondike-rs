@@ -245,16 +245,30 @@ impl<'a> SelectedArea<'a> for SelectedFoundation<'a> {
 
     fn activate(&mut self) -> Option<Action> {
         if self.selection.held_from.is_some() {
-            self.selection.held_from = None;
-        } else if self.settings.take_from_foundation {
-            self.selection.held_from = Some(self.id());
+            self.put_down();
+        } else {
+            self.pick_up();
         }
 
         None
     }
 
+    fn pick_up(&mut self) {
+        if self.settings.take_from_foundation {
+            self.selection.held_from = Some(self.id());
+        }
+    }
+
+    fn put_down(&mut self) {
+        self.selection.held_from = None;
+    }
+
     fn select_more(&mut self) {}
     fn select_less(&mut self) {}
+
+    fn held_from(&self) -> Option<AreaId> {
+        self.selection.held_from
+    }
 
     fn as_area<'b>(&'b self) -> &'b dyn Area<'a>
     where

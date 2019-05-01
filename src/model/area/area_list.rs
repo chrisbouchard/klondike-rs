@@ -286,6 +286,20 @@ impl<'a> AreaList<'a> {
         }
     }
 
+    pub fn return_held(&mut self) -> Vec<AreaId> {
+        if let Some(original_area_id) = self.selected().held_from() {
+            let affected_area_ids = self.move_selection(original_area_id);
+
+            if !affected_area_ids.is_empty() {
+                self.selected_mut().put_down();
+            }
+
+            affected_area_ids
+        } else {
+            vec![]
+        }
+    }
+
     fn get_index(&self, area_id: AreaId) -> usize {
         *self
             .area_ids
