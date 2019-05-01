@@ -92,7 +92,10 @@ impl<'a, S> Foundation<'a, S> {
                 face_up_len: cards_len,
                 visible_len: 2,
                 spread_len: 1,
-                selection: selection.map(|_| StackSelection::Cards(1)),
+                selection: selection.map(|selection| StackSelection {
+                    len: 1,
+                    held: selection.held_from.is_some(),
+                }),
             },
         }
     }

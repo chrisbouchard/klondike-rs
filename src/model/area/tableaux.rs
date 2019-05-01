@@ -76,7 +76,10 @@ impl<'a, S> Tableaux<'a, S> {
                 face_up_len: self.revealed_len,
                 visible_len: self.cards.len(),
                 spread_len: self.revealed_len,
-                selection: mode.map(selection_to_stack_selection),
+                selection: mode.map(|selection| StackSelection {
+                    len: selection.len,
+                    held: selection.held_from.is_some(),
+                }),
             },
         }
     }
@@ -275,15 +278,5 @@ impl<'a> SelectedArea<'a> for SelectedTableaux<'a> {
         'a: 'b,
     {
         self
-    }
-}
-
-fn selection_to_stack_selection(selection: Selection) -> StackSelection {
-    let len = selection.len;
-
-    if selection.held_from.is_some() {
-        StackSelection::Stack(len)
-    } else {
-        StackSelection::Cards(len)
     }
 }

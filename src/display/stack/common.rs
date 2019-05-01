@@ -55,6 +55,7 @@ pub fn card_coords(
 fn card_shift(index: usize, offsets: &Offsets, stack_details: &StackDetails) -> Coords {
     stack_details
         .selection_index()
+        .filter(|_| stack_details.held())
         .filter(|&selection_index| index >= selection_index)
         .map(|_| offsets.selected)
         .unwrap_or_default()

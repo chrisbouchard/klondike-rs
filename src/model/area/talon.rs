@@ -58,7 +58,10 @@ impl<'a, S> Talon<'a, S> {
                 face_up_len: cards_len,
                 visible_len: self.fanned_len + 1,
                 spread_len: self.fanned_len,
-                selection: mode.map(|_| StackSelection::Cards(1)),
+                selection: mode.map(|selection| StackSelection {
+                    len: 1,
+                    held: selection.held_from.is_some(),
+                }),
             },
         }
     }

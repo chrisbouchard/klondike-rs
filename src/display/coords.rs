@@ -1,6 +1,8 @@
 use std::{cmp::Ordering, ops};
 use termion::cursor;
 
+pub static ZERO: Coords = Coords { x: 0, y: 0 };
+
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
 pub struct Coords {
     pub x: i32,
@@ -61,6 +63,17 @@ impl PartialOrd for Coords {
             Some(Ordering::Greater)
         } else {
             None
+        }
+    }
+}
+
+impl ops::Neg for Coords {
+    type Output = Coords;
+
+    fn neg(self) -> Self::Output {
+        Coords {
+            x: -self.x,
+            y: -self.y,
         }
     }
 }

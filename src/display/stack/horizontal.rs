@@ -45,7 +45,7 @@ where
             }
         }
 
-        if stack.details.selection.is_some() {
+        if let Some(ref selection) = stack.details.selection {
             let selection_index = stack.details.selection_index().unwrap_or_default();
 
             debug!("selection_index: {}", selection_index);
@@ -67,7 +67,7 @@ where
             debug!("end_coords: {:?}", end_coords);
 
             let len = (end_coords.x - start_coords.x) as u16;
-            bounds += self.draw_horizontal_selector(start_coords, len)?;
+            bounds += self.draw_horizontal_selector(start_coords, len, selection.held)?;
         }
 
         Ok(bounds)

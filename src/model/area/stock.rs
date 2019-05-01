@@ -50,7 +50,10 @@ impl<'a, S> Stock<'a, S> {
                 face_up_len: 0,
                 visible_len: 2,
                 spread_len: 1,
-                selection: mode.map(|_| StackSelection::Cards(1)),
+                selection: mode.map(|_| StackSelection {
+                    len: 1,
+                    held: false,
+                }),
             },
         }
     }

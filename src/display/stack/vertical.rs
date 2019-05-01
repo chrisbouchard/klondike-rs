@@ -5,11 +5,11 @@ use crate::{
     display::{
         bounds::Bounds,
         card::{CardPainter, CARD_SIZE},
-        coords::Coords,
+        coords::{Coords, ZERO},
         selector::SelectorPainter,
         Result,
     },
-    model::stack::{Stack, StackSelection},
+    model::stack::Stack,
     utils::usize::BoundedSub,
 };
 
@@ -24,8 +24,7 @@ static UNCOLLAPSED_OFFSETS: Offsets = Offsets {
     collapse_spread_len: 0,
 };
 
-static CARD_SELECTOR_OFFSET: Coords = Coords::from_x(-2);
-static STACK_SELECTOR_OFFSET: Coords = Coords::from_y(0);
+static SELECTOR_OFFSET: Coords = Coords::from_x(-2);
 
 pub trait VerticalStackPainter {
     fn draw_vertical_stack(&mut self, coords: Coords, stack: &Stack) -> Result<Bounds>;
@@ -69,33 +68,27 @@ where
          * in which case we can't subtract from a 0 usize. */
         let end_index = stack.details.len.bounded_sub(1);
 
-        if let Some(selection) = stack.details.selection {
-            match selection {
-                StackSelection::Cards(_) => {
-                    let selection_index = stack.details.selection_index().unwrap_or_default();
+        if let Some(ref selection) = stack.details.selection {
+            let selection_index = stack.details.selection_index().unwrap_or_default();
 
-                    let start_coords =
-                        card_coords(coords, selection_index, &offsets, &stack.details)
-                            .unwrap_or(coords)
-                            + CARD_SELECTOR_OFFSET;
-                    let end_coords = card_coords(coords, end_index, &offsets, &stack.details)
-                        .unwrap_or(coords)
-                        + CARD_SIZE.to_y()
-                        + CARD_SELECTOR_OFFSET;
+            let held_offset = if selection.held {
+                -UNCOLLAPSED_OFFSETS.selected
+            } else {
+                ZERO
+            };
 
-                    let len = (end_coords.y - start_coords.y) as u16;
-                    bounds += self.draw_vertical_selector(start_coords, len)?;
-                }
-                StackSelection::Stack(_) | StackSelection::FullStack => {
-                    let start_coords = card_coords(coords, end_index, &offsets, &stack.details)
-                        .unwrap_or(coords)
-                        + CARD_SIZE.to_y()
-                        + STACK_SELECTOR_OFFSET;
+            let start_coords = card_coords(coords, selection_index, &offsets, &stack.details)
+                .unwrap_or(coords)
+                + SELECTOR_OFFSET
+                + held_offset;
+            let end_coords = card_coords(coords, end_index, &offsets, &stack.details)
+                .unwrap_or(coords)
+                + CARD_SIZE.to_y()
+                + SELECTOR_OFFSET
+                + held_offset;
 
-                    let len = CARD_SIZE.x as u16;
-                    bounds += self.draw_horizontal_selector(start_coords, len)?;
-                }
-            }
+            let len = (end_coords.y - start_coords.y) as u16;
+            bounds += self.draw_vertical_selector(start_coords, len, selection.held)?;
         }
 
         Ok(bounds)

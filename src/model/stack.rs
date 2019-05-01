@@ -10,14 +10,13 @@ pub enum Orientation {
     Vertical,
 }
 
-#[derive(Copy, Clone, Debug)]
-pub enum StackSelection {
-    Cards(usize),
-    Stack(usize),
-    FullStack,
+#[derive(Debug)]
+pub struct StackSelection {
+    pub len: usize,
+    pub held: bool,
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Debug)]
 pub struct StackDetails {
     pub orientation: Orientation,
     pub len: usize,
@@ -41,15 +40,17 @@ impl StackDetails {
     }
 
     pub fn selection_index(&self) -> Option<usize> {
-        self.selection.and_then(|selection| match selection {
-            StackSelection::Cards(len) => Some(self.len.bounded_sub(len)),
-            StackSelection::Stack(len) => Some(self.len.bounded_sub(len)),
-            StackSelection::FullStack => None,
-        })
+        self.selection
+            .as_ref()
+            .map(|selection| self.len.bounded_sub(selection.len))
     }
 
     pub fn unspread_len(&self) -> usize {
         self.visible_len.bounded_sub(self.spread_len)
+    }
+    
+    pub fn held(&self) -> bool {
+        self.selection.as_ref().map(|selection| selection.held).unwrap_or_default()
     }
 }
 
