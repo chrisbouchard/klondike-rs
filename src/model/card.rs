@@ -57,7 +57,7 @@ pub enum Suit {
 }
 
 /// Canonical order
-static SUITS: [Suit; 4] = [Suit::Spades, Suit::Hearts, Suit::Clubs, Suit::Diamonds];
+static SUITS: [Suit; 4] = [Suit::Spades, Suit::Hearts, Suit::Diamonds, Suit::Clubs];
 
 impl Suit {
     pub fn color(self) -> Color {
@@ -69,20 +69,20 @@ impl Suit {
 
     pub fn symbol(self) -> String {
         match self {
-            Suit::Clubs => "♣",
-            Suit::Diamonds => "♦",
-            Suit::Hearts => "♥",
             Suit::Spades => "♠",
+            Suit::Hearts => "♥",
+            Suit::Diamonds => "♦",
+            Suit::Clubs => "♣",
         }
         .to_string()
     }
 
     pub fn index(self) -> u8 {
         match self {
-            Suit::Clubs => 0,
-            Suit::Spades => 1,
-            Suit::Hearts => 2,
-            Suit::Diamonds => 3,
+            Suit::Spades => 0,
+            Suit::Hearts => 1,
+            Suit::Diamonds => 2,
+            Suit::Clubs => 3,
         }
     }
 
