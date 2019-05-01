@@ -28,8 +28,12 @@ where
         self.draw_frame(
             bounds,
             Some(Title("H E L P".to_string(), Direction::Center)),
-            Some(Title("Press any key to continue . . .".to_string(), Direction::Right)),
-            &frame::DOUBLE)?;
+            Some(Title(
+                "Press any key to continue . . .".to_string(),
+                Direction::Right,
+            )),
+            &frame::DOUBLE,
+        )?;
 
         let cyan = color::Fg(color::Cyan);
         let white = color::Fg(color::White);
@@ -124,8 +128,17 @@ where
 
         write!(
             self,
+            "{goto}{cyan}ESC{reset} :  {white}Return Held Cards",
+            goto = cursor::Goto::from(inner_top_middle + Coords::from_y(4)),
+            cyan = cyan,
+            reset = reset,
+            white = white
+        )?;
+
+        write!(
+            self,
             "{goto}{cyan}?{reset} :  {white}Display Help",
-            goto = cursor::Goto::from(inner_top_middle + Coords::from_y(5)),
+            goto = cursor::Goto::from(inner_top_middle + Coords::from_y(6)),
             cyan = cyan,
             reset = reset,
             white = white
@@ -134,7 +147,7 @@ where
         write!(
             self,
             "{goto}{cyan}q{reset} :  {white}Quit",
-            goto = cursor::Goto::from(inner_top_middle + Coords::from_y(6)),
+            goto = cursor::Goto::from(inner_top_middle + Coords::from_y(7)),
             cyan = cyan,
             reset = reset,
             white = white
