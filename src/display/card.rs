@@ -91,7 +91,7 @@ where
         let start: cursor::Goto = interior_coords.into();
         let next = format!("{}{}", cursor::Left(4), cursor::Down(1));
 
-        write!(self, "{}{}", start, color::Fg(color::Blue))?;
+        write!(self, "{}{}", start, color::Fg(color::LightBlue))?;
         write!(self, "░░░░{}", next)?;
         write!(self, "░░░░{}", next)?;
 
