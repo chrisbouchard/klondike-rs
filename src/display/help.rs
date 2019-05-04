@@ -5,22 +5,22 @@ use super::{
     bounds::Bounds,
     coords::Coords,
     frame::{self, Direction, FramePainter, Title},
-    Result,
 };
+use crate::error::Result;
 
 static MARGIN: Coords = Coords::from_xy(2, 1);
 static BORDER: Coords = Coords::from_xy(1, 1);
 static PADDING: Coords = Coords::from_xy(2, 1);
 
 pub trait HelpPainter {
-    fn draw_help_message(&mut self) -> Result;
+    fn draw_help_message(&mut self) -> Result<()>;
 }
 
 impl<W> HelpPainter for W
 where
     W: io::Write,
 {
-    fn draw_help_message(&mut self) -> Result {
+    fn draw_help_message(&mut self) -> Result<()> {
         let top_left = MARGIN;
         let bottom_right = Coords::from(terminal_size()?) - MARGIN;
         let bounds = Bounds::new(top_left, bottom_right);

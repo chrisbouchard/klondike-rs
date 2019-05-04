@@ -1,8 +1,11 @@
 use std::{fmt, io};
 use termion::{color, cursor};
 
-use super::{bounds::Bounds, coords::Coords, Result};
-use crate::utils::usize::BoundedSub;
+use super::{bounds::Bounds, coords::Coords};
+use crate::{
+    error::Result,
+    utils::usize::BoundedSub
+};
 
 #[derive(Debug)]
 pub struct FrameStyle {
@@ -63,7 +66,7 @@ pub trait FramePainter {
         top_title: Option<Title<impl fmt::Display>>,
         bottom_title: Option<Title<impl fmt::Display>>,
         frame_style: &FrameStyle,
-    ) -> Result;
+    ) -> Result<()>;
 }
 
 impl<W> FramePainter for W
@@ -76,7 +79,7 @@ where
         top_title: Option<Title<impl fmt::Display>>,
         bottom_title: Option<Title<impl fmt::Display>>,
         frame_style: &FrameStyle,
-    ) -> Result {
+    ) -> Result<()> {
         let blank_width = (bounds.width() as usize).bounded_sub(2);
 
         let top = if let Some(title) = top_title {

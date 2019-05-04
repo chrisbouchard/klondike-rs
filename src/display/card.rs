@@ -3,7 +3,8 @@ use termion::{color, cursor};
 
 use crate::model::{Card, Color};
 
-use super::{bounds::Bounds, coords::Coords, Result};
+use super::{bounds::Bounds, coords::Coords};
+use crate::error::Result;
 
 pub static CARD_SIZE: Coords = Coords::from_xy(8, 4);
 
@@ -117,7 +118,7 @@ where
     }
 }
 
-fn draw_card_frame<W>(writer: &mut W, coords: Coords) -> Result
+fn draw_card_frame<W>(writer: &mut W, coords: Coords) -> Result<()>
 where
     W: io::Write,
 {

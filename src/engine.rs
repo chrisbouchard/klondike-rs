@@ -3,7 +3,8 @@
 use std::{collections::HashMap, fmt};
 
 use crate::{
-    display::{DisplayState, Result},
+    display::DisplayState,
+    error::Result,
     model::{
         area::AreaId,
         game::{Action, Game},
@@ -43,8 +44,8 @@ where
 }
 
 pub trait Repainter {
-    fn repaint_full(&mut self, game: &Game, state: DisplayState) -> Result;
-    fn repaint_areas(&mut self, game: &Game, area_ids: &[AreaId]) -> Result;
+    fn repaint_full(&mut self, game: &Game, state: DisplayState) -> Result<()>;
+    fn repaint_areas(&mut self, game: &Game, area_ids: &[AreaId]) -> Result<()>;
 }
 
 pub struct GameEngine<'a, I, R> {
@@ -67,7 +68,7 @@ where
         self.state
     }
 
-    pub fn handle_input(&mut self, input: I) -> Result {
+    pub fn handle_input(&mut self, input: I) -> Result<()> {
         if let Some(input_mapper) = self.input_mappers.get_mut(&self.state) {
             match input_mapper.map_input(input) {
                 Some(Update::Action(action)) => {

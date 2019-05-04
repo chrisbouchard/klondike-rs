@@ -1,11 +1,13 @@
+use std::convert::TryFrom;
+
 use crate::{
     display::{
         bounds::Bounds,
         card::{CardPainter, CARD_SIZE},
         coords::Coords,
         selector::SelectorPainter,
-        Result,
     },
+    error::Result,
     model::stack::Stack,
     utils::usize::BoundedSub,
 };
@@ -66,7 +68,7 @@ where
             debug!("start_coords: {:?}", start_coords);
             debug!("end_coords: {:?}", end_coords);
 
-            let len = (end_coords.x - start_coords.x) as u16;
+            let len = u16::try_from(end_coords.x - start_coords.x)?;
             bounds += self.draw_horizontal_selector(start_coords, len, selection.held)?;
         }
 

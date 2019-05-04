@@ -1,4 +1,7 @@
-use std::cmp::min;
+use std::{
+    cmp::min,
+    convert::TryFrom,
+};
 use termion;
 
 use crate::{
@@ -7,10 +10,9 @@ use crate::{
         card::{CardPainter, CARD_SIZE},
         coords::{Coords, ZERO},
         selector::SelectorPainter,
-        Result,
     },
+    error::Result,
     model::stack::Stack,
-    utils::usize::BoundedSub,
 };
 
 use super::common::*;
@@ -66,7 +68,7 @@ where
 
         /* Be careful about getting the last index. It's possible for the stack to actually be empty,
          * in which case we can't subtract from a 0 usize. */
-        let end_index = stack.details.len.bounded_sub(1);
+        let end_index = stack.details.len.saturating_sub(1);
 
         if let Some(ref selection) = stack.details.selection {
             let selection_index = stack.details.selection_index().unwrap_or_default();
@@ -87,7 +89,7 @@ where
                 + SELECTOR_OFFSET
                 + held_offset;
 
-            let len = (end_coords.y - start_coords.y) as u16;
+            let len = u16::try_from(end_coords.y - start_coords.y)?;
             bounds += self.draw_vertical_selector(start_coords, len, selection.held)?;
         }
 
@@ -104,18 +106,18 @@ fn offset_with_collapse(coords: Coords, stack: &Stack) -> Result<Offsets> {
     if collapse_len > 0 {
         let reserve_unspread_len = if stack.details.spread_len > 0 { 0 } else { 1 };
         let unspread_len = stack.details.unspread_len();
-        let collapse_unspread_len = unspread_len.bounded_sub(reserve_unspread_len + 1);
+        let collapse_unspread_len = unspread_len.saturating_sub(reserve_unspread_len + 1);
         debug!(
             "unspread_len: {}, collapse_unspread_len: {}",
             unspread_len, collapse_unspread_len
         );
 
         offsets.collapse_unspread_len = collapse_unspread_len;
-        collapse_len = collapse_len.bounded_sub(collapse_unspread_len);
+        collapse_len = collapse_len.saturating_sub(collapse_unspread_len);
     }
 
     if collapse_len > 0 {
-        offsets.collapse_spread_len = min(stack.details.spread_len.bounded_sub(1), collapse_len);
+        offsets.collapse_spread_len = min(stack.details.spread_len.saturating_sub(1), collapse_len);
     }
 
     Ok(offsets)
@@ -125,15 +127,17 @@ fn collapse_len(coords: Coords, offsets: &Offsets, stack: &Stack) -> Result<usiz
     let terminal_height = usize::from(termion::terminal_size()?.1);
     debug!("terminal_height: {}", terminal_height);
 
-    let stack_height: usize = (0..stack.cards.len())
-        .flat_map(|i| card_coords(coords, i, offsets, &stack.details))
-        .map(|coords| coords + CARD_SIZE)
-        .map(|coords| coords.y)
-        .max()
-        // Add 1 for the selector, and 1 to turn the coord into a length.
-        .unwrap_or(0) as usize
-        + 2;
+    let stack_height = usize::try_from(
+        (0..stack.cards.len())
+            .flat_map(|i| card_coords(coords, i, offsets, &stack.details))
+            .map(|coords| coords + CARD_SIZE)
+            .map(|coords| coords.y)
+            .max()
+            .unwrap_or(0)
+            // Add 1 to turn the coordinate into a length.
+            + 1
+    )?;
     debug!("stack_height: {}", stack_height);
 
-    Ok(stack_height.bounded_sub(terminal_height))
+    Ok(stack_height.saturating_sub(terminal_height))
 }

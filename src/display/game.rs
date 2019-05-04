@@ -4,9 +4,12 @@ use crate::model::{AreaId, Game};
 
 use super::{
     blank::BlankPainter, bounds::Bounds, card::CARD_SIZE, coords::Coords, help::HelpPainter,
-    stack::StackPainter, DisplayState, Result,
+    stack::StackPainter, DisplayState,
 };
-use crate::engine::Repainter;
+use crate::{
+    engine::Repainter,
+    error::Result,
+};
 
 static STOCK_COORDS: Coords = Coords::from_xy(2, 0);
 static TALON_COORDS: Coords = Coords::from_xy(13, 0);
@@ -31,7 +34,7 @@ where
         }
     }
 
-    pub fn draw_area(&mut self, game: &Game, area_id: AreaId) -> Result {
+    pub fn draw_area(&mut self, game: &Game, area_id: AreaId) -> Result<()> {
         let coords = coords_for_area(area_id);
         let stack = game.stack(area_id);
 
@@ -49,7 +52,7 @@ where
         Ok(())
     }
 
-    pub fn draw_all_areas(&mut self, game: &Game) -> Result {
+    pub fn draw_all_areas(&mut self, game: &Game) -> Result<()> {
         self.painter.draw_blank_all()?;
         self.area_bounds.clear();
 
@@ -60,7 +63,7 @@ where
         Ok(())
     }
 
-    pub fn draw_help(&mut self) -> Result {
+    pub fn draw_help(&mut self) -> Result<()> {
         self.painter.draw_blank_all()?;
         self.area_bounds.clear();
 
@@ -69,7 +72,7 @@ where
         Ok(())
     }
 
-    pub fn flush(&mut self) -> Result {
+    pub fn flush(&mut self) -> Result<()> {
         self.painter.flush()?;
         Ok(())
     }
@@ -79,7 +82,7 @@ impl<W> Repainter for GameDisplay<W>
 where
     W: io::Write,
 {
-    fn repaint_full(&mut self, game: &Game, state: DisplayState) -> Result {
+    fn repaint_full(&mut self, game: &Game, state: DisplayState) -> Result<()> {
         match state {
             DisplayState::Playing => {
                 self.draw_all_areas(game)?;
@@ -93,7 +96,7 @@ where
         self.flush()
     }
 
-    fn repaint_areas(&mut self, game: &Game, area_ids: &[AreaId]) -> Result {
+    fn repaint_areas(&mut self, game: &Game, area_ids: &[AreaId]) -> Result<()> {
         for &area_id in area_ids {
             self.draw_area(game, area_id)?;
         }

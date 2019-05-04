@@ -12,13 +12,17 @@
 )]
 #![feature(const_fn)]
 
+// `error_chain!` can recurse deeply
+#![recursion_limit = "1024"]
+
 #[macro_use]
-extern crate failure_derive;
+extern crate error_chain;
 #[macro_use]
 extern crate log;
 
 pub mod display;
 pub mod engine;
+pub mod error;
 pub mod model;
 pub mod terminal;
 mod utils;

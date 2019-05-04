@@ -4,18 +4,19 @@ use std::io::Write;
 
 use termion::{clear, color, cursor};
 
-use super::{bounds::Bounds, coords::Coords, Result};
+use super::{bounds::Bounds, coords::Coords};
+use crate::error::Result;
 
 pub trait BlankPainter {
-    fn draw_blank_bounds(&mut self, bounds: Bounds) -> Result;
-    fn draw_blank_all(&mut self) -> Result;
+    fn draw_blank_bounds(&mut self, bounds: Bounds) -> Result<()>;
+    fn draw_blank_all(&mut self) -> Result<()>;
 }
 
 impl<W> BlankPainter for W
 where
     W: Write,
 {
-    fn draw_blank_bounds(&mut self, bounds: Bounds) -> Result {
+    fn draw_blank_bounds(&mut self, bounds: Bounds) -> Result<()> {
         let color = color::Fg(color::Reset);
         write!(self, "{}", color)?;
 
@@ -33,7 +34,7 @@ where
         Ok(())
     }
 
-    fn draw_blank_all(&mut self) -> Result {
+    fn draw_blank_all(&mut self) -> Result<()> {
         write!(self, "{}", clear::All)?;
         Ok(())
     }

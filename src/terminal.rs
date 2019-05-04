@@ -1,8 +1,6 @@
 //! Module to manage a TTY in alternate mode.
 
-use std::fmt::{self, Debug, Formatter};
-use std::fs::File;
-use std::io::{self, Write};
+use std::{fmt, fs::File, io::Write};
 
 use termion::{
     self, cursor,
@@ -10,19 +8,7 @@ use termion::{
     screen::AlternateScreen,
 };
 
-#[derive(Debug, Fail)]
-pub enum Error {
-    #[fail(display = "Unable to open TTY.")]
-    TtyError(#[cause] io::Error),
-}
-
-pub type Result<T> = ::std::result::Result<T, Error>;
-
-impl From<io::Error> for Error {
-    fn from(error: io::Error) -> Self {
-        Error::TtyError(error)
-    }
-}
+use super::error::Result;
 
 pub struct Terminal {
     input: File,
@@ -54,8 +40,8 @@ impl Drop for Terminal {
     }
 }
 
-impl Debug for Terminal {
-    fn fmt(&self, fmt: &mut Formatter) -> fmt::Result {
+impl fmt::Debug for Terminal {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.debug_struct("Terminal")
             .field("input", &self.input)
             .field("output", &"...")

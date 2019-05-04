@@ -11,20 +11,19 @@ use termion::{event::Key, input::TermRead, terminal_size};
 use klondike_lib::{
     display::{DisplayState, GameDisplay},
     engine::{GameEngineBuilder, Update},
+    error::{Result, ResultExt},
     model::{game::Action, AreaId, Deck, Game, Settings, Suit},
     terminal::Terminal,
 };
 
-type Result = ::std::result::Result<(), failure::Error>;
-
 static LOG_FILE: &'static str = "klondike.log";
 
-fn main() -> Result {
+fn main() -> Result<()> {
     WriteLogger::init(
         LevelFilter::Debug,
         Config::default(),
         File::create(LOG_FILE)?,
-    )?;
+    ).chain_err(|| "Unable to start logger")?;
     log_panics::init();
 
     info!("STARTING KLONDIKE");
