@@ -42,31 +42,24 @@ pub trait Area<'a> {
 }
 
 pub trait UnselectedArea<'a>: Area<'a> {
-    fn select<'b>(
+    fn select(
         self: Box<Self>,
-    ) -> Result<Box<dyn SelectedArea<'a> + 'b>, Box<dyn UnselectedArea<'a> + 'b>>
-    where
-        'a: 'b;
-    fn select_with_held<'b>(
+    ) -> Result<Box<dyn SelectedArea<'a> + 'a>, Box<dyn UnselectedArea<'a> + 'a>>;
+    fn select_with_held(
         self: Box<Self>,
         held: Held,
-    ) -> Result<Box<dyn SelectedArea<'a> + 'b>, (Box<dyn UnselectedArea<'a> + 'b>, Held)>
-    where
-        'a: 'b;
+    ) -> Result<Box<dyn SelectedArea<'a> + 'a>, (Box<dyn UnselectedArea<'a> + 'a>, Held)>;
 
     fn as_area<'b>(&'b self) -> &'b dyn Area<'a>
     where
         'a: 'b;
-
     fn as_area_mut<'b>(&'b mut self) -> &'b mut dyn Area<'a>
     where
         'a: 'b;
 }
 
 pub trait SelectedArea<'a>: Area<'a> {
-    fn deselect<'b>(self: Box<Self>) -> (Box<dyn UnselectedArea<'a> + 'b>, Option<Held>)
-    where
-        'a: 'b;
+    fn deselect(self: Box<Self>) -> (Box<dyn UnselectedArea<'a> + 'a>, Option<Held>);
 
     fn activate(&mut self) -> Option<Action>;
     fn pick_up(&mut self);
@@ -79,29 +72,25 @@ pub trait SelectedArea<'a>: Area<'a> {
     fn as_area<'b>(&'b self) -> &'b dyn Area<'a>
     where
         'a: 'b;
-
     fn as_area_mut<'b>(&'b mut self) -> &'b mut dyn Area<'a>
     where
         'a: 'b;
 }
 
-pub type SuccessfulMove<'a, 'b> = (
-    Box<dyn UnselectedArea<'a> + 'b>,
-    Box<dyn SelectedArea<'a> + 'b>,
+pub type SuccessfulMove<'a> = (
+    Box<dyn UnselectedArea<'a> + 'a>,
+    Box<dyn SelectedArea<'a> + 'a>,
 );
 
-pub type UnsuccessfulMove<'a, 'b> = (
-    Box<dyn SelectedArea<'a> + 'b>,
-    Box<dyn UnselectedArea<'a> + 'b>,
+pub type UnsuccessfulMove<'a> = (
+    Box<dyn SelectedArea<'a> + 'a>,
+    Box<dyn UnselectedArea<'a> + 'a>,
 );
 
-pub fn move_selection<'a, 'b>(
-    source: Box<dyn SelectedArea<'a> + 'b>,
-    target: Box<dyn UnselectedArea<'a> + 'b>,
-) -> Result<SuccessfulMove<'a, 'b>, UnsuccessfulMove<'a, 'b>>
-where
-    'a: 'b,
-{
+pub fn move_selection<'a>(
+    source: Box<dyn SelectedArea<'a> + 'a>,
+    target: Box<dyn UnselectedArea<'a> + 'a>,
+) -> Result<SuccessfulMove<'a>, UnsuccessfulMove<'a>> {
     let (source_unselected, held) = source.deselect();
 
     if let Some(held) = held {

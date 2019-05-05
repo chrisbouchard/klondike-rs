@@ -130,22 +130,16 @@ impl<'a> Area<'a> for SelectedStock<'a> {
 }
 
 impl<'a> UnselectedArea<'a> for UnselectedStock<'a> {
-    fn select<'b>(
+    fn select(
         self: Box<Self>,
-    ) -> Result<Box<dyn SelectedArea<'a> + 'b>, Box<dyn UnselectedArea<'a> + 'b>>
-    where
-        'a: 'b,
-    {
+    ) -> Result<Box<dyn SelectedArea<'a> + 'a>, Box<dyn UnselectedArea<'a> + 'a>> {
         Ok(Box::new(self.with_selection(Selection)))
     }
 
-    fn select_with_held<'b>(
+    fn select_with_held(
         self: Box<Self>,
         held: Held,
-    ) -> Result<Box<dyn SelectedArea<'a> + 'b>, (Box<dyn UnselectedArea<'a> + 'b>, Held)>
-    where
-        'a: 'b,
-    {
+    ) -> Result<Box<dyn SelectedArea<'a> + 'a>, (Box<dyn UnselectedArea<'a> + 'a>, Held)> {
         Err((self, held))
     }
 
@@ -165,10 +159,7 @@ impl<'a> UnselectedArea<'a> for UnselectedStock<'a> {
 }
 
 impl<'a> SelectedArea<'a> for SelectedStock<'a> {
-    fn deselect<'b>(self: Box<Self>) -> (Box<dyn UnselectedArea<'a> + 'b>, Option<Held>)
-    where
-        'a: 'b,
-    {
+    fn deselect(self: Box<Self>) -> (Box<dyn UnselectedArea<'a> + 'a>, Option<Held>) {
         let unselected = Box::new(self.with_selection(()));
         (unselected, None)
     }

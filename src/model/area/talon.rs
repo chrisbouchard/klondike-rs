@@ -147,12 +147,9 @@ impl<'a> Area<'a> for SelectedTalon<'a> {
 }
 
 impl<'a> UnselectedArea<'a> for UnselectedTalon<'a> {
-    fn select<'b>(
+    fn select(
         self: Box<Self>,
-    ) -> Result<Box<dyn SelectedArea<'a> + 'b>, Box<dyn UnselectedArea<'a> + 'b>>
-    where
-        'a: 'b,
-    {
+    ) -> Result<Box<dyn SelectedArea<'a> + 'a>, Box<dyn UnselectedArea<'a> + 'a>> {
         if !self.cards.is_empty() {
             Ok(Box::new(self.with_selection(Selection { held_from: None })))
         } else {
@@ -160,13 +157,10 @@ impl<'a> UnselectedArea<'a> for UnselectedTalon<'a> {
         }
     }
 
-    fn select_with_held<'b>(
+    fn select_with_held(
         mut self: Box<Self>,
         held: Held,
-    ) -> Result<Box<dyn SelectedArea<'a> + 'b>, (Box<dyn UnselectedArea<'a> + 'b>, Held)>
-    where
-        'a: 'b,
-    {
+    ) -> Result<Box<dyn SelectedArea<'a> + 'a>, (Box<dyn UnselectedArea<'a> + 'a>, Held)> {
         let source = held.source;
 
         match self.give_cards(held) {
@@ -193,10 +187,7 @@ impl<'a> UnselectedArea<'a> for UnselectedTalon<'a> {
 }
 
 impl<'a> SelectedArea<'a> for SelectedTalon<'a> {
-    fn deselect<'b>(mut self: Box<Self>) -> (Box<dyn UnselectedArea<'a> + 'b>, Option<Held>)
-    where
-        'a: 'b,
-    {
+    fn deselect(mut self: Box<Self>) -> (Box<dyn UnselectedArea<'a> + 'a>, Option<Held>) {
         let held = if let Some(source) = self.selection.held_from {
             Some(self.take_cards(1, source))
         } else {
