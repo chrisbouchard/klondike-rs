@@ -23,7 +23,8 @@ fn main() -> Result<()> {
         LevelFilter::Debug,
         Config::default(),
         File::create(LOG_FILE)?,
-    ).chain_err(|| "Unable to start logger")?;
+    )
+    .chain_err(|| "Unable to start logger")?;
     log_panics::init();
 
     info!("STARTING KLONDIKE");

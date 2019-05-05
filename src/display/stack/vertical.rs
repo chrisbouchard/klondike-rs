@@ -1,7 +1,4 @@
-use std::{
-    cmp::min,
-    convert::TryFrom,
-};
+use std::{cmp::min, convert::TryFrom};
 use termion;
 
 use crate::{
@@ -135,7 +132,7 @@ fn collapse_len(coords: Coords, offsets: &Offsets, stack: &Stack) -> Result<usiz
             .max()
             .unwrap_or(0)
             // Add 1 to turn the coordinate into a length.
-            + 1
+            + 1,
     )?;
     debug!("stack_height: {}", stack_height);
 

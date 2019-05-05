@@ -2,10 +2,7 @@ use std::{fmt, io};
 use termion::{color, cursor};
 
 use super::{bounds::Bounds, coords::Coords};
-use crate::{
-    error::Result,
-    utils::usize::BoundedSub
-};
+use crate::{error::Result, utils::usize::BoundedSub};
 
 #[derive(Debug)]
 pub struct FrameStyle {
@@ -156,17 +153,13 @@ fn draw_frame_with_title(
     let available_len = width.bounded_sub(formatted_title.chars().count());
 
     let (left_len, right_len) = match direction {
-        Direction::Left => {
-            (1, available_len.bounded_sub(1))
-        }
+        Direction::Left => (1, available_len.bounded_sub(1)),
         Direction::Center => {
             let left_len = available_len / 2;
             let right_len = available_len - left_len;
             (left_len, right_len)
         }
-        Direction::Right => {
-            (available_len.bounded_sub(1), 1)
-        } 
+        Direction::Right => (available_len.bounded_sub(1), 1),
     };
 
     Ok(format!(

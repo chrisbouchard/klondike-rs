@@ -48,9 +48,12 @@ impl StackDetails {
     pub fn unspread_len(&self) -> usize {
         self.visible_len.bounded_sub(self.spread_len)
     }
-    
+
     pub fn held(&self) -> bool {
-        self.selection.as_ref().map(|selection| selection.held).unwrap_or_default()
+        self.selection
+            .as_ref()
+            .map(|selection| selection.held)
+            .unwrap_or_default()
     }
 }
 
