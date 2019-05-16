@@ -4,8 +4,7 @@ use std::io::Write;
 
 use termion::{clear, color, cursor};
 
-use super::{bounds::Bounds, coords::Coords};
-use crate::error::Result;
+use super::{bounds::Bounds, coords::Coords, error::Result};
 
 pub trait BlankPainter {
     fn draw_blank_bounds(&mut self, bounds: Bounds) -> Result<()>;

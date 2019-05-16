@@ -5,9 +5,9 @@ use crate::{
         bounds::Bounds,
         card::{CardPainter, CARD_SIZE},
         coords::Coords,
+        error::Result,
         selector::SelectorPainter,
     },
-    error::Result,
     model::stack::Stack,
     utils::usize::BoundedSub,
 };

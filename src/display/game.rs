@@ -4,9 +4,10 @@ use crate::model::{AreaId, Game};
 
 use super::{
     blank::BlankPainter, bounds::Bounds, card::CARD_SIZE, coords::Coords, help::HelpPainter,
+    error::Result,
     stack::StackPainter, DisplayState,
 };
-use crate::{engine::Repainter, error::Result};
+use crate::engine::Repainter;
 
 static STOCK_COORDS: Coords = Coords::from_xy(2, 0);
 static TALON_COORDS: Coords = Coords::from_xy(13, 0);

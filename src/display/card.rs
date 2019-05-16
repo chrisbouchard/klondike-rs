@@ -3,8 +3,7 @@ use termion::{color, cursor};
 
 use crate::model::{Card, Color};
 
-use super::{bounds::Bounds, coords::Coords};
-use crate::error::Result;
+use super::{bounds::Bounds, coords::Coords, error::Result};
 
 pub static CARD_SIZE: Coords = Coords::from_xy(8, 4);
 
