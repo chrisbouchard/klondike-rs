@@ -2,9 +2,10 @@ use std::borrow::Borrow;
 
 use super::{
     area::{
-        area_list::AreaList, foundation::UnselectedFoundation, stock::UnselectedStock,
-        tableaux::UnselectedTableaux, talon::UnselectedTalon, Area, AreaId, UnselectedArea,
+        foundation::UnselectedFoundation, stock::UnselectedStock, tableaux::UnselectedTableaux,
+        talon::UnselectedTalon, Area, AreaId, UnselectedArea,
     },
+    area_list::AreaList,
     card::Suit,
     deck::Deck,
     settings::Settings,
@@ -43,7 +44,7 @@ impl<'a> Game<'a> {
         areas.append(&mut foundation);
         areas.append(&mut tableaux);
 
-        let areas = AreaList::new(areas);
+        let areas = AreaList::new(areas).expect("Unable to create AreaList");
         let last_area = areas.selected().id();
 
         Game {
@@ -93,15 +94,15 @@ impl Action {
         match self {
             Action::MoveTo(area_id) => {
                 let moves = vec![area_id];
-                make_first_valid_move(game, moves)
+                self.make_first_valid_move(game, moves)
             }
             Action::MoveBack => {
                 let moves = vec![game.last_area];
-                make_first_valid_move(game, moves)
+                self.make_first_valid_move(game, moves)
             }
             Action::MoveToFoundation => {
                 let moves = Suit::values().map(AreaId::Foundation);
-                make_first_valid_move(game, moves)
+                self.make_first_valid_move(game, moves)
             }
             Action::MoveLeft => {
                 let moves = game
@@ -109,7 +110,7 @@ impl Action {
                     .iter_left_from_selection()
                     .map(Area::id)
                     .collect::<Vec<_>>();
-                make_first_valid_move(game, moves)
+                self.make_first_valid_move(game, moves)
             }
             Action::MoveRight => {
                 let moves = game
@@ -117,38 +118,47 @@ impl Action {
                     .iter_right_from_selection()
                     .map(Area::id)
                     .collect::<Vec<_>>();
-                make_first_valid_move(game, moves)
+                self.make_first_valid_move(game, moves)
             }
-            Action::SelectMore => {
-                game.areas.selected_mut().select_more();
-                vec![game.areas.selected().id()]
-            }
-            Action::SelectLess => {
-                game.areas.selected_mut().select_less();
-                vec![game.areas.selected().id()]
-            }
-            Action::Activate => game.areas.activate_selected(),
-            Action::ReturnHeld => game.areas.return_held(),
-        }
-    }
-}
-
-fn make_first_valid_move<I>(game: &mut Game, moves: I) -> Vec<AreaId>
-where
-    I: IntoIterator<Item = AreaId>,
-{
-    let new_last_area = game.areas.selected().id();
-
-    for new_area_id in moves {
-        debug!("Attempting to move selection to {:?}", new_area_id);
-
-        let area_ids = game.areas.move_selection(new_area_id);
-
-        if !area_ids.is_empty() {
-            game.last_area = new_last_area;
-            return area_ids;
+            Action::SelectMore => game.areas.select_more().unwrap_or_else(|error| {
+                debug!("Unable to select more: {}", error);
+                vec![]
+            }),
+            Action::SelectLess => game.areas.select_less().unwrap_or_else(|error| {
+                debug!("Unable to select less: {}", error);
+                vec![]
+            }),
+            Action::Activate => game.areas.activate_selected().unwrap_or_else(|error| {
+                debug!("Unable to activate: {}", error);
+                vec![]
+            }),
+            Action::ReturnHeld => game.areas.return_held().unwrap_or_else(|error| {
+                debug!("Unable to return held: {}", error);
+                vec![]
+            }),
         }
     }
 
-    vec![]
+    fn make_first_valid_move<I>(self, game: &mut Game, moves: I) -> Vec<AreaId>
+    where
+        I: IntoIterator<Item = AreaId>,
+    {
+        let new_last_area = game.areas.selected().id();
+
+        for new_area_id in moves {
+            debug!("Attempting to move selection to {:?}", new_area_id);
+
+            match game.areas.move_selection(new_area_id) {
+                Ok(area_ids) => {
+                    game.last_area = new_last_area;
+                    return area_ids;
+                }
+                Err(error) => {
+                    debug!("Unable to move to {:?}: {}", new_area_id, error);
+                }
+            }
+        }
+
+        vec![]
+    }
 }

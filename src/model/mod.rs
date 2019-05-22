@@ -7,6 +7,7 @@ pub use self::game::Game;
 pub use self::settings::Settings;
 
 pub mod area;
+pub mod area_list;
 pub mod card;
 pub mod deck;
 pub mod game;

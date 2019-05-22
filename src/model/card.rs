@@ -1,5 +1,3 @@
-use std::cmp::Ordering;
-
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum Color {
     Black,
@@ -11,10 +9,8 @@ pub struct Rank(u8);
 
 impl Rank {
     pub fn new(value: u8) -> Rank {
-        match value {
-            1...13 => Rank(value),
-            _ => panic!("Invalid rank {}", value),
-        }
+        assert!(1 <= value && value <= 13, "Invalid rank: {}", value);
+        Rank(value)
     }
 
     pub fn value(self) -> u8 {
@@ -48,12 +44,15 @@ impl Rank {
     }
 }
 
-#[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(
+    Copy, Clone, Debug, Eq, Hash, PartialEq, Ord, PartialOrd, IntoPrimitive, TryFromPrimitive,
+)]
+#[repr(u8)]
 pub enum Suit {
-    Clubs,
-    Diamonds,
-    Hearts,
-    Spades,
+    Spades = 0,
+    Hearts = 1,
+    Diamonds = 2,
+    Clubs = 3,
 }
 
 /// Canonical order
@@ -77,42 +76,19 @@ impl Suit {
         .to_string()
     }
 
-    pub fn index(self) -> u8 {
-        match self {
-            Suit::Spades => 0,
-            Suit::Hearts => 1,
-            Suit::Diamonds => 2,
-            Suit::Clubs => 3,
-        }
-    }
-
     pub fn values() -> impl Iterator<Item = Suit> {
         SUITS.iter().cloned()
     }
-
-    pub fn from_index(index: u8) -> Suit {
-        SUITS[index as usize]
-    }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Card {
-    pub rank: Rank,
     pub suit: Suit,
+    pub rank: Rank,
 }
 
 impl Card {
     pub fn color(&self) -> Color {
         self.suit.color()
-    }
-}
-
-impl PartialOrd<Card> for Card {
-    fn partial_cmp(&self, other: &Card) -> Option<Ordering> {
-        if self.suit == other.suit {
-            Some(self.rank.cmp(&other.rank))
-        } else {
-            None
-        }
     }
 }

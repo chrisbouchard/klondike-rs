@@ -2,14 +2,28 @@ use std::{error, fmt};
 
 pub trait ErrorKind: fmt::Debug + fmt::Display {}
 
-#[derive(Debug, Display)]
-#[display(fmt = "{}", kind)]
+#[derive(Debug)]
 pub struct Error<K>
 where
     K: ErrorKind,
 {
     pub kind: K,
     source: Option<Box<dyn error::Error + Send + Sync + 'static>>,
+}
+
+impl<K> fmt::Display for Error<K>
+where
+    K: ErrorKind,
+{
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "{}", self.kind)?;
+
+        if let Some(ref source) = self.source {
+            write!(fmt, "\nCaused by: {}", source)?;
+        }
+
+        Ok(())
+    }
 }
 
 impl<K> error::Error for Error<K>

@@ -3,13 +3,45 @@ use super::{
     stack::Stack,
 };
 
-pub mod area_list;
 pub mod foundation;
 pub mod stock;
 pub mod tableaux;
 pub mod talon;
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
+#[derive(Debug, Snafu)]
+pub enum Error {}
+
+pub type Result<T = (), E = Error> = ::std::result::Result<T, E>;
+
+#[derive(Debug)]
+pub enum MoveResult<T, U, E = Error> {
+    Moved(T),
+    Unmoved(U, E),
+    Fatal(E),
+}
+
+impl<T, U, E> ::std::ops::Try for MoveResult<T, U, E> {
+    type Ok = T;
+    type Error = E;
+
+    fn into_result(self) -> ::std::result::Result<Self::Ok, Self::Error> {
+        match self {
+            MoveResult::Moved(value) => Ok(value),
+            MoveResult::Unmoved(_, error) => Err(error),
+            MoveResult::Fatal(error) => Err(error),
+        }
+    }
+
+    fn from_error(error: Self::Error) -> Self {
+        MoveResult::Fatal(error)
+    }
+
+    fn from_ok(value: Self::Ok) -> Self {
+        MoveResult::Moved(value)
+    }
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum AreaId {
     Stock,
     Talon,
@@ -32,7 +64,7 @@ pub enum Action {
 pub trait Area<'a> {
     fn id(&self) -> AreaId;
 
-    fn give_cards(&mut self, held: Held) -> Result<(), Held>;
+    fn give_cards(&mut self, held: Held) -> MoveResult<(), Held>;
     fn take_cards(&mut self, len: usize) -> Held;
     fn take_all_cards(&mut self) -> Held;
 
@@ -44,11 +76,11 @@ pub trait Area<'a> {
 pub trait UnselectedArea<'a>: Area<'a> {
     fn select(
         self: Box<Self>,
-    ) -> Result<Box<dyn SelectedArea<'a> + 'a>, Box<dyn UnselectedArea<'a> + 'a>>;
+    ) -> MoveResult<Box<dyn SelectedArea<'a> + 'a>, Box<dyn UnselectedArea<'a> + 'a>>;
     fn select_with_held(
         self: Box<Self>,
         held: Held,
-    ) -> Result<Box<dyn SelectedArea<'a> + 'a>, (Box<dyn UnselectedArea<'a> + 'a>, Held)>;
+    ) -> MoveResult<Box<dyn SelectedArea<'a> + 'a>, (Box<dyn UnselectedArea<'a> + 'a>, Held)>;
 
     fn as_area<'b>(&'b self) -> &'b dyn Area<'a>
     where
@@ -61,11 +93,11 @@ pub trait UnselectedArea<'a>: Area<'a> {
 pub trait SelectedArea<'a>: Area<'a> {
     fn deselect(self: Box<Self>) -> (Box<dyn UnselectedArea<'a> + 'a>, Option<Held>);
 
-    fn activate(&mut self) -> Option<Action>;
-    fn pick_up(&mut self);
-    fn put_down(&mut self);
-    fn select_more(&mut self);
-    fn select_less(&mut self);
+    fn activate(&mut self) -> Result<Option<Action>>;
+    fn pick_up(&mut self) -> Result;
+    fn put_down(&mut self) -> Result;
+    fn select_more(&mut self) -> Result;
+    fn select_less(&mut self) -> Result;
 
     fn held_from(&self) -> Option<AreaId>;
 
@@ -77,44 +109,56 @@ pub trait SelectedArea<'a>: Area<'a> {
         'a: 'b;
 }
 
-pub type SuccessfulMove<'a> = (
-    Box<dyn UnselectedArea<'a> + 'a>,
-    Box<dyn SelectedArea<'a> + 'a>,
-);
-
-pub type UnsuccessfulMove<'a> = (
-    Box<dyn SelectedArea<'a> + 'a>,
-    Box<dyn UnselectedArea<'a> + 'a>,
-);
+pub struct SelectionMove<'a> {
+    pub selected: Box<dyn SelectedArea<'a> + 'a>,
+    pub unselected: Box<dyn UnselectedArea<'a> + 'a>,
+}
 
 pub fn move_selection<'a>(
     source: Box<dyn SelectedArea<'a> + 'a>,
     target: Box<dyn UnselectedArea<'a> + 'a>,
-) -> Result<SuccessfulMove<'a>, UnsuccessfulMove<'a>> {
+) -> MoveResult<SelectionMove<'a>, SelectionMove<'a>> {
     let (source_unselected, held) = source.deselect();
 
     if let Some(held) = held {
         match target.select_with_held(held) {
-            Ok(target_selected) => Ok((source_unselected, target_selected)),
+            MoveResult::Moved(target_selected) => MoveResult::Moved(SelectionMove {
+                selected: target_selected,
+                unselected: source_unselected,
+            }),
 
-            Err((target_unselected, held)) => {
-                let source_selected = source_unselected
-                    .select_with_held(held)
-                    .ok()
-                    .expect("Unable to replace selection with held cards");
-                Err((source_selected, target_unselected))
+            MoveResult::Unmoved((target_unselected, held), error) => {
+                let source_selected = source_unselected.select_with_held(held)?;
+                MoveResult::Unmoved(
+                    SelectionMove {
+                        selected: source_selected,
+                        unselected: target_unselected,
+                    },
+                    error,
+                )
             }
+
+            MoveResult::Fatal(error) => MoveResult::Fatal(error),
         }
     } else {
         match target.select() {
-            Ok(target_selected) => Ok((source_unselected, target_selected)),
-            Err(target_unselected) => {
-                let source_selected = source_unselected
-                    .select()
-                    .ok()
-                    .expect("Unable to replace selection");
-                Err((source_selected, target_unselected))
+            MoveResult::Moved(target_selected) => MoveResult::Moved(SelectionMove {
+                selected: target_selected,
+                unselected: source_unselected,
+            }),
+
+            MoveResult::Unmoved(target_unselected, error) => {
+                let source_selected = source_unselected.select()?;
+                MoveResult::Unmoved(
+                    SelectionMove {
+                        selected: source_selected,
+                        unselected: target_unselected,
+                    },
+                    error,
+                )
             }
+
+            MoveResult::Fatal(error) => MoveResult::Fatal(error),
         }
     }
 }

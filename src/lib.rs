@@ -10,12 +10,16 @@
     unused_qualifications,
     unused_results
 )]
-#![feature(const_fn)]
+#![feature(const_fn, try_trait)]
 
 #[macro_use]
 extern crate derive_more;
 #[macro_use]
 extern crate log;
+#[macro_use]
+extern crate num_enum;
+#[macro_use]
+extern crate snafu;
 
 pub mod display;
 pub mod engine;

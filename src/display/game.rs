@@ -3,9 +3,8 @@ use std::{collections::HashMap, fmt, io};
 use crate::model::{AreaId, Game};
 
 use super::{
-    blank::BlankPainter, bounds::Bounds, card::CARD_SIZE, coords::Coords, help::HelpPainter,
-    error::Result,
-    stack::StackPainter, DisplayState,
+    blank::BlankPainter, bounds::Bounds, card::CARD_SIZE, coords::Coords, error::Result,
+    help::HelpPainter, stack::StackPainter, DisplayState,
 };
 use crate::engine::Repainter;
 

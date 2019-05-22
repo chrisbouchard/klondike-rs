@@ -15,8 +15,10 @@ derive_more = "0.14.0"
 itertools = "0.8.0"
 log = "0.4"
 log-panics = "2"
+num_enum = "0.2"
 rand = "0.6"
 simplelog = "0.5"
+snafu = "0.4"
 termion = "1"
 
 [lib]
