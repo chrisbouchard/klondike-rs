@@ -72,8 +72,7 @@ impl<'a, S> Tableaux<'a, S> {
     fn give_cards(&mut self, mut held: Held) -> MoveResult<(), Held> {
         match self.accepts_cards(&held) {
             Ok(_) => {
-                let held_len = held.cards.len();
-                self.revealed_len += held_len;
+                self.revealed_len += held.cards.len();
                 self.cards.append(&mut held.cards);
                 MoveResult::Moved(())
             }

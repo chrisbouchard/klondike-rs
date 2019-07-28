@@ -157,14 +157,7 @@ impl<'a> UnselectedArea<'a> for UnselectedStock<'a> {
     fn select(
         self: Box<Self>,
     ) -> MoveResult<Box<dyn SelectedArea<'a> + 'a>, Box<dyn UnselectedArea<'a> + 'a>> {
-        if !self.cards.is_empty() {
-            MoveResult::Moved(Box::new(self.with_selection(Selection)))
-        } else {
-            NothingToSelect {
-                message: "Empty area",
-            }
-            .fail_move(self)
-        }
+        MoveResult::Moved(Box::new(self.with_selection(Selection)))
     }
 
     fn select_with_held(

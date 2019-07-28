@@ -52,6 +52,12 @@ impl<'a, S> Talon<'a, S> {
     fn give_cards(&mut self, mut held: Held) -> MoveResult<(), Held> {
         match self.validate_cards(&held) {
             Ok(_) => {
+                if held.source == AreaId::Stock {
+                    self.fanned_len = held.cards.len();
+                } else {
+                    self.fanned_len += held.cards.len();
+                }
+
                 self.cards.append(&mut held.cards);
                 MoveResult::Moved(())
             }
@@ -61,7 +67,7 @@ impl<'a, S> Talon<'a, S> {
 
     fn take_cards(&mut self, len: usize, source: AreaId) -> Held {
         let cards = self.cards.split_off_bounded(len);
-        self.fanned_len = self.fanned_len.bounded_sub(len);
+        self.fanned_len = self.fanned_len.bounded_sub(cards.len());
 
         Held { source, cards }
     }

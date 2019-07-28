@@ -347,7 +347,7 @@ impl<'a> AreaList<'a> {
 
                 Ok(vec![AreaId::Stock, AreaId::Talon])
             }
-            None => Ok(vec![]),
+            None => Ok(vec![selected_area.id()]),
         }
     }
 
