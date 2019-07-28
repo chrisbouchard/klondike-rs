@@ -10,18 +10,19 @@
     unused_qualifications,
     unused_results
 )]
-#![feature(const_fn)]
-// `error_chain!` can recurse deeply
-#![recursion_limit = "1024"]
+#![feature(const_fn, try_trait)]
 
 #[macro_use]
-extern crate error_chain;
+extern crate derive_more;
 #[macro_use]
 extern crate log;
+#[macro_use]
+extern crate num_enum;
+#[macro_use]
+extern crate snafu;
 
 pub mod display;
 pub mod engine;
-pub mod error;
 pub mod model;
 pub mod terminal;
 mod utils;

@@ -5,8 +5,8 @@ use super::{
     bounds::Bounds,
     coords::Coords,
     frame::{self, Direction, FramePainter, Title},
+    Result,
 };
-use crate::error::Result;
 
 static MARGIN: Coords = Coords::from_xy(2, 1);
 static BORDER: Coords = Coords::from_xy(1, 1);

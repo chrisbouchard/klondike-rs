@@ -3,20 +3,19 @@ use termion::{color, cursor};
 
 use crate::model::{Card, Color};
 
-use super::{bounds::Bounds, coords::Coords};
-use crate::error::Result;
+use super::{bounds::Bounds, coords::Coords, Result};
 
 pub static CARD_SIZE: Coords = Coords::from_xy(8, 4);
 
 impl color::Color for Color {
-    fn write_fg(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn write_fg(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Color::Black => color::Reset.write_fg(f),
-            Color::Red => color::Red.write_fg(f),
+            Color::Black => color::Reset.write_fg(fmt),
+            Color::Red => color::Red.write_fg(fmt),
         }
     }
 
-    fn write_bg(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn write_bg(&self, _fmt: &mut fmt::Formatter) -> fmt::Result {
         Ok(())
     }
 }
@@ -40,10 +39,10 @@ where
         let start: cursor::Goto = interior_coords.into();
         let next = format!("{}{}", cursor::Left(4), cursor::Down(1));
 
-        let rank_str = card.rank.label();
-        let suit_str = card.suit.symbol();
+        let rank_str = format!("{}", card.rank);
+        let suit_str = format!("{}", card.suit);
 
-        let offset = cursor::Right(3 - card.rank.label().len() as u16);
+        let offset = cursor::Right(3 - rank_str.len() as u16);
 
         write!(self, "{}{}", start, color::Fg(card.color()))?;
         write!(self, "{}{}{}{}", rank_str, offset, suit_str, next)?;
@@ -59,14 +58,10 @@ where
 
         let start: cursor::Goto = interior_coords.into();
 
-        let rank_str = card.rank.label();
-        let suit_str = card.suit.symbol();
+        let rank_str = format!("{}", card.rank);
+        let suit_str = format!("{}", card.suit);
 
-        let spacer = if card.rank.label().len() == 2 {
-            " "
-        } else {
-            "╶╴"
-        };
+        let spacer = if rank_str.len() == 2 { " " } else { "╶╴" };
 
         let color = color::Fg(card.color());
         let white = color::Fg(color::Reset);

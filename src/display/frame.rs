@@ -1,8 +1,8 @@
 use std::{fmt, io};
 use termion::{color, cursor};
 
-use super::{bounds::Bounds, coords::Coords};
-use crate::{error::Result, utils::usize::BoundedSub};
+use super::{bounds::Bounds, coords::Coords, Result};
+use crate::utils::usize::BoundedSub;
 
 #[derive(Debug)]
 pub struct FrameStyle {

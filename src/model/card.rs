@@ -1,4 +1,4 @@
-use std::cmp::Ordering;
+use std::{convert::TryInto, fmt};
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum Color {
@@ -6,58 +6,70 @@ pub enum Color {
     Red,
 }
 
-#[derive(Copy, Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
-pub struct Rank(u8);
+#[derive(Copy, Clone, Debug, Eq, Ord, PartialEq, PartialOrd, IntoPrimitive, TryFromPrimitive)]
+#[repr(u8)]
+pub enum Rank {
+    Ace = 1,
+    Two,
+    Three,
+    Four,
+    Five,
+    Six,
+    Seven,
+    Eight,
+    Nine,
+    Ten,
+    Jack,
+    Queen,
+    King,
+}
 
 impl Rank {
-    pub fn new(value: u8) -> Rank {
-        match value {
-            1...13 => Rank(value),
-            _ => panic!("Invalid rank {}", value),
-        }
-    }
-
-    pub fn value(self) -> u8 {
-        self.0
-    }
-
     pub fn is_followed_by(self, other: Rank) -> bool {
-        self.value() + 1 == other.value()
-    }
-
-    pub fn is_ace(self) -> bool {
-        self.value() == 1
-    }
-
-    pub fn is_king(self) -> bool {
-        self.value() == 13
-    }
-
-    pub fn label(self) -> String {
-        match self {
-            Rank(1) => "A".to_string(),
-            Rank(11) => "J".to_string(),
-            Rank(12) => "Q".to_string(),
-            Rank(13) => "K".to_string(),
-            Rank(value) => format!("{}", value),
-        }
+        u8::from(self) + 1 == u8::from(other)
     }
 
     pub fn values() -> impl Iterator<Item = Rank> {
-        (1..14).map(Rank::new)
+        (1u8..14).map(|value| value.try_into().unwrap())
     }
 }
 
-#[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
-pub enum Suit {
-    Clubs,
-    Diamonds,
-    Hearts,
-    Spades,
+impl fmt::Display for Rank {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Rank::Ace => write!(fmt, "A"),
+            Rank::Jack => write!(fmt, "J"),
+            Rank::Queen => write!(fmt, "Q"),
+            Rank::King => write!(fmt, "K"),
+            &rank => write!(fmt, "{}", u8::from(rank)),
+        }
+    }
 }
 
-/// Canonical order
-static SUITS: [Suit; 4] = [Suit::Spades, Suit::Hearts, Suit::Diamonds, Suit::Clubs];
+#[derive(
+    Copy,
+    Clone,
+    Debug,
+    Eq,
+    Hash,
+    PartialEq,
+    Ord,
+    PartialOrd,
+    IntoPrimitive,
+    TryFromPrimitive,
+    Display,
+)]
+#[repr(u8)]
+pub enum Suit {
+    #[display(fmt = "♠")]
+    Spades,
+    #[display(fmt = "♥")]
+    Hearts,
+    #[display(fmt = "♦")]
+    Diamonds,
+    #[display(fmt = "♣")]
+    Clubs,
+}
 
 impl Suit {
     pub fn color(self) -> Color {
@@ -67,52 +79,19 @@ impl Suit {
         }
     }
 
-    pub fn symbol(self) -> String {
-        match self {
-            Suit::Spades => "♠",
-            Suit::Hearts => "♥",
-            Suit::Diamonds => "♦",
-            Suit::Clubs => "♣",
-        }
-        .to_string()
-    }
-
-    pub fn index(self) -> u8 {
-        match self {
-            Suit::Spades => 0,
-            Suit::Hearts => 1,
-            Suit::Diamonds => 2,
-            Suit::Clubs => 3,
-        }
-    }
-
     pub fn values() -> impl Iterator<Item = Suit> {
-        SUITS.iter().cloned()
-    }
-
-    pub fn from_index(index: u8) -> Suit {
-        SUITS[index as usize]
+        (0u8..4).map(|value| value.try_into().unwrap())
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Card {
-    pub rank: Rank,
     pub suit: Suit,
+    pub rank: Rank,
 }
 
 impl Card {
     pub fn color(&self) -> Color {
         self.suit.color()
-    }
-}
-
-impl PartialOrd<Card> for Card {
-    fn partial_cmp(&self, other: &Card) -> Option<Ordering> {
-        if self.suit == other.suit {
-            Some(self.rank.cmp(&other.rank))
-        } else {
-            None
-        }
     }
 }

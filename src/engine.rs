@@ -1,15 +1,32 @@
 //! Module tying together the Klondike model and display.
 
+use snafu::{IntoError, ResultExt};
 use std::{collections::HashMap, fmt};
 
 use crate::{
-    display::DisplayState,
-    error::Result,
+    display::{self, DisplayState},
     model::{
         area::AreaId,
         game::{Action, Game},
     },
 };
+
+#[derive(Debug, Snafu)]
+pub enum Error {
+    #[snafu(display("Display error: {}", source))]
+    DisplayError { source: display::Error },
+
+    #[snafu(display("Error evaluating RepaintWatcher: {}", source))]
+    RepaintWatcherError { source: Box<dyn std::error::Error> },
+}
+
+pub type Result<T, E = Error> = std::result::Result<T, E>;
+
+impl From<display::Error> for Error {
+    fn from(error: display::Error) -> Self {
+        DisplayError.into_error(error)
+    }
+}
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum Update {
@@ -36,10 +53,10 @@ pub trait RepaintWatcher {
 
 impl<F> RepaintWatcher for F
 where
-    F: FnMut() -> Result<bool>,
+    F: FnMut() -> std::result::Result<bool, Box<dyn std::error::Error>>,
 {
     fn full_repaint_required(&mut self) -> Result<bool> {
-        self()
+        self().context(RepaintWatcherError)
     }
 }
 

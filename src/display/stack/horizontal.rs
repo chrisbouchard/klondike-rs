@@ -6,8 +6,8 @@ use crate::{
         card::{CardPainter, CARD_SIZE},
         coords::Coords,
         selector::SelectorPainter,
+        Result,
     },
-    error::Result,
     model::stack::Stack,
     utils::usize::BoundedSub,
 };

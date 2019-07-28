@@ -7,7 +7,10 @@ use crate::{
     utils::{usize::BoundedSub, vec::SplitOffBounded},
 };
 
-use super::{Action, Area, AreaId, Held, SelectedArea, UnselectedArea};
+use super::{
+    Action, Area, AreaId, Held, MoveResult, NotSupported, NothingToSelect, Result, SelectedArea,
+    SnafuSelectorExt, UnselectedArea,
+};
 
 #[derive(Copy, Clone, Debug)]
 pub struct Selection {
@@ -26,23 +29,45 @@ pub type UnselectedTalon<'a> = Talon<'a, ()>;
 pub type SelectedTalon<'a> = Talon<'a, Selection>;
 
 impl<'a, S> Talon<'a, S> {
-    fn give_cards(&mut self, mut held: Held) -> Result<(), Held> {
-        if held.source == AreaId::Talon {
-            self.fanned_len += held.cards.len();
-            self.cards.append(&mut held.cards);
+    fn id(&self) -> AreaId {
+        AreaId::Talon
+    }
+
+    fn validate_cards(&self, held: &Held) -> Result {
+        if held.source == self.id() {
+            // We'll always take back our own cards.
             Ok(())
         } else if held.source == AreaId::Stock {
-            self.fanned_len = held.cards.len();
-            self.cards.append(&mut held.cards);
+            // We'll allow cards from the stock to be replaced onto us.
             Ok(())
         } else {
-            Err(held)
+            // But no cards from anywhere else.
+            NotSupported {
+                message: format!("Cannot place cards from area: {:?}", held.source),
+            }
+            .fail()
+        }
+    }
+
+    fn give_cards(&mut self, mut held: Held) -> MoveResult<(), Held> {
+        match self.validate_cards(&held) {
+            Ok(_) => {
+                if held.source == AreaId::Stock {
+                    self.fanned_len = held.cards.len();
+                } else {
+                    self.fanned_len += held.cards.len();
+                }
+
+                self.cards.append(&mut held.cards);
+                MoveResult::Moved(())
+            }
+            Err(error) => MoveResult::Unmoved(held, error),
         }
     }
 
     fn take_cards(&mut self, len: usize, source: AreaId) -> Held {
         let cards = self.cards.split_off_bounded(len);
-        self.fanned_len = self.fanned_len.bounded_sub(len);
+        self.fanned_len = self.fanned_len.bounded_sub(cards.len());
 
         Held { source, cards }
     }
@@ -93,10 +118,10 @@ impl<'a> UnselectedTalon<'a> {
 
 impl<'a> Area<'a> for UnselectedTalon<'a> {
     fn id(&self) -> AreaId {
-        AreaId::Talon
+        Talon::id(self)
     }
 
-    fn give_cards(&mut self, held: Held) -> Result<(), Held> {
+    fn give_cards(&mut self, held: Held) -> MoveResult<(), Held> {
         Talon::give_cards(self, held)
     }
 
@@ -119,10 +144,10 @@ impl<'a> Area<'a> for UnselectedTalon<'a> {
 
 impl<'a> Area<'a> for SelectedTalon<'a> {
     fn id(&self) -> AreaId {
-        AreaId::Talon
+        Talon::id(self)
     }
 
-    fn give_cards(&mut self, held: Held) -> Result<(), Held> {
+    fn give_cards(&mut self, held: Held) -> MoveResult<(), Held> {
         self.selection.held_from = None;
         Talon::give_cards(self, held)
     }
@@ -149,25 +174,28 @@ impl<'a> Area<'a> for SelectedTalon<'a> {
 impl<'a> UnselectedArea<'a> for UnselectedTalon<'a> {
     fn select(
         self: Box<Self>,
-    ) -> Result<Box<dyn SelectedArea<'a> + 'a>, Box<dyn UnselectedArea<'a> + 'a>> {
+    ) -> MoveResult<Box<dyn SelectedArea<'a> + 'a>, Box<dyn UnselectedArea<'a> + 'a>> {
         if !self.cards.is_empty() {
-            Ok(Box::new(self.with_selection(Selection { held_from: None })))
+            MoveResult::Moved(Box::new(self.with_selection(Selection { held_from: None })))
         } else {
-            Err(self)
+            NothingToSelect {
+                message: "Empty area",
+            }
+            .fail_move(self)
         }
     }
 
     fn select_with_held(
         mut self: Box<Self>,
         held: Held,
-    ) -> Result<Box<dyn SelectedArea<'a> + 'a>, (Box<dyn UnselectedArea<'a> + 'a>, Held)> {
+    ) -> MoveResult<Box<dyn SelectedArea<'a> + 'a>, (Box<dyn UnselectedArea<'a> + 'a>, Held)> {
         let source = held.source;
 
         match self.give_cards(held) {
-            Ok(()) => Ok(Box::new(self.with_selection(Selection {
+            MoveResult::Moved(()) => MoveResult::Moved(Box::new(self.with_selection(Selection {
                 held_from: Some(source),
             }))),
-            Err(held) => Err((self, held)),
+            MoveResult::Unmoved(held, error) => MoveResult::Unmoved((self, held), error),
         }
     }
 
@@ -178,7 +206,7 @@ impl<'a> UnselectedArea<'a> for UnselectedTalon<'a> {
         self
     }
 
-    fn as_area_mut<'b>(&'b mut self) -> &'b mut Area<'a>
+    fn as_area_mut<'b>(&'b mut self) -> &'b mut dyn Area<'a>
     where
         'a: 'b,
     {
@@ -199,26 +227,38 @@ impl<'a> SelectedArea<'a> for SelectedTalon<'a> {
         (unselected, held)
     }
 
-    fn activate(&mut self) -> Option<Action> {
+    fn activate(&mut self) -> Result<Option<Action>> {
         if self.selection.held_from.is_some() {
-            self.put_down();
+            self.put_down()?;
         } else {
-            self.pick_up();
+            self.pick_up()?;
         }
 
-        None
+        Ok(None)
     }
 
-    fn pick_up(&mut self) {
+    fn pick_up(&mut self) -> Result {
         self.selection.held_from = Some(self.id());
+        Ok(())
     }
 
-    fn put_down(&mut self) {
+    fn put_down(&mut self) -> Result {
         self.selection.held_from = None;
+        Ok(())
     }
 
-    fn select_more(&mut self) {}
-    fn select_less(&mut self) {}
+    fn select_more(&mut self) -> Result {
+        NotSupported {
+            message: "Selection cannot be changed",
+        }
+        .fail()
+    }
+    fn select_less(&mut self) -> Result {
+        NotSupported {
+            message: "Selection cannot be changed",
+        }
+        .fail()
+    }
 
     fn held_from(&self) -> Option<AreaId> {
         self.selection.held_from
@@ -231,7 +271,7 @@ impl<'a> SelectedArea<'a> for SelectedTalon<'a> {
         self
     }
 
-    fn as_area_mut<'b>(&'b mut self) -> &'b mut Area<'a>
+    fn as_area_mut<'b>(&'b mut self) -> &'b mut dyn Area<'a>
     where
         'a: 'b,
     {

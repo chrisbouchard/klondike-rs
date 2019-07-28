@@ -1,8 +1,7 @@
 use std::io;
 use termion::{color, cursor};
 
-use super::{bounds::Bounds, coords::Coords};
-use crate::error::Result;
+use super::{bounds::Bounds, coords::Coords, Result};
 
 pub trait SelectorPainter {
     fn draw_horizontal_selector(&mut self, coords: Coords, len: u16, held: bool) -> Result<Bounds>;

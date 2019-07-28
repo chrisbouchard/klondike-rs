@@ -7,7 +7,10 @@ use crate::{
     utils::vec::SplitOffBounded,
 };
 
-use super::{Action, Area, AreaId, Held, SelectedArea, UnselectedArea};
+use super::{
+    Action, Area, AreaId, Held, MoveResult, NotSupported, Result, SelectedArea, SnafuSelectorExt,
+    UnselectedArea,
+};
 
 #[derive(Copy, Clone, Debug)]
 pub struct Selection;
@@ -23,12 +26,33 @@ pub type UnselectedStock<'a> = Stock<'a, ()>;
 pub type SelectedStock<'a> = Stock<'a, Selection>;
 
 impl<'a, S> Stock<'a, S> {
-    fn give_cards(&mut self, mut held: Held) -> Result<(), Held> {
-        if held.source == AreaId::Stock || held.source == AreaId::Talon {
-            self.cards.append(&mut held.cards);
+    fn id(&self) -> AreaId {
+        AreaId::Stock
+    }
+
+    fn validate_cards(&self, held: &Held) -> Result {
+        if held.source == self.id() {
+            // We'll always take back our own cards.
+            Ok(())
+        } else if held.source == AreaId::Talon {
+            // We'll allow cards from the talon to be replaced onto us.
             Ok(())
         } else {
-            Err(held)
+            // But no cards from anywhere else.
+            NotSupported {
+                message: format!("Cannot place cards from area: {:?}", held.source),
+            }
+            .fail()
+        }
+    }
+
+    fn give_cards(&mut self, mut held: Held) -> MoveResult<(), Held> {
+        match self.validate_cards(&held) {
+            Ok(_) => {
+                self.cards.append(&mut held.cards);
+                MoveResult::Moved(())
+            }
+            Err(error) => MoveResult::Unmoved(held, error),
         }
     }
 
@@ -79,10 +103,10 @@ impl<'a> UnselectedStock<'a> {
 
 impl<'a> Area<'a> for UnselectedStock<'a> {
     fn id(&self) -> AreaId {
-        AreaId::Stock
+        Stock::id(self)
     }
 
-    fn give_cards(&mut self, held: Held) -> Result<(), Held> {
+    fn give_cards(&mut self, held: Held) -> MoveResult<(), Held> {
         Stock::give_cards(self, held)
     }
 
@@ -105,10 +129,10 @@ impl<'a> Area<'a> for UnselectedStock<'a> {
 
 impl<'a> Area<'a> for SelectedStock<'a> {
     fn id(&self) -> AreaId {
-        AreaId::Stock
+        Stock::id(self)
     }
 
-    fn give_cards(&mut self, held: Held) -> Result<(), Held> {
+    fn give_cards(&mut self, held: Held) -> MoveResult<(), Held> {
         Stock::give_cards(self, held)
     }
 
@@ -132,15 +156,18 @@ impl<'a> Area<'a> for SelectedStock<'a> {
 impl<'a> UnselectedArea<'a> for UnselectedStock<'a> {
     fn select(
         self: Box<Self>,
-    ) -> Result<Box<dyn SelectedArea<'a> + 'a>, Box<dyn UnselectedArea<'a> + 'a>> {
-        Ok(Box::new(self.with_selection(Selection)))
+    ) -> MoveResult<Box<dyn SelectedArea<'a> + 'a>, Box<dyn UnselectedArea<'a> + 'a>> {
+        MoveResult::Moved(Box::new(self.with_selection(Selection)))
     }
 
     fn select_with_held(
         self: Box<Self>,
         held: Held,
-    ) -> Result<Box<dyn SelectedArea<'a> + 'a>, (Box<dyn UnselectedArea<'a> + 'a>, Held)> {
-        Err((self, held))
+    ) -> MoveResult<Box<dyn SelectedArea<'a> + 'a>, (Box<dyn UnselectedArea<'a> + 'a>, Held)> {
+        NotSupported {
+            message: "Cards in this area cannot be held",
+        }
+        .fail_move((self, held))
     }
 
     fn as_area<'b>(&'b self) -> &'b dyn Area<'a>
@@ -150,7 +177,7 @@ impl<'a> UnselectedArea<'a> for UnselectedStock<'a> {
         self
     }
 
-    fn as_area_mut<'b>(&'b mut self) -> &'b mut Area<'a>
+    fn as_area_mut<'b>(&'b mut self) -> &'b mut dyn Area<'a>
     where
         'a: 'b,
     {
@@ -164,18 +191,38 @@ impl<'a> SelectedArea<'a> for SelectedStock<'a> {
         (unselected, None)
     }
 
-    fn activate(&mut self) -> Option<Action> {
+    fn activate(&mut self) -> Result<Option<Action>> {
         if self.cards.is_empty() {
-            Some(Action::Restock)
+            Ok(Some(Action::Restock))
         } else {
-            Some(Action::Draw(self.settings.draw_from_stock_len))
+            Ok(Some(Action::Draw(self.settings.draw_from_stock_len)))
         }
     }
 
-    fn pick_up(&mut self) {}
-    fn put_down(&mut self) {}
-    fn select_more(&mut self) {}
-    fn select_less(&mut self) {}
+    fn pick_up(&mut self) -> Result {
+        NotSupported {
+            message: "Cards in this area cannot be held",
+        }
+        .fail()
+    }
+    fn put_down(&mut self) -> Result {
+        NotSupported {
+            message: "Cards in this area cannot be held",
+        }
+        .fail()
+    }
+    fn select_more(&mut self) -> Result {
+        NotSupported {
+            message: "Cards in this area cannot be held",
+        }
+        .fail()
+    }
+    fn select_less(&mut self) -> Result {
+        NotSupported {
+            message: "Cards in this area cannot be held",
+        }
+        .fail()
+    }
 
     fn held_from(&self) -> Option<AreaId> {
         None
@@ -188,7 +235,7 @@ impl<'a> SelectedArea<'a> for SelectedStock<'a> {
         self
     }
 
-    fn as_area_mut<'b>(&'b mut self) -> &'b mut Area<'a>
+    fn as_area_mut<'b>(&'b mut self) -> &'b mut dyn Area<'a>
     where
         'a: 'b,
     {
