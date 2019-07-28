@@ -1,13 +1,16 @@
 use crate::{
     model::{
-        card::{Card, Suit},
+        card::{Card, Rank, Suit},
         settings::Settings,
         stack::{Orientation, Stack, StackDetails, StackSelection},
     },
     utils::vec::SplitOffBounded,
 };
 
-use super::{Action, Area, AreaId, Held, SelectedArea, UnselectedArea};
+use super::{
+    Action, Area, AreaId, Held, InvalidCard, MoveResult, NotSupported, NothingToSelect, Result,
+    SelectedArea, SnafuSelectorExt, TooManyCards, UnselectedArea,
+};
 
 /// Selection of a foundation area. Only the top card of a foundation area can be selected, and that
 /// card can either be held (picked up to move) or not. Additionally, depending on settings, it may
@@ -45,33 +48,59 @@ impl<'a, S> Foundation<'a, S> {
         AreaId::Foundation(self.suit)
     }
 
-    fn accepts_cards(&self, held: &Held) -> bool {
+    fn validate_cards(&self, held: &Held) -> Result {
         if held.source == self.id() {
-            true
-        }
-        // We only accept one card at a time.
-        else if let [card] = held.cards.as_slice() {
+            // We'll always take back our own cards.
+            Ok(())
+        } else if let [card] = held.cards.as_slice() {
+            ensure!(
+                self.suit == card.suit,
+                InvalidCard {
+                    message: format!("Wrong suit: card: {:?}, suit: {:?}", card, self.suit),
+                }
+            );
+
             if let Some(foundation_card) = self.cards.last() {
                 // If there are already cards in this foundation, only accept the next card in
                 // sequence.
-                self.suit.index() == card.suit.index()
-                    && foundation_card.rank.is_followed_by(card.rank)
+                ensure!(
+                    foundation_card.rank.is_followed_by(card.rank),
+                    InvalidCard {
+                        message: format!(
+                            "Card does not follow: card: {:?}, top: {:?}",
+                            card, foundation_card
+                        ),
+                    }
+                );
+                Ok(())
             } else {
                 // If there are no cards in this foundation yet, we have to start with the ace.
-                self.suit.index() == card.suit.index() && card.rank.is_ace()
+                ensure!(
+                    card.rank == Rank::Ace,
+                    InvalidCard {
+                        message: format!("Card does not follow: card: {:?}, top: empty", card),
+                    }
+                );
+                Ok(())
             }
         } else {
-            // Reject too many or too few cards.
-            false
+            ensure!(
+                held.cards.is_empty(),
+                TooManyCards {
+                    message: "Expected only one card",
+                }
+            );
+            Ok(())
         }
     }
 
-    fn give_cards(&mut self, mut held: Held) -> Result<(), Held> {
-        if self.accepts_cards(&held) {
-            self.cards.append(&mut held.cards);
-            Ok(())
-        } else {
-            Err(held)
+    fn give_cards(&mut self, mut held: Held) -> MoveResult<(), Held> {
+        match self.validate_cards(&held) {
+            Ok(_) => {
+                self.cards.append(&mut held.cards);
+                MoveResult::Moved(())
+            }
+            Err(error) => MoveResult::Unmoved(held, error),
         }
     }
 
@@ -130,7 +159,7 @@ impl<'a> Area<'a> for UnselectedFoundation<'a> {
         Foundation::id(self)
     }
 
-    fn give_cards(&mut self, held: Held) -> Result<(), Held> {
+    fn give_cards(&mut self, held: Held) -> MoveResult<(), Held> {
         Foundation::give_cards(self, held)
     }
 
@@ -156,7 +185,7 @@ impl<'a> Area<'a> for SelectedFoundation<'a> {
         Foundation::id(self)
     }
 
-    fn give_cards(&mut self, held: Held) -> Result<(), Held> {
+    fn give_cards(&mut self, held: Held) -> MoveResult<(), Held> {
         self.selection.held_from = None;
         Foundation::give_cards(self, held)
     }
@@ -183,25 +212,28 @@ impl<'a> Area<'a> for SelectedFoundation<'a> {
 impl<'a> UnselectedArea<'a> for UnselectedFoundation<'a> {
     fn select(
         self: Box<Self>,
-    ) -> Result<Box<dyn SelectedArea<'a> + 'a>, Box<dyn UnselectedArea<'a> + 'a>> {
+    ) -> MoveResult<Box<dyn SelectedArea<'a> + 'a>, Box<dyn UnselectedArea<'a> + 'a>> {
         if !self.cards.is_empty() {
-            Ok(Box::new(self.with_selection(Selection { held_from: None })))
+            MoveResult::Moved(Box::new(self.with_selection(Selection { held_from: None })))
         } else {
-            Err(self)
+            NothingToSelect {
+                message: "Empty area",
+            }
+            .fail_move(self)
         }
     }
 
     fn select_with_held(
         mut self: Box<Self>,
         held: Held,
-    ) -> Result<Box<dyn SelectedArea<'a> + 'a>, (Box<dyn UnselectedArea<'a> + 'a>, Held)> {
+    ) -> MoveResult<Box<dyn SelectedArea<'a> + 'a>, (Box<dyn UnselectedArea<'a> + 'a>, Held)> {
         let source = held.source;
 
         match self.give_cards(held) {
-            Ok(()) => Ok(Box::new(self.with_selection(Selection {
+            MoveResult::Moved(()) => MoveResult::Moved(Box::new(self.with_selection(Selection {
                 held_from: Some(source),
             }))),
-            Err(held) => Err((self, held)),
+            MoveResult::Unmoved(held, error) => MoveResult::Unmoved((self, held), error),
         }
     }
 
@@ -212,7 +244,7 @@ impl<'a> UnselectedArea<'a> for UnselectedFoundation<'a> {
         self
     }
 
-    fn as_area_mut<'b>(&'b mut self) -> &'b mut Area<'a>
+    fn as_area_mut<'b>(&'b mut self) -> &'b mut dyn Area<'a>
     where
         'a: 'b,
     {
@@ -234,28 +266,41 @@ impl<'a> SelectedArea<'a> for SelectedFoundation<'a> {
         (unselected, held)
     }
 
-    fn activate(&mut self) -> Option<Action> {
+    fn activate(&mut self) -> Result<Option<Action>> {
         if self.selection.held_from.is_some() {
-            self.put_down();
+            self.put_down()?;
         } else {
-            self.pick_up();
+            self.pick_up()?;
         }
 
-        None
+        Ok(None)
     }
 
-    fn pick_up(&mut self) {
+    fn pick_up(&mut self) -> Result {
         if self.settings.take_from_foundation {
             self.selection.held_from = Some(self.id());
         }
+
+        Ok(())
     }
 
-    fn put_down(&mut self) {
+    fn put_down(&mut self) -> Result {
         self.selection.held_from = None;
+        Ok(())
     }
 
-    fn select_more(&mut self) {}
-    fn select_less(&mut self) {}
+    fn select_more(&mut self) -> Result {
+        NotSupported {
+            message: "Selection cannot be changed",
+        }
+        .fail()
+    }
+    fn select_less(&mut self) -> Result {
+        NotSupported {
+            message: "Selection cannot be changed",
+        }
+        .fail()
+    }
 
     fn held_from(&self) -> Option<AreaId> {
         self.selection.held_from
@@ -268,7 +313,7 @@ impl<'a> SelectedArea<'a> for SelectedFoundation<'a> {
         self
     }
 
-    fn as_area_mut<'b>(&'b mut self) -> &'b mut Area<'a>
+    fn as_area_mut<'b>(&'b mut self) -> &'b mut dyn Area<'a>
     where
         'a: 'b,
     {

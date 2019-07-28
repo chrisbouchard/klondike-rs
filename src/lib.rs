@@ -23,7 +23,6 @@ extern crate snafu;
 
 pub mod display;
 pub mod engine;
-pub mod error;
 pub mod model;
 pub mod terminal;
 mod utils;

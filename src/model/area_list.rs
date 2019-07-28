@@ -1,12 +1,12 @@
 use itertools::Itertools;
 use snafu::ResultExt;
-use std::{collections::HashMap, fmt, ops::Try};
+use std::{collections::HashMap, fmt};
 
 use crate::utils::vec::SplitOffAround;
 
 use super::area::{
-    move_selection, Action, Area, AreaId, Error as AreaError, MoveResult, SelectedArea,
-    SelectionMove, UnselectedArea,
+    self, move_selection, Action, Area, AreaId, MoveResult, SelectedArea, SelectionMove,
+    UnselectedArea,
 };
 
 #[derive(Debug, Snafu)]
@@ -15,16 +15,16 @@ pub enum Error {
     DuplicateAreaIds { area_ids: Vec<AreaId> },
 
     #[snafu(display("Unable to activate area {:?}: {}", area_id, source))]
-    UnableToActivate { area_id: AreaId, source: AreaError },
+    UnableToActivate {
+        area_id: AreaId,
+        source: area::Error,
+    },
 
-    #[snafu(display("Unable to select more for area {:?}: {}", area_id, source))]
-    UnableToSelectMore { area_id: AreaId, source: AreaError },
-
-    #[snafu(display("Unable to select less for area {:?}: {}", area_id, source))]
-    UnableToSelectLess { area_id: AreaId, source: AreaError },
-
-    #[snafu(display("Unable to select area {:?}: {}", area_id, source))]
-    UnableToSelect { area_id: AreaId, source: AreaError },
+    #[snafu(display("Unable to change selection for area {:?}: {}", area_id, source))]
+    SelectionError {
+        area_id: AreaId,
+        source: area::Error,
+    },
 }
 
 pub type Result<T> = ::std::result::Result<T, Error>;
@@ -73,13 +73,18 @@ impl<'a> AreaList<'a> {
         // reported the same area id.
         if area_ids.len() < areas.len() {
             let duplicated_areas = areas
-                .iter()
+                .into_iter()
                 .map(|area| area.id())
                 .sorted()
                 .group_by(|&area_id| area_id)
                 .into_iter()
-                .filter(|(_, group)| group.count() > 1)
-                .map(|(area_id, _)| area_id)
+                .filter_map(|(area_id, group)| {
+                    if group.count() > 1 {
+                        Some(area_id)
+                    } else {
+                        None
+                    }
+                })
                 .collect::<Vec<_>>();
             return DuplicateAreaIds {
                 area_ids: duplicated_areas,
@@ -107,7 +112,7 @@ impl<'a> AreaList<'a> {
             let selected_area = unselected_area
                 .select()
                 .into_result()
-                .context(UnableToSelect { area_id })?;
+                .context(SelectionError { area_id })?;
 
             Ok(AreaList {
                 area_ids,
@@ -294,14 +299,10 @@ impl<'a> AreaList<'a> {
                 target_vec.push(target_area);
                 target_vec.extend(areas_to_move.into_iter());
 
-                Err(error).context(UnableToSelect {
+                Err(error).context(SelectionError {
                     area_id: target_area_id,
                 })
             }
-
-            MoveResult::Fatal(error) => Err(error).context(UnableToSelect {
-                area_id: target_area_id,
-            }),
         }
     }
 
@@ -324,7 +325,7 @@ impl<'a> AreaList<'a> {
                 self.get_by_area_id_mut(AreaId::Talon)
                     .give_cards(held)
                     .into_result()
-                    .context(UnableToSelect {
+                    .context(SelectionError {
                         area_id: AreaId::Talon,
                     })?;
 
@@ -340,7 +341,7 @@ impl<'a> AreaList<'a> {
                 self.get_by_area_id_mut(AreaId::Stock)
                     .give_cards(held)
                     .into_result()
-                    .context(UnableToSelect {
+                    .context(SelectionError {
                         area_id: AreaId::Stock,
                     })?;
 
@@ -355,7 +356,9 @@ impl<'a> AreaList<'a> {
             let affected_area_ids = self.move_selection(original_area_id)?;
 
             if !affected_area_ids.is_empty() {
-                self.selected_mut().put_down();
+                self.selected_mut().put_down().context(SelectionError {
+                    area_id: original_area_id,
+                })?;
             }
 
             Ok(affected_area_ids)
@@ -368,7 +371,7 @@ impl<'a> AreaList<'a> {
         let selected_area = self.selected_mut();
         let selected_area_id = selected_area.id();
 
-        selected_area.select_more().context(UnableToSelectMore {
+        selected_area.select_more().context(SelectionError {
             area_id: selected_area_id,
         })?;
 
@@ -379,7 +382,7 @@ impl<'a> AreaList<'a> {
         let selected_area = self.selected_mut();
         let selected_area_id = selected_area.id();
 
-        selected_area.select_less().context(UnableToSelectMore {
+        selected_area.select_less().context(SelectionError {
             area_id: selected_area_id,
         })?;
 

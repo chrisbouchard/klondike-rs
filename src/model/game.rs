@@ -6,7 +6,7 @@ use super::{
         talon::UnselectedTalon, Area, AreaId, UnselectedArea,
     },
     area_list::AreaList,
-    card::Suit,
+    card::{Rank, Suit},
     deck::Deck,
     settings::Settings,
     stack::Stack,
@@ -59,7 +59,7 @@ impl<'a> Game<'a> {
             self.areas
                 .get_by_area_id(AreaId::Foundation(suit))
                 .peek_top_card()
-                .map_or(false, |suit| suit.rank.is_king())
+                .map_or(false, |suit| suit.rank == Rank::King)
         })
     }
 

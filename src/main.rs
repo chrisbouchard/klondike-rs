@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate log;
 
-use std::fs::File;
+use std::{convert::TryFrom, error::Error, fs::File};
 
 use log::LevelFilter;
 use rand::{seq::SliceRandom, thread_rng};
@@ -11,20 +11,18 @@ use termion::{event::Key, input::TermRead, terminal_size};
 use klondike_lib::{
     display::{DisplayState, GameDisplay},
     engine::{GameEngineBuilder, Update},
-    error::{Result, ResultExt},
     model::{game::Action, AreaId, Deck, Game, Settings, Suit},
     terminal::Terminal,
 };
 
 static LOG_FILE: &'static str = "klondike.log";
 
-fn main() -> Result<()> {
+fn main() -> Result<(), Box<dyn Error>> {
     WriteLogger::init(
         LevelFilter::Debug,
         Config::default(),
         File::create(LOG_FILE)?,
-    )
-    .chain_err(|| "Unable to start logger")?;
+    )?;
     log_panics::init();
 
     info!("STARTING KLONDIKE");
@@ -85,7 +83,7 @@ fn handle_playing_input(key: Key) -> Option<Update> {
         Key::Char('k') | Key::Up => Some(Update::Action(Action::SelectMore)),
         Key::Char('l') | Key::Right => Some(Update::Action(Action::MoveRight)),
 
-        Key::Char(c @ '1'...'7') => {
+        Key::Char(c @ '1'..='7') => {
             if let Some(index) = c.to_digit(10) {
                 let area_id = AreaId::Tableaux(index as u8 - 1);
                 Some(Update::Action(Action::MoveTo(area_id)))
@@ -94,8 +92,8 @@ fn handle_playing_input(key: Key) -> Option<Update> {
             }
         }
 
-        Key::F(i @ 1...4) => {
-            let area_id = AreaId::Foundation(Suit::from_index(i as u8 - 1));
+        Key::F(i @ 1..=4) => {
+            let area_id = AreaId::Foundation(Suit::try_from(i as u8 - 1).unwrap());
             Some(Update::Action(Action::MoveTo(area_id)))
         }
 

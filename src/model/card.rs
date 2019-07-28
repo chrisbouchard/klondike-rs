@@ -1,62 +1,75 @@
+use std::{convert::TryInto, fmt};
+
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum Color {
     Black,
     Red,
 }
 
-#[derive(Copy, Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
-pub struct Rank(u8);
+#[derive(Copy, Clone, Debug, Eq, Ord, PartialEq, PartialOrd, IntoPrimitive, TryFromPrimitive)]
+#[repr(u8)]
+pub enum Rank {
+    Ace = 1,
+    Two,
+    Three,
+    Four,
+    Five,
+    Six,
+    Seven,
+    Eight,
+    Nine,
+    Ten,
+    Jack,
+    Queen,
+    King,
+}
 
 impl Rank {
-    pub fn new(value: u8) -> Rank {
-        assert!(1 <= value && value <= 13, "Invalid rank: {}", value);
-        Rank(value)
-    }
-
-    pub fn value(self) -> u8 {
-        self.0
-    }
-
     pub fn is_followed_by(self, other: Rank) -> bool {
-        self.value() + 1 == other.value()
-    }
-
-    pub fn is_ace(self) -> bool {
-        self.value() == 1
-    }
-
-    pub fn is_king(self) -> bool {
-        self.value() == 13
-    }
-
-    pub fn label(self) -> String {
-        match self {
-            Rank(1) => "A".to_string(),
-            Rank(11) => "J".to_string(),
-            Rank(12) => "Q".to_string(),
-            Rank(13) => "K".to_string(),
-            Rank(value) => format!("{}", value),
-        }
+        u8::from(self) + 1 == u8::from(other)
     }
 
     pub fn values() -> impl Iterator<Item = Rank> {
-        (1..14).map(Rank::new)
+        (1u8..14).map(|value| value.try_into().unwrap())
+    }
+}
+
+impl fmt::Display for Rank {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Rank::Ace => write!(fmt, "A"),
+            Rank::Jack => write!(fmt, "J"),
+            Rank::Queen => write!(fmt, "Q"),
+            Rank::King => write!(fmt, "K"),
+            &rank => write!(fmt, "{}", u8::from(rank)),
+        }
     }
 }
 
 #[derive(
-    Copy, Clone, Debug, Eq, Hash, PartialEq, Ord, PartialOrd, IntoPrimitive, TryFromPrimitive,
+    Copy,
+    Clone,
+    Debug,
+    Eq,
+    Hash,
+    PartialEq,
+    Ord,
+    PartialOrd,
+    IntoPrimitive,
+    TryFromPrimitive,
+    Display,
 )]
 #[repr(u8)]
 pub enum Suit {
-    Spades = 0,
-    Hearts = 1,
-    Diamonds = 2,
-    Clubs = 3,
+    #[display(fmt = "♠")]
+    Spades,
+    #[display(fmt = "♥")]
+    Hearts,
+    #[display(fmt = "♦")]
+    Diamonds,
+    #[display(fmt = "♣")]
+    Clubs,
 }
-
-/// Canonical order
-static SUITS: [Suit; 4] = [Suit::Spades, Suit::Hearts, Suit::Diamonds, Suit::Clubs];
 
 impl Suit {
     pub fn color(self) -> Color {
@@ -66,18 +79,8 @@ impl Suit {
         }
     }
 
-    pub fn symbol(self) -> String {
-        match self {
-            Suit::Spades => "♠",
-            Suit::Hearts => "♥",
-            Suit::Diamonds => "♦",
-            Suit::Clubs => "♣",
-        }
-        .to_string()
-    }
-
     pub fn values() -> impl Iterator<Item = Suit> {
-        SUITS.iter().cloned()
+        (0u8..4).map(|value| value.try_into().unwrap())
     }
 }
 

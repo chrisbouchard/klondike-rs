@@ -6,8 +6,8 @@ use crate::{
         bounds::Bounds,
         card::{CardPainter, CARD_SIZE},
         coords::{Coords, ZERO},
-        error::Result,
         selector::SelectorPainter,
+        Result,
     },
     model::stack::Stack,
 };

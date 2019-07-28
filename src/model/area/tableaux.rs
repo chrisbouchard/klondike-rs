@@ -1,13 +1,17 @@
 use crate::{
     model::{
-        card::Card,
+        area::{AlreadyHeld, MaxSelection, MinSelection, NothingHeld},
+        card::{Card, Rank},
         settings::Settings,
         stack::{Orientation, Stack, StackDetails, StackSelection},
     },
     utils::vec::SplitOffBounded,
 };
 
-use super::{Action, Area, AreaId, Held, SelectedArea, UnselectedArea};
+use super::{
+    Action, Area, AreaId, Held, InvalidCard, MoveResult, NothingToSelect, Result, SelectedArea,
+    SnafuSelectorExt, UnselectedArea,
+};
 
 #[derive(Copy, Clone, Debug)]
 pub struct Selection {
@@ -32,31 +36,48 @@ impl<'a, S> Tableaux<'a, S> {
         AreaId::Tableaux(self.index)
     }
 
-    fn accepts_cards(&self, held: &Held) -> bool {
+    fn accepts_cards(&self, held: &Held) -> Result {
         if held.source == self.id() {
-            true
+            // We'll always take back our own cards.
+            Ok(())
         } else if let Some(card) = held.cards.first() {
             if let Some(tableaux_card) = self.cards.last() {
                 // TODO: Check that the pile itself is legit.
-                self.revealed_len > 0
-                    && card.rank.is_followed_by(tableaux_card.rank)
-                    && card.color() != tableaux_card.color()
+                ensure!(
+                    self.revealed_len > 0
+                        && card.rank.is_followed_by(tableaux_card.rank)
+                        && card.color() != tableaux_card.color(),
+                    InvalidCard {
+                        message: format!(
+                            "Card does not follow: card: {:?}, top: {:?}",
+                            card, tableaux_card
+                        )
+                    }
+                );
+                Ok(())
             } else {
-                card.rank.is_king()
+                ensure!(
+                    card.rank == Rank::King,
+                    InvalidCard {
+                        message: format!("Card does not follow: card: {:?}, top: empty", card)
+                    }
+                );
+                Ok(())
             }
         } else {
-            false
+            Ok(())
         }
     }
 
-    fn give_cards(&mut self, mut held: Held) -> Result<(), Held> {
-        if self.accepts_cards(&held) {
-            let held_len = held.cards.len();
-            self.revealed_len += held_len;
-            self.cards.append(&mut held.cards);
-            Ok(())
-        } else {
-            Err(held)
+    fn give_cards(&mut self, mut held: Held) -> MoveResult<(), Held> {
+        match self.accepts_cards(&held) {
+            Ok(_) => {
+                let held_len = held.cards.len();
+                self.revealed_len += held_len;
+                self.cards.append(&mut held.cards);
+                MoveResult::Moved(())
+            }
+            Err(error) => MoveResult::Unmoved(held, error),
         }
     }
 
@@ -117,7 +138,7 @@ impl<'a> Area<'a> for UnselectedTableaux<'a> {
         Tableaux::id(self)
     }
 
-    fn give_cards(&mut self, held: Held) -> Result<(), Held> {
+    fn give_cards(&mut self, held: Held) -> MoveResult<(), Held> {
         Tableaux::give_cards(self, held)
     }
 
@@ -143,7 +164,7 @@ impl<'a> Area<'a> for SelectedTableaux<'a> {
         Tableaux::id(self)
     }
 
-    fn give_cards(&mut self, held: Held) -> Result<(), Held> {
+    fn give_cards(&mut self, held: Held) -> MoveResult<(), Held> {
         self.selection.held_from = None;
         self.selection.len = 1;
 
@@ -176,30 +197,33 @@ impl<'a> Area<'a> for SelectedTableaux<'a> {
 impl<'a> UnselectedArea<'a> for UnselectedTableaux<'a> {
     fn select(
         self: Box<Self>,
-    ) -> Result<Box<dyn SelectedArea<'a> + 'a>, Box<dyn UnselectedArea<'a> + 'a>> {
+    ) -> MoveResult<Box<dyn SelectedArea<'a> + 'a>, Box<dyn UnselectedArea<'a> + 'a>> {
         if !self.cards.is_empty() {
-            Ok(Box::new(self.with_selection(Selection {
+            MoveResult::Moved(Box::new(self.with_selection(Selection {
                 held_from: None,
                 len: 1,
             })))
         } else {
-            Err(self)
+            NothingToSelect {
+                message: "Empty area",
+            }
+            .fail_move(self)
         }
     }
 
     fn select_with_held(
         mut self: Box<Self>,
         held: Held,
-    ) -> Result<Box<dyn SelectedArea<'a> + 'a>, (Box<dyn UnselectedArea<'a> + 'a>, Held)> {
+    ) -> MoveResult<Box<dyn SelectedArea<'a> + 'a>, (Box<dyn UnselectedArea<'a> + 'a>, Held)> {
         let source = held.source;
         let len = held.cards.len();
 
         match self.give_cards(held) {
-            Ok(()) => Ok(Box::new(self.with_selection(Selection {
+            MoveResult::Moved(()) => MoveResult::Moved(Box::new(self.with_selection(Selection {
                 held_from: Some(source),
                 len,
             }))),
-            Err(held) => Err((self, held)),
+            MoveResult::Unmoved(held, error) => MoveResult::Unmoved((self, held), error),
         }
     }
 
@@ -210,7 +234,7 @@ impl<'a> UnselectedArea<'a> for UnselectedTableaux<'a> {
         self
     }
 
-    fn as_area_mut<'b>(&'b mut self) -> &'b mut Area<'a>
+    fn as_area_mut<'b>(&'b mut self) -> &'b mut dyn Area<'a>
     where
         'a: 'b,
     {
@@ -231,38 +255,61 @@ impl<'a> SelectedArea<'a> for SelectedTableaux<'a> {
         (unselected, held)
     }
 
-    fn activate(&mut self) -> Option<Action> {
+    fn activate(&mut self) -> Result<Option<Action>> {
         if self.selection.held_from.is_some() {
-            self.put_down();
+            self.put_down()?;
+            Ok(None)
         } else if self.revealed_len > 0 {
-            self.pick_up();
+            self.pick_up()?;
+            Ok(None)
         } else if !self.cards.is_empty() {
             self.revealed_len += 1;
-        }
-
-        None
-    }
-
-    fn pick_up(&mut self) {
-        if self.revealed_len > 0 {
-            self.selection.held_from = Some(self.id());
+            Ok(None)
+        } else {
+            NothingToSelect {
+                message: "Empty area",
+            }
+            .fail()
         }
     }
 
-    fn put_down(&mut self) {
+    fn pick_up(&mut self) -> Result {
+        ensure!(self.selection.held_from.is_none(), AlreadyHeld);
+
+        ensure!(
+            !self.cards.is_empty(),
+            NothingToSelect {
+                message: "Empty area",
+            }
+        );
+
+        ensure!(
+            self.revealed_len > 0,
+            NothingToSelect {
+                message: "No visible cards",
+            }
+        );
+
+        self.selection.held_from = Some(self.id());
+        Ok(())
+    }
+
+    fn put_down(&mut self) -> Result {
+        ensure!(self.selection.held_from.is_some(), NothingHeld);
         self.selection.held_from = None;
+        Ok(())
     }
 
-    fn select_more(&mut self) {
-        if self.selection.len < self.revealed_len {
-            self.selection.len += 1;
-        }
+    fn select_more(&mut self) -> Result {
+        ensure!(self.selection.len < self.revealed_len, MaxSelection);
+        self.selection.len += 1;
+        Ok(())
     }
 
-    fn select_less(&mut self) {
-        if self.selection.len > 1 {
-            self.selection.len -= 1;
-        }
+    fn select_less(&mut self) -> Result {
+        ensure!(self.selection.len > 1, MinSelection);
+        self.selection.len -= 1;
+        Ok(())
     }
 
     fn held_from(&self) -> Option<AreaId> {
@@ -276,7 +323,7 @@ impl<'a> SelectedArea<'a> for SelectedTableaux<'a> {
         self
     }
 
-    fn as_area_mut<'b>(&'b mut self) -> &'b mut Area<'a>
+    fn as_area_mut<'b>(&'b mut self) -> &'b mut dyn Area<'a>
     where
         'a: 'b,
     {

@@ -3,10 +3,10 @@ use std::{collections::HashMap, fmt, io};
 use crate::model::{AreaId, Game};
 
 use super::{
-    blank::BlankPainter, bounds::Bounds, card::CARD_SIZE, coords::Coords, error::Result,
-    help::HelpPainter, stack::StackPainter, DisplayState,
+    blank::BlankPainter, bounds::Bounds, card::CARD_SIZE, coords::Coords, help::HelpPainter,
+    stack::StackPainter, DisplayState, Result,
 };
-use crate::engine::Repainter;
+use crate::engine::{self, Repainter};
 
 static STOCK_COORDS: Coords = Coords::from_xy(2, 0);
 static TALON_COORDS: Coords = Coords::from_xy(13, 0);
@@ -79,7 +79,7 @@ impl<W> Repainter for GameDisplay<W>
 where
     W: io::Write,
 {
-    fn repaint_full(&mut self, game: &Game, state: DisplayState) -> Result<()> {
+    fn repaint_full(&mut self, game: &Game, state: DisplayState) -> engine::Result<()> {
         match state {
             DisplayState::Playing => {
                 self.draw_all_areas(game)?;
@@ -90,15 +90,17 @@ where
             _ => {}
         }
 
-        self.flush()
+        self.flush()?;
+        Ok(())
     }
 
-    fn repaint_areas(&mut self, game: &Game, area_ids: &[AreaId]) -> Result<()> {
+    fn repaint_areas(&mut self, game: &Game, area_ids: &[AreaId]) -> engine::Result<()> {
         for &area_id in area_ids {
             self.draw_area(game, area_id)?;
         }
 
-        self.flush()
+        self.flush()?;
+        Ok(())
     }
 }
 
@@ -118,8 +120,8 @@ fn coords_for_area(area_id: AreaId) -> Coords {
     match area_id {
         AreaId::Stock => STOCK_COORDS,
         AreaId::Talon => TALON_COORDS,
-        AreaId::Foundation(index) => {
-            FOUNDATION_COORDS + i32::from(index.index()) * (CARD_SIZE.to_x() + COLUMN_OFFSET)
+        AreaId::Foundation(suit) => {
+            FOUNDATION_COORDS + i32::from(u8::from(suit)) * (CARD_SIZE.to_x() + COLUMN_OFFSET)
         }
         AreaId::Tableaux(index) => {
             TABLEAUX_COORDS + i32::from(index) * (CARD_SIZE.to_x() + COLUMN_OFFSET)

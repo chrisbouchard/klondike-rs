@@ -1,6 +1,6 @@
 use crate::model::stack::{Orientation, Stack};
 
-use super::{bounds::Bounds, coords::Coords, error::Result};
+use super::{bounds::Bounds, coords::Coords, Result};
 
 use self::{horizontal::HorizontalStackPainter, vertical::VerticalStackPainter};
 

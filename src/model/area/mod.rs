@@ -1,3 +1,6 @@
+use snafu;
+use std::error;
+
 use super::{
     card::{Card, Suit},
     stack::Stack,
@@ -9,7 +12,31 @@ pub mod tableaux;
 pub mod talon;
 
 #[derive(Debug, Snafu)]
-pub enum Error {}
+pub enum Error {
+    #[snafu(display("Invalid card: {}", message))]
+    InvalidCard { message: String },
+
+    #[snafu(display("Too many cards: {}", message))]
+    TooManyCards { message: String },
+
+    #[snafu(display("Operation not supported: {}", message))]
+    NotSupported { message: String },
+
+    #[snafu(display("Nothing to select: {}", message))]
+    NothingToSelect { message: String },
+
+    #[snafu(display("Cards already held"))]
+    AlreadyHeld,
+
+    #[snafu(display("No cards held"))]
+    NothingHeld,
+
+    #[snafu(display("Maximum selection"))]
+    MaxSelection,
+
+    #[snafu(display("Minimum selection"))]
+    MinSelection,
+}
 
 pub type Result<T = (), E = Error> = ::std::result::Result<T, E>;
 
@@ -17,27 +44,28 @@ pub type Result<T = (), E = Error> = ::std::result::Result<T, E>;
 pub enum MoveResult<T, U, E = Error> {
     Moved(T),
     Unmoved(U, E),
-    Fatal(E),
 }
 
-impl<T, U, E> ::std::ops::Try for MoveResult<T, U, E> {
-    type Ok = T;
-    type Error = E;
-
-    fn into_result(self) -> ::std::result::Result<Self::Ok, Self::Error> {
+impl<T, U, E> MoveResult<T, U, E> {
+    pub fn into_result(self) -> ::std::result::Result<T, E> {
         match self {
             MoveResult::Moved(value) => Ok(value),
             MoveResult::Unmoved(_, error) => Err(error),
-            MoveResult::Fatal(error) => Err(error),
         }
     }
+}
 
-    fn from_error(error: Self::Error) -> Self {
-        MoveResult::Fatal(error)
-    }
+trait SnafuSelectorExt<E> {
+    fn fail_move<T, U>(self, value: U) -> MoveResult<T, U, E>;
+}
 
-    fn from_ok(value: Self::Ok) -> Self {
-        MoveResult::Moved(value)
+impl<S, E> SnafuSelectorExt<E> for S
+where
+    E: error::Error + snafu::ErrorCompat,
+    S: snafu::IntoError<E, Source = snafu::NoneError>,
+{
+    fn fail_move<T, U>(self, value: U) -> MoveResult<T, U, E> {
+        MoveResult::Unmoved(value, self.into_error(snafu::NoneError))
     }
 }
 
@@ -128,7 +156,10 @@ pub fn move_selection<'a>(
             }),
 
             MoveResult::Unmoved((target_unselected, held), error) => {
-                let source_selected = source_unselected.select_with_held(held)?;
+                let source_selected = source_unselected
+                    .select_with_held(held)
+                    .into_result()
+                    .unwrap();
                 MoveResult::Unmoved(
                     SelectionMove {
                         selected: source_selected,
@@ -137,8 +168,6 @@ pub fn move_selection<'a>(
                     error,
                 )
             }
-
-            MoveResult::Fatal(error) => MoveResult::Fatal(error),
         }
     } else {
         match target.select() {
@@ -148,7 +177,7 @@ pub fn move_selection<'a>(
             }),
 
             MoveResult::Unmoved(target_unselected, error) => {
-                let source_selected = source_unselected.select()?;
+                let source_selected = source_unselected.select().into_result().unwrap();
                 MoveResult::Unmoved(
                     SelectionMove {
                         selected: source_selected,
@@ -157,8 +186,6 @@ pub fn move_selection<'a>(
                     error,
                 )
             }
-
-            MoveResult::Fatal(error) => MoveResult::Fatal(error),
         }
     }
 }

@@ -4,8 +4,8 @@ use termion::{color, cursor, terminal_size};
 use super::{
     bounds::Bounds,
     coords::Coords,
-    error::Result,
     frame::{self, Direction, FramePainter, Title},
+    Result,
 };
 
 static MARGIN: Coords = Coords::from_xy(2, 1);
