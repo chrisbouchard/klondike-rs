@@ -8,14 +8,14 @@ use super::{bounds::Bounds, coords::Coords, Result};
 pub static CARD_SIZE: Coords = Coords::from_xy(8, 4);
 
 impl color::Color for Color {
-    fn write_fg(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn write_fg(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Color::Black => color::Reset.write_fg(f),
-            Color::Red => color::Red.write_fg(f),
+            Color::Black => color::Reset.write_fg(fmt),
+            Color::Red => color::Red.write_fg(fmt),
         }
     }
 
-    fn write_bg(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn write_bg(&self, _fmt: &mut fmt::Formatter) -> fmt::Result {
         Ok(())
     }
 }

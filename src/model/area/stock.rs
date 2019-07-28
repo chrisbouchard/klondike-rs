@@ -8,8 +8,8 @@ use crate::{
 };
 
 use super::{
-    Action, Area, AreaId, Held, MoveResult, NotSupported, NothingToSelect, Result, SelectedArea,
-    SnafuSelectorExt, UnselectedArea,
+    Action, Area, AreaId, Held, MoveResult, NotSupported, Result, SelectedArea, SnafuSelectorExt,
+    UnselectedArea,
 };
 
 #[derive(Copy, Clone, Debug)]
