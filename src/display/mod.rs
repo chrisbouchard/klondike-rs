@@ -9,11 +9,13 @@ pub mod blank;
 pub mod bounds;
 pub mod card;
 pub mod coords;
+pub mod format_str;
 pub mod frame;
 pub mod game;
 pub mod help;
 pub mod selector;
 pub mod stack;
+pub mod widget;
 
 #[derive(Debug, Snafu)]
 pub enum Error {

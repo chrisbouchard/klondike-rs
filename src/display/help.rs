@@ -4,7 +4,8 @@ use termion::{color, cursor, terminal_size};
 use super::{
     bounds::Bounds,
     coords::Coords,
-    frame::{self, Direction, FramePainter, Title},
+    format_str::FormattedString,
+    frame::{self, Direction, FrameWidget, Title},
     Result,
 };
 
@@ -25,15 +26,20 @@ where
         let bottom_right = Coords::from(terminal_size()?) - MARGIN;
         let bounds = Bounds::new(top_left, bottom_right);
 
-        self.draw_frame(
+        let frame_display = FrameWidget {
             bounds,
-            Some(Title("H E L P".to_string(), Direction::Center)),
-            Some(Title(
-                "Press any key to continue . . .".to_string(),
+            top_title: Some(Title(
+                FormattedString::of_content("H E L P"),
+                Direction::Center,
+            )),
+            bottom_title: Some(Title(
+                FormattedString::of_content("Press any key to continue . . ."),
                 Direction::Right,
             )),
-            &frame::DOUBLE,
-        )?;
+            frame_style: &frame::DOUBLE,
+        };
+
+        write!(self, "{}", frame_display)?;
 
         let cyan = color::Fg(color::Cyan);
         let white = color::Fg(color::White);

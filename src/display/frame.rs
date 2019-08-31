@@ -1,32 +1,32 @@
-use std::{fmt, io};
+use std::fmt;
 use termion::{color, cursor};
 
-use super::{bounds::Bounds, coords::Coords, Result};
+use super::{bounds::Bounds, format_str::FormattedString, widget::Widget};
 use crate::utils::usize::BoundedSub;
 
 #[derive(Debug)]
 pub struct FrameStyle {
-    top_left: char,
-    top: char,
-    top_right: char,
-    left: char,
-    right: char,
-    bottom_left: char,
-    bottom: char,
-    bottom_right: char,
-    title_left: char,
-    title_right: char,
+    pub top_left: char,
+    pub top: char,
+    pub top_right: char,
+    pub left: char,
+    pub right: char,
+    pub bottom_left: char,
+    pub bottom: char,
+    pub bottom_right: char,
+    pub title_left: char,
+    pub title_right: char,
 }
 
-pub static SINGLE_CURVED: FrameStyle = FrameStyle {
-    top_left: '╭',
+pub static SINGLE: FrameStyle = FrameStyle {
+    top_left: '┌',
     top: '─',
-    top_right: '╮',
+    top_right: '┐',
     left: '│',
     right: '│',
-    bottom_left: '╰',
+    bottom_left: '└',
     bottom: '─',
-    bottom_right: '╯',
+    bottom_right: '┘',
     title_left: '┤',
     title_right: '├',
 };
@@ -52,105 +52,103 @@ pub enum Direction {
 }
 
 #[derive(Debug)]
-pub struct Title<D>(pub D, pub Direction)
-where
-    D: fmt::Display;
+pub struct Title(pub FormattedString, pub Direction);
 
-pub trait FramePainter {
-    fn draw_frame(
-        &mut self,
-        bounds: Bounds,
-        top_title: Option<Title<impl fmt::Display>>,
-        bottom_title: Option<Title<impl fmt::Display>>,
-        frame_style: &FrameStyle,
-    ) -> Result<()>;
+pub struct FrameWidget<'a> {
+    pub bounds: Bounds,
+    pub top_title: Option<Title>,
+    pub bottom_title: Option<Title>,
+    pub frame_style: &'a FrameStyle,
 }
 
-impl<W> FramePainter for W
-where
-    W: io::Write,
-{
-    fn draw_frame(
-        &mut self,
-        bounds: Bounds,
-        top_title: Option<Title<impl fmt::Display>>,
-        bottom_title: Option<Title<impl fmt::Display>>,
-        frame_style: &FrameStyle,
-    ) -> Result<()> {
-        let blank_width = (bounds.width() as usize).bounded_sub(2);
+impl<'a> Widget for FrameWidget<'a> {
+    fn bounds(&self) -> Bounds {
+        self.bounds
+    }
+}
 
-        let top = if let Some(title) = top_title {
-            draw_frame_with_title(
+impl<'a> fmt::Display for FrameWidget<'a> {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        let blank_width = (self.bounds.width() as usize).bounded_sub(2);
+
+        let top = if let Some(title) = self.top_title {
+            format_with_title(
                 title,
                 blank_width,
-                frame_style.top,
-                frame_style.title_left,
-                frame_style.title_right,
-            )?
+                self.frame_style.top,
+                self.frame_style.title_left,
+                self.frame_style.title_right,
+            )
         } else {
-            frame_style.top.to_string().repeat(blank_width)
+            self.frame_style.top.to_string().repeat(blank_width)
         };
 
-        let bottom = if let Some(title) = bottom_title {
-            draw_frame_with_title(
+        let bottom = if let Some(title) = self.bottom_title {
+            format_with_title(
                 title,
                 blank_width,
-                frame_style.bottom,
-                frame_style.title_left,
-                frame_style.title_right,
-            )?
+                self.frame_style.bottom,
+                self.frame_style.title_left,
+                self.frame_style.title_right,
+            )
         } else {
-            frame_style.bottom.to_string().repeat(blank_width)
+            self.frame_style.bottom.to_string().repeat(blank_width)
         };
 
+        let goto = self.goto_coords();
+        let step = format!(
+            "{}{}",
+            cursor::Down(1),
+            cursor::Left(self.bounds.width() as u16)
+        );
         let white = color::Fg(color::White);
 
         write!(
-            self,
-            "{goto}{white}{top_left}{top}{top_right}",
-            goto = cursor::Goto::from(bounds.top_left),
+            fmt,
+            "{white}{top_left}{top}{white}{top_right}",
             white = white,
-            top_left = frame_style.top_left,
+            top_left = self.frame_style.top_left,
             top = top,
-            top_right = frame_style.top_right,
+            top_right = self.frame_style.top_right,
         )?;
 
-        for i in 1..(bounds.height() - 1) {
+        for i in 1..(self.bounds.height() - 1) {
             write!(
-                self,
-                "{goto}{white}{left}{skip}{right}",
-                goto = cursor::Goto::from(bounds.top_left + Coords::from_y(i)),
+                fmt,
+                "{step}{white}{left}{skip}{right}",
+                step = step,
                 white = white,
-                left = frame_style.left,
+                left = self.frame_style.left,
                 skip = cursor::Right(blank_width as u16),
-                right = frame_style.right,
+                right = self.frame_style.right,
             )?;
         }
 
         write!(
-            self,
-            "{goto}{white}{bottom_left}{bottom}{bottom_right}",
-            goto = cursor::Goto::from(bounds.top_left.to_x() + bounds.bottom_right.to_y()),
+            fmt,
+            "{step}{white}{bottom_left}{bottom}{white}{bottom_right}",
+            step = step,
             white = white,
-            bottom_left = frame_style.bottom_left,
+            bottom_left = self.frame_style.bottom_left,
             bottom = bottom,
-            bottom_right = frame_style.bottom_right,
+            bottom_right = self.frame_style.bottom_right,
         )?;
 
         Ok(())
     }
 }
 
-fn draw_frame_with_title(
-    Title(text, direction): Title<impl fmt::Display>,
+fn format_with_title(
+    Title(text, direction): Title,
     width: usize,
     filler: char,
     title_left: char,
     title_right: char,
-) -> Result<String> {
-    let formatted_title = format!("{} {} {}", title_left, text, title_right,);
+) -> String {
+    let formatted_title = format!("{} {} {}", title_left, text, title_right);
+    let formatted_title_len = text.len() + 4;
 
-    let available_len = width.bounded_sub(formatted_title.chars().count());
+    let available_len = width.bounded_sub(formatted_title_len);
 
     let (left_len, right_len) = match direction {
         Direction::Left => (1, available_len.bounded_sub(1)),
@@ -162,10 +160,10 @@ fn draw_frame_with_title(
         Direction::Right => (available_len.bounded_sub(1), 1),
     };
 
-    Ok(format!(
+    format!(
         "{}{}{}",
         filler.to_string().repeat(left_len),
         formatted_title,
         filler.to_string().repeat(right_len),
-    ))
+    )
 }
