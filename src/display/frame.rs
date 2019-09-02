@@ -1,7 +1,7 @@
 use std::fmt;
 use termion::{color, cursor};
 
-use super::{bounds::Bounds, format_str::FormattedString, widget::Widget};
+use super::{bounds::Bounds, format_str::FormattedString, Widget};
 use crate::utils::usize::BoundedSub;
 
 #[derive(Debug)]
@@ -54,6 +54,7 @@ pub enum Direction {
 #[derive(Debug)]
 pub struct Title(pub FormattedString, pub Direction);
 
+#[derive(Debug)]
 pub struct FrameWidget<'a> {
     pub bounds: Bounds,
     pub top_title: Option<Title>,
@@ -71,7 +72,7 @@ impl<'a> fmt::Display for FrameWidget<'a> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         let blank_width = (self.bounds.width() as usize).bounded_sub(2);
 
-        let top = if let Some(title) = self.top_title {
+        let top = if let Some(ref title) = self.top_title {
             format_with_title(
                 title,
                 blank_width,
@@ -83,7 +84,7 @@ impl<'a> fmt::Display for FrameWidget<'a> {
             self.frame_style.top.to_string().repeat(blank_width)
         };
 
-        let bottom = if let Some(title) = self.bottom_title {
+        let bottom = if let Some(ref title) = self.bottom_title {
             format_with_title(
                 title,
                 blank_width,
@@ -95,7 +96,7 @@ impl<'a> fmt::Display for FrameWidget<'a> {
             self.frame_style.bottom.to_string().repeat(blank_width)
         };
 
-        let goto = self.goto_coords();
+        let goto: cursor::Goto = self.bounds.top_left.into();
         let step = format!(
             "{}{}",
             cursor::Down(1),
@@ -105,14 +106,15 @@ impl<'a> fmt::Display for FrameWidget<'a> {
 
         write!(
             fmt,
-            "{white}{top_left}{top}{white}{top_right}",
+            "{goto}{white}{top_left}{top}{white}{top_right}",
+            goto = goto,
             white = white,
             top_left = self.frame_style.top_left,
             top = top,
             top_right = self.frame_style.top_right,
         )?;
 
-        for i in 1..(self.bounds.height() - 1) {
+        for _ in 1..(self.bounds.height() - 1) {
             write!(
                 fmt,
                 "{step}{white}{left}{skip}{right}",
@@ -139,7 +141,7 @@ impl<'a> fmt::Display for FrameWidget<'a> {
 }
 
 fn format_with_title(
-    Title(text, direction): Title,
+    Title(text, direction): &Title,
     width: usize,
     filler: char,
     title_left: char,

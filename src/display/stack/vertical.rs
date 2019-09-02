@@ -1,13 +1,16 @@
 use std::{cmp::min, convert::TryFrom};
-use termion;
 
 use crate::display::{
+    bounds::Bounds,
     card::{CardWidget, CardWidgetMode, CARD_SIZE},
     coords::{Coords, ZERO},
     selector::SelectorWidget,
 };
 
-use super::{common::*, Offsets, StackWidget};
+use super::{
+    common::{card_coords, card_iter, Offsets},
+    StackWidget,
+};
 
 static UNCOLLAPSED_OFFSETS: Offsets = Offsets {
     unspread: Coords::from_y(1),
@@ -20,11 +23,11 @@ static UNCOLLAPSED_OFFSETS: Offsets = Offsets {
 
 static SELECTOR_OFFSET: Coords = Coords::from_x(-2);
 
-pub fn offsets(display: &StackWidget) -> Offsets {
-    let ref details = display.stack.details;
+pub fn offsets(widget: &StackWidget) -> Offsets {
+    let ref details = widget.stack.details;
 
     let mut offsets = UNCOLLAPSED_OFFSETS.clone();
-    let mut collapse_len = collapse_len(display, &offsets);
+    let mut collapse_len = collapse_len(widget, &offsets);
 
     debug!("collapse_len: {}", collapse_len);
 
@@ -48,32 +51,34 @@ pub fn offsets(display: &StackWidget) -> Offsets {
     offsets
 }
 
-fn collapse_len(display: &StackWidget, offsets: &Offsets) -> usize {
-    // TODO: Get this from the widget, not from termion.
-    let terminal_height = usize::from(termion::terminal_size().unwrap().1);
-    debug!("terminal_height: {}", terminal_height);
+fn collapse_len(widget: &StackWidget, offsets: &Offsets) -> usize {
+    if widget.stack.cards.is_empty() {
+        return 0;
+    }
 
-    let stack_height = usize::try_from(
-        (0..display.stack.cards.len())
-            .flat_map(|i| card_coords(display.coords, i, offsets, &display.stack.details))
-            .map(|coords| coords + CARD_SIZE)
-            .map(|coords| coords.y)
-            .max()
-            .unwrap_or(0)
-            // Add 1 to turn the coordinate into a length.
-            + 1,
+    let coords = widget.bounds.top_left;
+    let available_height = usize::try_from(widget.bounds.height()).unwrap();
+
+    let last_card_coords = card_coords(
+        coords,
+        widget.stack.cards.len() - 1,
+        offsets,
+        &widget.stack.details,
     )
-    .unwrap();
-    debug!("stack_height: {}", stack_height);
+    .unwrap_or(ZERO);
 
-    stack_height.saturating_sub(terminal_height)
+    let uncollapsed_bottom_right = last_card_coords + CARD_SIZE;
+    let uncollapsed_bounds = Bounds::new(coords, uncollapsed_bottom_right);
+    let uncollapsed_height = usize::try_from(uncollapsed_bounds.height()).unwrap();
+
+    uncollapsed_height.saturating_sub(available_height)
 }
 
 pub fn card_widget_iter<'a>(
-    display: &'a StackWidget,
+    widget: &'a StackWidget,
     offsets: &'a Offsets,
 ) -> impl Iterator<Item = CardWidget<'a>> {
-    let ref details = display.stack.details;
+    let ref details = widget.stack.details;
 
     // Index at which the collapsed unspread cards will be represented.
     let collapsed_unspread_index = details.visible_index() + offsets.collapse_unspread_len;
@@ -81,9 +86,9 @@ pub fn card_widget_iter<'a>(
     let uncollapsed_spread_index = details.spread_index() + offsets.collapse_spread_len;
 
     // First index of a face up card. All cards before this are face down.
-    let face_up_index = display.stack.details.face_up_index();
+    let face_up_index = widget.stack.details.face_up_index();
 
-    card_iter(display, offsets).map(|(index, coords, card)| {
+    card_iter(widget, offsets).map(move |(index, coords, card)| {
         let mode = {
             if offsets.collapse_unspread_len > 0 && index <= collapsed_unspread_index {
                 // Add 1 for the one visible card.
@@ -102,11 +107,11 @@ pub fn card_widget_iter<'a>(
     })
 }
 
-pub fn selector_widget(display: &StackWidget, offsets: &Offsets) -> Option<SelectorWidget> {
-    let coords = display.coords;
-    let ref details = display.stack.details;
+pub fn selector_widget(widget: &StackWidget, offsets: &Offsets) -> Option<SelectorWidget> {
+    let coords = widget.bounds.top_left;
+    let ref details = widget.stack.details;
 
-    details.selection.map(|selection| {
+    details.selection.as_ref().map(|selection| {
         let selection_index = details.selection_index().unwrap_or_default();
 
         // Be careful about getting the last index. It's possible for the stack to actually be

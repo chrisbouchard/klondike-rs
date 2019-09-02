@@ -2,24 +2,26 @@ use std::fmt;
 
 use crate::model::stack::{Orientation, Stack};
 
-use super::{
-    bounds::Bounds, card::CardWidget, coords::Coords, selector::SelectorWidget, widget::Widget,
-};
+use super::{bounds::Bounds, card::CardWidget, coords::Coords, selector::SelectorWidget, Widget};
+
+use self::common::Offsets;
 
 mod common;
 mod horizontal;
 mod vertical;
 
+#[derive(Debug)]
 pub struct StackWidget<'a> {
-    pub coords: Coords,
+    pub bounds: Bounds,
     pub stack: &'a Stack<'a>,
 }
 
 impl<'a> Widget for StackWidget<'a> {
     fn bounds(&self) -> Bounds {
+        let coords = self.bounds.top_left;
         let offsets = self.offsets();
 
-        let mut bounds = Bounds::new(self.coords, self.coords);
+        let mut bounds = Bounds::new(coords, coords);
 
         for card_widget in self.card_widget_iter(&offsets) {
             bounds += card_widget.bounds();
@@ -50,14 +52,17 @@ impl<'a> fmt::Display for StackWidget<'a> {
 }
 
 impl<'a> StackWidget<'a> {
-    fn offsets(&self) -> Offsets {
+    fn offsets(&self) -> common::Offsets {
         match self.stack.details.orientation {
             Orientation::Horizontal => horizontal::offsets(self),
             Orientation::Vertical => vertical::offsets(self),
         }
     }
 
-    fn card_widget_iter(&'a self, offsets: &'a Offsets) -> impl Iterator<Item = CardWidget<'a>> {
+    fn card_widget_iter(
+        &'a self,
+        offsets: &'a common::Offsets,
+    ) -> impl Iterator<Item = CardWidget<'a>> {
         // We can't just match and return the iterators like we do for the other methods, because
         // they have different opaque iterator types. So we'll create separate variables for both
         // but only populate one, and then we'll chain the optional iterators.
@@ -80,20 +85,10 @@ impl<'a> StackWidget<'a> {
         horizontal_iter.chain(vertical_iter)
     }
 
-    fn selector_widget(&self, offsets: &Offsets) -> Option<SelectorWidget> {
+    fn selector_widget(&self, offsets: &common::Offsets) -> Option<SelectorWidget> {
         match self.stack.details.orientation {
             Orientation::Horizontal => horizontal::selector_widget(self, offsets),
             Orientation::Vertical => vertical::selector_widget(self, offsets),
         }
     }
-}
-
-#[derive(Clone, Debug)]
-struct Offsets {
-    pub unspread: Coords,
-    pub collapsed_spread: Coords,
-    pub uncollapsed_spread: Coords,
-    pub selected: Coords,
-    pub collapse_unspread_len: usize,
-    pub collapse_spread_len: usize,
 }

@@ -2,20 +2,18 @@
 
 use snafu::IntoError;
 use std::{fmt, io, num};
+use termion::terminal_size;
 
-pub use self::{coords::Coords, game::GameDisplay};
-
-pub mod blank;
-pub mod bounds;
-pub mod card;
-pub mod coords;
-pub mod format_str;
-pub mod frame;
-pub mod game;
-pub mod help;
-pub mod selector;
-pub mod stack;
-pub mod widget;
+mod blank;
+mod bounds;
+mod card;
+mod coords;
+mod format_str;
+mod frame;
+mod game;
+mod help;
+mod selector;
+mod stack;
 
 #[derive(Debug, Snafu)]
 pub enum Error {
@@ -54,4 +52,13 @@ pub enum DisplayState {
     Playing,
     HelpMessageOpen,
     Quitting,
+}
+
+pub trait Widget: fmt::Display {
+    fn bounds(&self) -> Bounds;
+}
+
+pub fn terminal_bounds() -> Result<Bounds> {
+    let size: Coords = terminal_size()?.into();
+    Ok(Bounds::with_size_from_zero(size))
 }

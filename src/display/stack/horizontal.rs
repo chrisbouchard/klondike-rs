@@ -2,16 +2,17 @@ use std::convert::TryFrom;
 
 use crate::{
     display::{
-        bounds::Bounds,
         card::{CardWidget, CardWidgetMode, CARD_SIZE},
         coords::Coords,
         selector::SelectorWidget,
     },
-    model::stack::Stack,
     utils::usize::BoundedSub,
 };
 
-use super::{common::*, Offsets, StackWidget};
+use super::{
+    common::{card_coords, card_iter, Offsets},
+    StackWidget,
+};
 
 static OFFSETS: Offsets = Offsets {
     unspread: Coords::from_x(1),
@@ -24,17 +25,17 @@ static OFFSETS: Offsets = Offsets {
 
 static SELECTOR_OFFSET: Coords = Coords::from_y(0);
 
-pub fn offsets(display: &StackWidget) -> Offsets {
-    OFFSETS
+pub fn offsets(_widget: &StackWidget) -> Offsets {
+    OFFSETS.clone()
 }
 
 pub fn card_widget_iter<'a>(
-    display: &'a StackWidget,
+    widget: &'a StackWidget,
     offsets: &'a Offsets,
 ) -> impl Iterator<Item = CardWidget<'a>> {
-    let face_up_index = display.stack.details.face_up_index();
+    let face_up_index = widget.stack.details.face_up_index();
 
-    card_iter(display, offsets).map(|(index, coords, card)| {
+    card_iter(widget, offsets).map(move |(index, coords, card)| {
         let mode = {
             if index < face_up_index {
                 CardWidgetMode::FullFaceDown
@@ -47,11 +48,11 @@ pub fn card_widget_iter<'a>(
     })
 }
 
-pub fn selector_widget(display: &StackWidget, offsets: &Offsets) -> Option<SelectorWidget> {
-    let coords = display.coords;
-    let ref details = display.stack.details;
+pub fn selector_widget(widget: &StackWidget, offsets: &Offsets) -> Option<SelectorWidget> {
+    let coords = widget.bounds.top_left;
+    let ref details = widget.stack.details;
 
-    details.selection.map(|selection| {
+    details.selection.as_ref().map(|_| {
         let selection_index = details.selection_index().unwrap_or_default();
 
         debug!("selection_index: {}", selection_index);

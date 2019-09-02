@@ -5,9 +5,9 @@ use std::{
     ops,
 };
 
-use super::coords::Coords;
+use super::coords::{self, Coords};
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct Bounds {
     pub top_left: Coords,
     pub bottom_right: Coords,
@@ -23,6 +23,8 @@ impl Bounds {
     }
 
     pub fn with_size(top_left: Coords, size: Coords) -> Bounds {
+        assert!(size >= coords::ZERO);
+
         // We need to subtract 1 from each size dimension because our minimum size is 1 x 1; in
         // other words, a Bounds with coords (x, y), (x, y) has size 1 x 1.
         let bottom_right = top_left + size - Coords::from_xy(1, 1);
@@ -31,6 +33,10 @@ impl Bounds {
             top_left,
             bottom_right,
         }
+    }
+
+    pub fn with_size_from_zero(size: Coords) -> Bounds {
+        Self::with_size(coords::ZERO, size)
     }
 
     pub fn width(&self) -> i32 {

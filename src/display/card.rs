@@ -7,8 +7,8 @@ use super::{
     bounds::Bounds,
     coords::Coords,
     format_str::FormattedString,
-    frame::{Direction, FrameWidget, FrameStyle, Title},
-    widget::Widget,
+    frame::{Direction, FrameStyle, FrameWidget, Title},
+    Widget,
 };
 
 pub static CARD_SIZE: Coords = Coords::from_xy(8, 4);
@@ -139,7 +139,6 @@ impl<'a> fmt::Display for CardWidget<'a> {
 
             CardWidgetMode::SliceFaceDown(count) => {
                 let gray = color::Fg(color::LightBlack);
-                let white = color::Fg(color::White);
 
                 let formatted_count = format!("{}×", count);
 

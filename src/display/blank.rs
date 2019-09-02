@@ -4,8 +4,9 @@ use std::fmt;
 
 use termion::{color, cursor};
 
-use super::{bounds::Bounds, coords::Coords, widget::Widget};
+use super::{bounds::Bounds, coords::Coords, Widget};
 
+#[derive(Debug)]
 pub struct BlankWidget {
     pub bounds: Bounds,
 }

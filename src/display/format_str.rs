@@ -1,4 +1,4 @@
-use std::fmt::{self, Write};
+use std::fmt;
 
 #[derive(Clone, Debug)]
 pub struct FormattedString {
@@ -14,7 +14,10 @@ impl FormattedString {
         }
     }
 
-    pub fn of_content<D>(content: D) -> Self {
+    pub fn of_content<D>(content: D) -> Self
+    where
+        D: fmt::Display,
+    {
         let content_str = format!("{}", content);
         let content_len = content_str.chars().count();
 
@@ -32,18 +35,24 @@ impl FormattedString {
         self.len
     }
 
-    pub fn push_content<D>(self, content: D) -> Self {
+    pub fn push_content<D>(mut self, content: D) -> Self
+    where
+        D: fmt::Display,
+    {
         let content_str = format!("{}", content);
         let content_len = content_str.chars().count();
 
-        self.string.push_str(content_str);
+        self.string.push_str(&content_str);
         self.len += content_len;
 
         self
     }
 
-    pub fn push_formatting<D>(self, formatting: D) -> Self {
-        self.string.push_str(format!("{}", formatting));
+    pub fn push_formatting<D>(mut self, formatting: D) -> Self
+    where
+        D: fmt::Display,
+    {
+        self.string.push_str(&format!("{}", formatting));
         self
     }
 }

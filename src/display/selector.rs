@@ -3,7 +3,7 @@ use termion::{color, cursor};
 
 use crate::model::stack::Orientation;
 
-use super::{bounds::Bounds, coords::Coords, widget::Widget};
+use super::{bounds::Bounds, coords::Coords, Widget};
 
 mod horizontal {
     use super::{fmt, Bounds, Coords};
@@ -20,7 +20,7 @@ mod horizontal {
         write!(fmt, "╛")
     }
 
-    pub fn write_next(fmt: &mut fmt::Formatter) -> fmt::Result {
+    pub fn write_next(_fmt: &mut fmt::Formatter) -> fmt::Result {
         Ok(())
     }
 
@@ -74,7 +74,7 @@ impl fmt::Display for SelectorWidget {
         let start: cursor::Goto = self.coords.into();
         let color = color::Fg(color::LightWhite);
 
-        write!(self, "{}{}", start, color)?;
+        write!(fmt, "{}{}", start, color)?;
 
         for i in 0..self.len {
             if i == 0 {
