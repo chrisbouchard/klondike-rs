@@ -5,7 +5,6 @@ use std::{collections::HashMap, fmt, io};
 
 use crate::{
     display::{
-        self,
         game::{GameWidget, GameWidgetState},
         terminal_bounds, DisplayState,
     },
@@ -14,9 +13,6 @@ use crate::{
 
 #[derive(Debug, Snafu)]
 pub enum Error {
-    #[snafu(display("Display error: {}", source))]
-    DisplayError { source: display::Error },
-
     #[snafu(display("IO error: {}", source))]
     IoError { source: io::Error },
 
@@ -85,7 +81,7 @@ where
             if let Some(area_ids) = area_ids {
                 let widget = GameWidget {
                     area_ids,
-                    bounds: terminal_bounds().context(DisplayError)?,
+                    bounds: terminal_bounds().context(IoError)?,
                     game: &self.game,
                     display_state: self.state,
                     widget_state: &self.game_widget_state,
@@ -156,7 +152,7 @@ where
         {
             let widget = GameWidget {
                 area_ids: vec![],
-                bounds: terminal_bounds().context(DisplayError)?,
+                bounds: terminal_bounds().context(IoError)?,
                 game: &game,
                 display_state: self.state,
                 widget_state: &game_widget_state,
