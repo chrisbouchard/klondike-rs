@@ -1,8 +1,11 @@
 use std::fmt;
 
-use crate::model::stack::{Orientation, Stack};
+use crate::{
+    model::stack::{Orientation, Stack},
+    utils::bounds::Bounds,
+};
 
-use super::{bounds::Bounds, card::CardWidget, coords::Coords, selector::SelectorWidget, Widget};
+use super::{card::CardWidget, selector::SelectorWidget, Widget};
 
 use self::common::Offsets;
 
@@ -52,17 +55,14 @@ impl<'a> fmt::Display for StackWidget<'a> {
 }
 
 impl<'a> StackWidget<'a> {
-    fn offsets(&self) -> common::Offsets {
+    fn offsets(&self) -> Offsets {
         match self.stack.details.orientation {
             Orientation::Horizontal => horizontal::offsets(self),
             Orientation::Vertical => vertical::offsets(self),
         }
     }
 
-    fn card_widget_iter(
-        &'a self,
-        offsets: &'a common::Offsets,
-    ) -> impl Iterator<Item = CardWidget<'a>> {
+    fn card_widget_iter(&'a self, offsets: &'a Offsets) -> impl Iterator<Item = CardWidget<'a>> {
         // We can't just match and return the iterators like we do for the other methods, because
         // they have different opaque iterator types. So we'll create separate variables for both
         // but only populate one, and then we'll chain the optional iterators.
@@ -85,7 +85,7 @@ impl<'a> StackWidget<'a> {
         horizontal_iter.chain(vertical_iter)
     }
 
-    fn selector_widget(&self, offsets: &common::Offsets) -> Option<SelectorWidget> {
+    fn selector_widget(&self, offsets: &Offsets) -> Option<SelectorWidget> {
         match self.stack.details.orientation {
             Orientation::Horizontal => horizontal::selector_widget(self, offsets),
             Orientation::Vertical => vertical::selector_widget(self, offsets),

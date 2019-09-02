@@ -1,9 +1,12 @@
 use std::fmt;
 use termion::{color, cursor};
 
-use crate::model::stack::Orientation;
+use crate::{
+    model::stack::Orientation,
+    utils::{bounds::Bounds, coords::Coords},
+};
 
-use super::{bounds::Bounds, coords::Coords, Widget};
+use super::Widget;
 
 mod horizontal {
     use super::{fmt, Bounds, Coords};

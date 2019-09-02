@@ -6,7 +6,7 @@ use std::{convert::TryFrom, error::Error, fs::File};
 use log::LevelFilter;
 use rand::{seq::SliceRandom, thread_rng};
 use simplelog::{Config, WriteLogger};
-use termion::{event::Key, input::TermRead, terminal_size};
+use termion::{event::Key, input::TermRead};
 
 use klondike_lib::{
     display::DisplayState,

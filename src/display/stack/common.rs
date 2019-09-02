@@ -1,4 +1,7 @@
-use crate::{display::Coords, model::stack::StackDetails, model::Card};
+use crate::{
+    model::{stack::StackDetails, Card},
+    utils::coords::Coords,
+};
 
 use super::StackWidget;
 

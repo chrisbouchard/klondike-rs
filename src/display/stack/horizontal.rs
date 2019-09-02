@@ -3,10 +3,9 @@ use std::convert::TryFrom;
 use crate::{
     display::{
         card::{CardWidget, CardWidgetMode, CARD_SIZE},
-        coords::Coords,
         selector::SelectorWidget,
     },
-    utils::usize::BoundedSub,
+    utils::{coords::Coords, usize::BoundedSub},
 };
 
 use super::{

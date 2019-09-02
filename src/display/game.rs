@@ -1,11 +1,13 @@
 use std::{cell::RefCell, collections::HashMap, convert::TryFrom, fmt};
 use termion::clear;
 
-use crate::model::{AreaId, Game, Suit};
+use crate::{
+    model::{AreaId, Game, Suit},
+    utils::{bounds::Bounds, coords::Coords},
+};
 
 use super::{
-    blank::BlankWidget, bounds::Bounds, card::CARD_SIZE, coords::Coords, help::HelpWidget,
-    stack::StackWidget, DisplayState, Widget,
+    blank::BlankWidget, card::CARD_SIZE, help::HelpWidget, stack::StackWidget, DisplayState, Widget,
 };
 
 static STOCK_COORDS: Coords = Coords::from_xy(2, 0);

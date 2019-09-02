@@ -1,11 +1,13 @@
 use std::fmt;
 use termion::{color, cursor};
 
-use crate::model::{Card, Color};
+use crate::{
+    model::{Card, Color},
+    utils::{bounds::Bounds, coords::Coords},
+};
 
 use super::{
-    bounds::Bounds,
-    coords::Coords,
+    blank::BlankWidget,
     format_str::FormattedString,
     frame::{Direction, FrameStyle, FrameWidget, Title},
     Widget,
@@ -15,16 +17,16 @@ pub static CARD_SIZE: Coords = Coords::from_xy(8, 4);
 pub static SLICE_SIZE: Coords = Coords::from_xy(8, 2);
 
 pub static CARD_FRAME_STYLE: FrameStyle = FrameStyle {
-    top_left: '╭',
-    top: '─',
-    top_right: '╮',
-    left: '│',
-    right: '│',
-    bottom_left: '╰',
-    bottom: '─',
-    bottom_right: '╯',
-    title_left: '╴',
-    title_right: '╶',
+    top_left: "╭",
+    top: "─",
+    top_right: "╮",
+    left: "│",
+    right: "│",
+    bottom_left: "╰",
+    bottom: "─",
+    bottom_right: "╯",
+    title_left: "╴",
+    title_right: "╶",
 };
 
 impl color::Color for Color {
@@ -48,15 +50,6 @@ pub enum CardWidgetMode {
     SliceFaceDown(usize),
 }
 
-impl CardWidgetMode {
-    fn size(&self) -> Coords {
-        match self {
-            CardWidgetMode::FullFaceUp | CardWidgetMode::FullFaceDown => CARD_SIZE,
-            CardWidgetMode::SliceFaceUp | CardWidgetMode::SliceFaceDown(_) => SLICE_SIZE,
-        }
-    }
-}
-
 #[derive(Debug)]
 pub struct CardWidget<'a> {
     pub card: &'a Card,
@@ -66,8 +59,17 @@ pub struct CardWidget<'a> {
 
 impl<'a> CardWidget<'a> {
     fn fmt_frame(&self, title: Option<FormattedString>, fmt: &mut fmt::Formatter) -> fmt::Result {
+        let bounds = self.bounds();
+
+        if bounds.height() > 2 && bounds.width() > 2 {
+            let blank = BlankWidget {
+                bounds: bounds.inset(1),
+            };
+            write!(fmt, "{}", blank)?;
+        }
+
         let frame = FrameWidget {
-            bounds: self.bounds(),
+            bounds,
             top_title: title.map(|title| Title(title, Direction::Right)),
             bottom_title: None,
             frame_style: &CARD_FRAME_STYLE,
@@ -80,7 +82,7 @@ impl<'a> CardWidget<'a> {
 
 impl<'a> Widget for CardWidget<'a> {
     fn bounds(&self) -> Bounds {
-        Bounds::with_size(self.coords, self.mode.size())
+        Bounds::with_size(self.coords, CARD_SIZE)
     }
 }
 
@@ -132,7 +134,7 @@ impl<'a> fmt::Display for CardWidget<'a> {
                     .push_formatting(white)
                     .push_content(spacer)
                     .push_formatting(color)
-                    .push_formatting(suit_str);
+                    .push_content(suit_str);
 
                 self.fmt_frame(Some(title), fmt)?;
             }

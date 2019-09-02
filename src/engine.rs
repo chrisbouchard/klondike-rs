@@ -91,6 +91,7 @@ where
                     widget_state: &self.game_widget_state,
                 };
                 write!(self.output, "{}", widget).context(IoError)?;
+                self.output.flush().context(IoError)?;
             }
         }
 
@@ -132,7 +133,7 @@ where
         }
     }
 
-    pub fn input_mapper<M>(&mut self, state: DisplayState, input_mapper: M) -> &mut Self
+    pub fn input_mapper<M>(mut self, state: DisplayState, input_mapper: M) -> Self
     where
         M: InputMapper<I> + 'a,
     {
@@ -140,7 +141,7 @@ where
         self
     }
 
-    pub fn output(&mut self, output: O) -> &mut Self {
+    pub fn output(mut self, output: O) -> Self {
         self.output = Some(output);
         self
     }
@@ -161,6 +162,7 @@ where
                 widget_state: &game_widget_state,
             };
             write!(output, "{}", widget).context(IoError)?;
+            output.flush().context(IoError)?;
         }
 
         Ok(GameEngine {

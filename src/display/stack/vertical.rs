@@ -1,10 +1,14 @@
 use std::{cmp::min, convert::TryFrom};
 
-use crate::display::{
-    bounds::Bounds,
-    card::{CardWidget, CardWidgetMode, CARD_SIZE},
-    coords::{Coords, ZERO},
-    selector::SelectorWidget,
+use crate::{
+    display::{
+        card::{CardWidget, CardWidgetMode, CARD_SIZE},
+        selector::SelectorWidget,
+    },
+    utils::{
+        bounds::Bounds,
+        coords::{self, Coords},
+    },
 };
 
 use super::{
@@ -57,7 +61,7 @@ fn collapse_len(widget: &StackWidget, offsets: &Offsets) -> usize {
     }
 
     let coords = widget.bounds.top_left;
-    let available_height = usize::try_from(widget.bounds.height()).unwrap();
+    let maximum_y = usize::try_from(widget.bounds.bottom_right.y).unwrap();
 
     let last_card_coords = card_coords(
         coords,
@@ -65,13 +69,12 @@ fn collapse_len(widget: &StackWidget, offsets: &Offsets) -> usize {
         offsets,
         &widget.stack.details,
     )
-    .unwrap_or(ZERO);
+    .unwrap_or_default();
 
-    let uncollapsed_bottom_right = last_card_coords + CARD_SIZE;
-    let uncollapsed_bounds = Bounds::new(coords, uncollapsed_bottom_right);
-    let uncollapsed_height = usize::try_from(uncollapsed_bounds.height()).unwrap();
+    let uncollapsed_bounds = Bounds::with_size(last_card_coords, CARD_SIZE);
+    let uncollapsed_y = usize::try_from(uncollapsed_bounds.bottom_right.y).unwrap();
 
-    uncollapsed_height.saturating_sub(available_height)
+    uncollapsed_y.saturating_sub(maximum_y)
 }
 
 pub fn card_widget_iter<'a>(
@@ -121,7 +124,7 @@ pub fn selector_widget(widget: &StackWidget, offsets: &Offsets) -> Option<Select
         let held_offset = if selection.held {
             -UNCOLLAPSED_OFFSETS.selected
         } else {
-            ZERO
+            coords::ZERO
         };
 
         let start_coords = card_coords(coords, selection_index, offsets, details).unwrap_or(coords)

@@ -1,9 +1,9 @@
 use std::fmt;
 use termion::{color, cursor};
 
+use crate::utils::{bounds::Bounds, coords::Coords};
+
 use super::{
-    bounds::Bounds,
-    coords::Coords,
     format_str::FormattedString,
     frame::{self, Direction, FrameWidget, Title},
     Widget,

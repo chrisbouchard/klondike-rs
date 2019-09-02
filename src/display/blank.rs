@@ -4,7 +4,9 @@ use std::fmt;
 
 use termion::{color, cursor};
 
-use super::{bounds::Bounds, coords::Coords, Widget};
+use crate::utils::{bounds::Bounds, coords::Coords};
+
+use super::Widget;
 
 #[derive(Debug)]
 pub struct BlankWidget {

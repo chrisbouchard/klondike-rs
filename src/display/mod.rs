@@ -4,16 +4,19 @@ use snafu::IntoError;
 use std::{fmt, io, num};
 use termion::terminal_size;
 
-mod blank;
-mod bounds;
-mod card;
-mod coords;
-mod format_str;
-mod frame;
-mod game;
-mod help;
-mod selector;
-mod stack;
+use crate::utils::{
+    bounds::Bounds,
+    coords::{self, Coords},
+};
+
+pub mod blank;
+pub mod card;
+pub mod format_str;
+pub mod frame;
+pub mod game;
+pub mod help;
+pub mod selector;
+pub mod stack;
 
 #[derive(Debug, Snafu)]
 pub enum Error {
@@ -59,6 +62,6 @@ pub trait Widget: fmt::Display {
 }
 
 pub fn terminal_bounds() -> Result<Bounds> {
-    let size: Coords = terminal_size()?.into();
-    Ok(Bounds::with_size_from_zero(size))
+    let bottom_right: Coords = terminal_size()?.into();
+    Ok(Bounds::new(coords::ZERO, bottom_right))
 }

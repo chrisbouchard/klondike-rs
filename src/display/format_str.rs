@@ -55,6 +55,12 @@ impl FormattedString {
         self.string.push_str(&format!("{}", formatting));
         self
     }
+
+    pub fn push_formatted_content(mut self, format_str: &FormattedString) -> Self {
+        self.string.push_str(format_str.as_str());
+        self.len += format_str.len();
+        self
+    }
 }
 
 impl fmt::Display for FormattedString {
