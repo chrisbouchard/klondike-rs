@@ -6,14 +6,28 @@ pub struct FormattedString {
     string: String,
 }
 
-impl FormattedString {
-    pub fn new() -> Self {
+impl Default for FormattedString {
+    fn default() -> Self {
         FormattedString {
             len: 0,
             string: String::new(),
         }
     }
+}
 
+impl From<String> for FormattedString {
+    fn from(content: String) -> Self {
+        FormattedString::of_content(content)
+    }
+}
+
+impl<'a> From<&'a str> for FormattedString {
+    fn from(content: &'a str) -> Self {
+        FormattedString::of_content(content)
+    }
+}
+
+impl FormattedString {
     pub fn of_content<D>(content: D) -> Self
     where
         D: fmt::Display,

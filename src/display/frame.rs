@@ -55,6 +55,29 @@ pub enum Direction {
 #[derive(Debug)]
 pub struct Title(pub FormattedString, pub Direction);
 
+impl Title {
+    pub fn left<F>(text: F) -> Title
+    where
+        F: Into<FormattedString>,
+    {
+        Title(text.into(), Direction::Left)
+    }
+
+    pub fn center<F>(text: F) -> Title
+    where
+        F: Into<FormattedString>,
+    {
+        Title(text.into(), Direction::Center)
+    }
+
+    pub fn right<F>(text: F) -> Title
+    where
+        F: Into<FormattedString>,
+    {
+        Title(text.into(), Direction::Right)
+    }
+}
+
 #[derive(Debug)]
 pub struct FrameWidget<'a> {
     pub bounds: Bounds,

@@ -70,7 +70,7 @@ impl<'a> CardWidget<'a> {
 
         let frame = FrameWidget {
             bounds,
-            top_title: title.map(|title| Title(title, Direction::Right)),
+            top_title: title.map(|title| Title::right(title)),
             bottom_title: None,
             frame_style: &CARD_FRAME_STYLE,
         };
@@ -128,7 +128,7 @@ impl<'a> fmt::Display for CardWidget<'a> {
 
                 let spacer = if rank_str.len() == 2 { " " } else { "╶╴" };
 
-                let title = FormattedString::new()
+                let title = FormattedString::default()
                     .push_formatting(color)
                     .push_content(rank_str)
                     .push_formatting(white)
@@ -144,7 +144,7 @@ impl<'a> fmt::Display for CardWidget<'a> {
 
                 let formatted_count = format!("{}×", count);
 
-                let title = FormattedString::new()
+                let title = FormattedString::default()
                     .push_formatting(gray)
                     .push_content(formatted_count);
 

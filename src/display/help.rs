@@ -28,14 +28,8 @@ impl fmt::Display for HelpWidget {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         let frame_display = FrameWidget {
             bounds: self.bounds,
-            top_title: Some(Title(
-                FormattedString::of_content("H E L P"),
-                Direction::Center,
-            )),
-            bottom_title: Some(Title(
-                FormattedString::of_content("Press any key to continue . . ."),
-                Direction::Right,
-            )),
+            top_title: Some(Title::center("H E L P")),
+            bottom_title: Some(Title::right("Press any key to continue . . .")),
             frame_style: &frame::DOUBLE,
         };
 
