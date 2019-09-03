@@ -1,18 +1,20 @@
 use std::{cmp::min, convert::TryFrom};
-use termion;
 
 use crate::{
     display::{
-        bounds::Bounds,
-        card::{CardPainter, CARD_SIZE},
-        coords::{Coords, ZERO},
-        selector::SelectorPainter,
-        Result,
+        card::{CardWidget, CardWidgetMode, CARD_SIZE},
+        selector::SelectorWidget,
     },
-    model::stack::Stack,
+    utils::{
+        bounds::Bounds,
+        coords::{self, Coords},
+    },
 };
 
-use super::common::*;
+use super::{
+    common::{card_coords, card_iter, Offsets},
+    StackWidget,
+};
 
 static UNCOLLAPSED_OFFSETS: Offsets = Offsets {
     unspread: Coords::from_y(1),
@@ -25,84 +27,17 @@ static UNCOLLAPSED_OFFSETS: Offsets = Offsets {
 
 static SELECTOR_OFFSET: Coords = Coords::from_x(-2);
 
-pub trait VerticalStackPainter {
-    fn draw_vertical_stack(&mut self, coords: Coords, stack: &Stack) -> Result<Bounds>;
-}
+pub fn offsets(widget: &StackWidget) -> Offsets {
+    let ref details = widget.stack.details;
 
-impl<T> VerticalStackPainter for T
-where
-    T: CardPainter + SelectorPainter,
-{
-    fn draw_vertical_stack(&mut self, coords: Coords, stack: &Stack) -> Result<Bounds> {
-        let offsets = offset_with_collapse(coords, stack)?;
-
-        // Index at which the collapsed unspread cards will be represented.
-        let collapsed_unspread_index =
-            stack.details.visible_index() + offsets.collapse_unspread_len;
-
-        let uncollapsed_spread_index = stack.details.spread_index() + offsets.collapse_spread_len;
-
-        // First index of a face up card. All cards before this are face down.
-        let face_up_index = stack.details.face_up_index();
-
-        let mut bounds = Bounds::new(coords, coords);
-
-        for (i, card) in stack.into_iter().enumerate() {
-            if let Some(coords) = card_coords(coords, i, &offsets, &stack.details) {
-                if offsets.collapse_unspread_len > 0 && i <= collapsed_unspread_index {
-                    // Add 1 for the one visible card.
-                    let count = offsets.collapse_unspread_len + 1;
-                    bounds += self.draw_card_face_down_with_count(coords, count)?;
-                } else if i < face_up_index {
-                    bounds += self.draw_card_face_down(coords)?;
-                } else if offsets.collapse_spread_len > 0 && i < uncollapsed_spread_index {
-                    bounds += self.draw_card_face_up_slice(coords, card)?;
-                } else {
-                    bounds += self.draw_card_face_up(coords, card)?;
-                }
-            }
-        }
-
-        /* Be careful about getting the last index. It's possible for the stack to actually be empty,
-         * in which case we can't subtract from a 0 usize. */
-        let end_index = stack.details.len.saturating_sub(1);
-
-        if let Some(ref selection) = stack.details.selection {
-            let selection_index = stack.details.selection_index().unwrap_or_default();
-
-            let held_offset = if selection.held {
-                -UNCOLLAPSED_OFFSETS.selected
-            } else {
-                ZERO
-            };
-
-            let start_coords = card_coords(coords, selection_index, &offsets, &stack.details)
-                .unwrap_or(coords)
-                + SELECTOR_OFFSET
-                + held_offset;
-            let end_coords = card_coords(coords, end_index, &offsets, &stack.details)
-                .unwrap_or(coords)
-                + CARD_SIZE.to_y()
-                + SELECTOR_OFFSET
-                + held_offset;
-
-            let len = u16::try_from(end_coords.y - start_coords.y)?;
-            bounds += self.draw_vertical_selector(start_coords, len, selection.held)?;
-        }
-
-        Ok(bounds)
-    }
-}
-
-fn offset_with_collapse(coords: Coords, stack: &Stack) -> Result<Offsets> {
     let mut offsets = UNCOLLAPSED_OFFSETS.clone();
-    let mut collapse_len = collapse_len(coords, &offsets, stack)?;
+    let mut collapse_len = collapse_len(widget, &offsets);
 
     debug!("collapse_len: {}", collapse_len);
 
     if collapse_len > 0 {
-        let reserve_unspread_len = if stack.details.spread_len > 0 { 0 } else { 1 };
-        let unspread_len = stack.details.unspread_len();
+        let reserve_unspread_len = if details.spread_len > 0 { 0 } else { 1 };
+        let unspread_len = details.unspread_len();
         let collapse_unspread_len = unspread_len.saturating_sub(reserve_unspread_len + 1);
         debug!(
             "unspread_len: {}, collapse_unspread_len: {}",
@@ -114,27 +49,98 @@ fn offset_with_collapse(coords: Coords, stack: &Stack) -> Result<Offsets> {
     }
 
     if collapse_len > 0 {
-        offsets.collapse_spread_len = min(stack.details.spread_len.saturating_sub(1), collapse_len);
+        offsets.collapse_spread_len = min(details.spread_len.saturating_sub(1), collapse_len);
     }
 
-    Ok(offsets)
+    offsets
 }
 
-fn collapse_len(coords: Coords, offsets: &Offsets, stack: &Stack) -> Result<usize> {
-    let terminal_height = usize::from(termion::terminal_size()?.1);
-    debug!("terminal_height: {}", terminal_height);
+fn collapse_len(widget: &StackWidget, offsets: &Offsets) -> usize {
+    if widget.stack.cards.is_empty() {
+        return 0;
+    }
 
-    let stack_height = usize::try_from(
-        (0..stack.cards.len())
-            .flat_map(|i| card_coords(coords, i, offsets, &stack.details))
-            .map(|coords| coords + CARD_SIZE)
-            .map(|coords| coords.y)
-            .max()
-            .unwrap_or(0)
-            // Add 1 to turn the coordinate into a length.
-            + 1,
-    )?;
-    debug!("stack_height: {}", stack_height);
+    let coords = widget.bounds.top_left;
+    let maximum_y = usize::try_from(widget.bounds.bottom_right.y).unwrap();
 
-    Ok(stack_height.saturating_sub(terminal_height))
+    let last_card_coords = card_coords(
+        coords,
+        widget.stack.cards.len() - 1,
+        offsets,
+        &widget.stack.details,
+    )
+    .unwrap_or_default();
+
+    let uncollapsed_bounds = Bounds::with_size(last_card_coords, CARD_SIZE);
+    let uncollapsed_y = usize::try_from(uncollapsed_bounds.bottom_right.y).unwrap();
+
+    uncollapsed_y.saturating_sub(maximum_y)
+}
+
+pub fn card_widget_iter<'a>(
+    widget: &'a StackWidget,
+    offsets: &'a Offsets,
+) -> impl Iterator<Item = CardWidget<'a>> {
+    let ref details = widget.stack.details;
+
+    // Index at which the collapsed unspread cards will be represented.
+    let collapsed_unspread_index = details.visible_index() + offsets.collapse_unspread_len;
+
+    let uncollapsed_spread_index = details.spread_index() + offsets.collapse_spread_len;
+
+    // First index of a face up card. All cards before this are face down.
+    let face_up_index = widget.stack.details.face_up_index();
+
+    card_iter(widget, offsets).map(move |(index, coords, card)| {
+        let mode = {
+            if offsets.collapse_unspread_len > 0 && index <= collapsed_unspread_index {
+                // Add 1 for the one visible card.
+                let count = offsets.collapse_unspread_len + 1;
+                CardWidgetMode::SliceFaceDown(count)
+            } else if index < face_up_index {
+                CardWidgetMode::FullFaceDown
+            } else if offsets.collapse_spread_len > 0 && index < uncollapsed_spread_index {
+                CardWidgetMode::SliceFaceUp
+            } else {
+                CardWidgetMode::FullFaceUp
+            }
+        };
+
+        CardWidget { card, coords, mode }
+    })
+}
+
+pub fn selector_widget(widget: &StackWidget, offsets: &Offsets) -> Option<SelectorWidget> {
+    let coords = widget.bounds.top_left;
+    let ref details = widget.stack.details;
+
+    details.selection.as_ref().map(|selection| {
+        let selection_index = details.selection_index().unwrap_or_default();
+
+        // Be careful about getting the last index. It's possible for the stack to actually be
+        // empty, in which case we can't subtract from a 0 usize.
+        let end_index = details.len.saturating_sub(1);
+
+        let held_offset = if selection.held {
+            -UNCOLLAPSED_OFFSETS.selected
+        } else {
+            coords::ZERO
+        };
+
+        let start_coords = card_coords(coords, selection_index, offsets, details).unwrap_or(coords)
+            + SELECTOR_OFFSET
+            + held_offset;
+        let end_coords = card_coords(coords, end_index, offsets, details).unwrap_or(coords)
+            + CARD_SIZE.to_y()
+            + SELECTOR_OFFSET
+            + held_offset;
+
+        let len = u16::try_from(end_coords.y - start_coords.y).unwrap();
+
+        SelectorWidget {
+            coords: start_coords,
+            len,
+            orientation: details.orientation,
+        }
+    })
 }

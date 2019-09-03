@@ -1,4 +1,9 @@
-use crate::{display::Coords, model::stack::StackDetails};
+use crate::{
+    model::{stack::StackDetails, Card},
+    utils::coords::Coords,
+};
+
+use super::StackWidget;
 
 #[derive(Clone, Debug)]
 pub struct Offsets {
@@ -8,6 +13,22 @@ pub struct Offsets {
     pub selected: Coords,
     pub collapse_unspread_len: usize,
     pub collapse_spread_len: usize,
+}
+
+pub fn card_iter<'a>(
+    widget: &'a StackWidget<'a>,
+    offsets: &'a Offsets,
+) -> impl Iterator<Item = (usize, Coords, &'a Card)> {
+    let coords = widget.bounds.top_left;
+
+    widget
+        .stack
+        .into_iter()
+        .enumerate()
+        .filter_map(move |(index, card)| {
+            card_coords(coords, index, offsets, &widget.stack.details)
+                .map(|coords| (index, coords, card))
+        })
 }
 
 pub fn card_coords(

@@ -1,11 +1,32 @@
-use std::{fmt, io};
+use std::fmt;
 use termion::{color, cursor};
 
-use crate::model::{Card, Color};
+use crate::{
+    model::{Card, Color},
+    utils::{bounds::Bounds, coords::Coords, format_str::FormattedString},
+};
 
-use super::{bounds::Bounds, coords::Coords, Result};
+use super::{
+    blank::BlankWidget,
+    frame::{FrameStyle, FrameWidget, Title},
+    Widget,
+};
 
 pub static CARD_SIZE: Coords = Coords::from_xy(8, 4);
+pub static SLICE_SIZE: Coords = Coords::from_xy(8, 2);
+
+pub static CARD_FRAME_STYLE: FrameStyle = FrameStyle {
+    top_left: "╭",
+    top: "─",
+    top_right: "╮",
+    left: "│",
+    right: "│",
+    bottom_left: "╰",
+    bottom: "─",
+    bottom_right: "╯",
+    title_left: "╴",
+    title_right: "╶",
+};
 
 impl color::Color for Color {
     fn write_fg(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
@@ -20,114 +41,114 @@ impl color::Color for Color {
     }
 }
 
-pub trait CardPainter {
-    fn draw_card_face_up(&mut self, coords: Coords, card: &Card) -> Result<Bounds>;
-    fn draw_card_face_up_slice(&mut self, coords: Coords, card: &Card) -> Result<Bounds>;
-    fn draw_card_face_down(&mut self, coords: Coords) -> Result<Bounds>;
-    fn draw_card_face_down_with_count(&mut self, coords: Coords, count: usize) -> Result<Bounds>;
+#[derive(Copy, Clone, Debug)]
+pub enum CardWidgetMode {
+    FullFaceUp,
+    FullFaceDown,
+    SliceFaceUp,
+    SliceFaceDown(usize),
 }
 
-impl<W> CardPainter for W
-where
-    W: io::Write,
-{
-    fn draw_card_face_up(&mut self, coords: Coords, card: &Card) -> Result<Bounds> {
-        draw_card_frame(self, coords)?;
+#[derive(Debug)]
+pub struct CardWidget<'a> {
+    pub card: &'a Card,
+    pub coords: Coords,
+    pub mode: CardWidgetMode,
+}
 
-        let interior_coords = coords + Coords::from_xy(2, 1);
+impl<'a> CardWidget<'a> {
+    fn fmt_frame(&self, title: Option<FormattedString>, fmt: &mut fmt::Formatter) -> fmt::Result {
+        let bounds = self.bounds();
 
-        let start: cursor::Goto = interior_coords.into();
-        let next = format!("{}{}", cursor::Left(4), cursor::Down(1));
+        if bounds.height() > 2 && bounds.width() > 2 {
+            let blank = BlankWidget {
+                bounds: bounds.inset(1),
+            };
+            write!(fmt, "{}", blank)?;
+        }
 
-        let rank_str = format!("{}", card.rank);
-        let suit_str = format!("{}", card.suit);
+        let frame = FrameWidget {
+            bounds,
+            top_title: title.map(|title| Title::right(title)),
+            bottom_title: None,
+            frame_style: &CARD_FRAME_STYLE,
+        };
 
-        let offset = cursor::Right(3 - rank_str.len() as u16);
-
-        write!(self, "{}{}", start, color::Fg(card.color()))?;
-        write!(self, "{}{}{}{}", rank_str, offset, suit_str, next)?;
-        write!(self, "{}{}{}{}", suit_str, offset, rank_str, next)?;
-
-        Ok(Bounds::with_size(coords, CARD_SIZE))
-    }
-
-    fn draw_card_face_up_slice(&mut self, coords: Coords, card: &Card) -> Result<Bounds> {
-        draw_card_frame(self, coords)?;
-
-        let interior_coords = coords + Coords::from_x(1);
-
-        let start: cursor::Goto = interior_coords.into();
-
-        let rank_str = format!("{}", card.rank);
-        let suit_str = format!("{}", card.suit);
-
-        let spacer = if rank_str.len() == 2 { " " } else { "╶╴" };
-
-        let color = color::Fg(card.color());
-        let white = color::Fg(color::Reset);
-
-        write!(self, "{}{}", start, color::Fg(card.color()))?;
-        write!(
-            self,
-            "{}{}╴{}{}{}{}{}{}{}╶",
-            start, white, color, rank_str, white, spacer, color, suit_str, white
-        )?;
-
-        Ok(Bounds::with_size(coords, Coords::from_xy(CARD_SIZE.x, 1)))
-    }
-
-    fn draw_card_face_down(&mut self, coords: Coords) -> Result<Bounds> {
-        draw_card_frame(self, coords)?;
-
-        let interior_coords = coords + Coords::from_xy(2, 1);
-
-        let start: cursor::Goto = interior_coords.into();
-        let next = format!("{}{}", cursor::Left(4), cursor::Down(1));
-
-        write!(self, "{}{}", start, color::Fg(color::LightBlue))?;
-        write!(self, "░░░░{}", next)?;
-        write!(self, "░░░░{}", next)?;
-
-        Ok(Bounds::with_size(coords, CARD_SIZE))
-    }
-
-    fn draw_card_face_down_with_count(&mut self, coords: Coords, count: usize) -> Result<Bounds> {
-        let bounds = self.draw_card_face_down(coords)?;
-
-        let formatted_count = format!("{}×", count);
-
-        let count_coords =
-            coords + CARD_SIZE.to_x() - Coords::from_x(formatted_count.chars().count() as i32 + 3);
-        let goto: cursor::Goto = count_coords.into();
-
-        let gray = color::Fg(color::LightBlack);
-        let white = color::Fg(color::Reset);
-
-        write!(
-            self,
-            "{}{}╴{}{}{}╶",
-            goto, white, gray, formatted_count, white
-        )?;
-
-        Ok(bounds)
+        write!(fmt, "{}", frame)?;
+        Ok(())
     }
 }
 
-fn draw_card_frame<W>(writer: &mut W, coords: Coords) -> Result<()>
-where
-    W: io::Write,
-{
-    let (row, col) = coords.as_row_col();
+impl<'a> Widget for CardWidget<'a> {
+    fn bounds(&self) -> Bounds {
+        Bounds::with_size(self.coords, CARD_SIZE)
+    }
+}
 
-    // TODO: Use CARD_SIZE?
-    let start = cursor::Goto(col, row);
-    let next = format!("{}{}", cursor::Left(8), cursor::Down(1));
+impl<'a> fmt::Display for CardWidget<'a> {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        match self.mode {
+            CardWidgetMode::FullFaceUp => {
+                let interior_coords = self.coords + Coords::from_xy(2, 1);
 
-    write!(writer, "{}{}", start, color::Fg(color::Reset))?;
-    write!(writer, "╭──────╮{}", next)?;
-    write!(writer, "│      │{}", next)?;
-    write!(writer, "│      │{}", next)?;
-    write!(writer, "╰──────╯{}", next)?;
+                let color = color::Fg(self.card.color());
+                let start: cursor::Goto = interior_coords.into();
+                let next = format!("{}{}", cursor::Left(4), cursor::Down(1));
 
-    Ok(())
+                let rank_str = format!("{}", self.card.rank);
+                let suit_str = format!("{}", self.card.suit);
+
+                let offset = cursor::Right(3 - rank_str.len() as u16);
+
+                self.fmt_frame(None, fmt)?;
+                write!(fmt, "{}{}", start, color)?;
+                write!(fmt, "{}{}{}{}", rank_str, offset, suit_str, next)?;
+                write!(fmt, "{}{}{}{}", suit_str, offset, rank_str, next)?;
+            }
+
+            CardWidgetMode::FullFaceDown => {
+                let interior_coords = self.coords + Coords::from_xy(2, 1);
+
+                let start: cursor::Goto = interior_coords.into();
+                let next = format!("{}{}", cursor::Left(4), cursor::Down(1));
+
+                self.fmt_frame(None, fmt)?;
+                write!(fmt, "{}{}", start, color::Fg(color::LightBlue))?;
+                write!(fmt, "░░░░{}", next)?;
+                write!(fmt, "░░░░{}", next)?;
+            }
+
+            CardWidgetMode::SliceFaceUp => {
+                let color = color::Fg(self.card.color());
+                let white = color::Fg(color::White);
+
+                let rank_str = format!("{}", self.card.rank);
+                let suit_str = format!("{}", self.card.suit);
+
+                let spacer = if rank_str.len() == 2 { " " } else { "╶╴" };
+
+                let title = FormattedString::new_with_formatting(color)
+                    .push_content(rank_str)
+                    .push_formatting(white)
+                    .push_content(spacer)
+                    .push_formatting(color)
+                    .push_content(suit_str);
+
+                self.fmt_frame(Some(title), fmt)?;
+            }
+
+            CardWidgetMode::SliceFaceDown(count) => {
+                let gray = color::Fg(color::LightBlack);
+
+                let formatted_count = format!("{}×", count);
+
+                let title =
+                    FormattedString::new_with_formatting(gray).push_content(formatted_count);
+
+                self.fmt_frame(Some(title), fmt)?;
+            }
+        }
+
+        Ok(())
+    }
 }

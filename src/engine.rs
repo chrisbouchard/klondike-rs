@@ -1,32 +1,26 @@
 //! Module tying together the Klondike model and display.
 
-use snafu::{IntoError, ResultExt};
-use std::{collections::HashMap, fmt};
+use snafu::{OptionExt, ResultExt};
+use std::{collections::HashMap, fmt, io};
 
 use crate::{
-    display::{self, DisplayState},
-    model::{
-        area::AreaId,
-        game::{Action, Game},
+    display::{
+        game::{GameWidget, GameWidgetState},
+        terminal_bounds, DisplayState,
     },
+    model::game::{Action, Game},
 };
 
 #[derive(Debug, Snafu)]
 pub enum Error {
-    #[snafu(display("Display error: {}", source))]
-    DisplayError { source: display::Error },
+    #[snafu(display("IO error: {}", source))]
+    IoError { source: io::Error },
 
-    #[snafu(display("Error evaluating RepaintWatcher: {}", source))]
-    RepaintWatcherError { source: Box<dyn std::error::Error> },
+    #[snafu(display("GameEngineBuilder: {}", message))]
+    GameEngineBuilderError { message: String },
 }
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;
-
-impl From<display::Error> for Error {
-    fn from(error: display::Error) -> Self {
-        DisplayError.into_error(error)
-    }
-}
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum Update {
@@ -47,35 +41,22 @@ where
     }
 }
 
-pub trait RepaintWatcher {
-    fn full_repaint_required(&mut self) -> Result<bool>;
-}
-
-impl<F> RepaintWatcher for F
+pub struct GameEngine<'a, I, O>
 where
-    F: FnMut() -> std::result::Result<bool, Box<dyn std::error::Error>>,
+    I: 'a,
+    O: io::Write + 'a,
 {
-    fn full_repaint_required(&mut self) -> Result<bool> {
-        self().context(RepaintWatcherError)
-    }
-}
-
-pub trait Repainter {
-    fn repaint_full(&mut self, game: &Game, state: DisplayState) -> Result<()>;
-    fn repaint_areas(&mut self, game: &Game, area_ids: &[AreaId]) -> Result<()>;
-}
-
-pub struct GameEngine<'a, I, R> {
     game: Game<'a>,
     state: DisplayState,
     input_mappers: HashMap<DisplayState, Box<dyn InputMapper<I> + 'a>>,
-    repainter: R,
-    repaint_watchers: Vec<Box<dyn RepaintWatcher + 'a>>,
+    output: O,
+    game_widget_state: GameWidgetState,
 }
 
-impl<'a, I, R> GameEngine<'a, I, R>
+impl<'a, I, O> GameEngine<'a, I, O>
 where
-    R: Repainter,
+    I: 'a,
+    O: io::Write + 'a,
 {
     pub fn game(&self) -> &Game<'a> {
         &self.game
@@ -87,37 +68,38 @@ where
 
     pub fn handle_input(&mut self, input: I) -> Result<()> {
         if let Some(input_mapper) = self.input_mappers.get_mut(&self.state) {
-            match input_mapper.map_input(input) {
-                Some(Update::Action(action)) => {
-                    let area_ids = self.game.apply_action(action);
-                    if self.repaint_full()? {
-                        self.repainter.repaint_full(&self.game, self.state)?;
-                    } else {
-                        self.repainter.repaint_areas(&self.game, &area_ids)?;
-                    }
-                }
-                Some(Update::State(state)) => {
+            let update = input_mapper.map_input(input);
+
+            let area_ids = update.map(|update| match update {
+                Update::Action(action) => self.game.apply_action(action),
+                Update::State(state) => {
                     self.state = state;
-                    self.repainter.repaint_full(&self.game, state)?;
+                    vec![]
                 }
-                None => {}
+            });
+
+            if let Some(area_ids) = area_ids {
+                let widget = GameWidget {
+                    area_ids,
+                    bounds: terminal_bounds().context(IoError)?,
+                    game: &self.game,
+                    display_state: self.state,
+                    widget_state: &self.game_widget_state,
+                };
+                write!(self.output, "{}", widget).context(IoError)?;
+                self.output.flush().context(IoError)?;
             }
         }
 
         Ok(())
     }
-
-    fn repaint_full(&mut self) -> Result<bool> {
-        #[allow(clippy::redundant_closure)]
-        self.repaint_watchers
-            .iter_mut()
-            .map(|repaint_watcher| repaint_watcher.full_repaint_required())
-            .collect::<Result<Vec<bool>>>()
-            .map(|v| v.into_iter().all(|b| b))
-    }
 }
 
-impl<'a, I, R> fmt::Debug for GameEngine<'a, I, R> {
+impl<'a, I, O> fmt::Debug for GameEngine<'a, I, O>
+where
+    I: 'a,
+    O: io::Write + 'a,
+{
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.debug_struct("GameEngine")
             .field("game", &self.game)
@@ -126,27 +108,27 @@ impl<'a, I, R> fmt::Debug for GameEngine<'a, I, R> {
     }
 }
 
-pub struct GameEngineBuilder<'a, I, R = ()> {
+pub struct GameEngineBuilder<'a, I, O> {
     game: Game<'a>,
     state: DisplayState,
     input_mappers: HashMap<DisplayState, Box<dyn InputMapper<I> + 'a>>,
-    repainter: R,
-    repaint_watchers: Vec<Box<dyn RepaintWatcher + 'a>>,
+    output: Option<O>,
 }
 
-impl<'a, I> GameEngineBuilder<'a, I, ()> {
+impl<'a, I, O> GameEngineBuilder<'a, I, O>
+where
+    I: 'a,
+    O: io::Write + 'a,
+{
     pub fn playing(game: Game<'a>) -> Self {
         GameEngineBuilder {
             game,
             state: DisplayState::Playing,
             input_mappers: HashMap::new(),
-            repainter: (),
-            repaint_watchers: vec![],
+            output: None,
         }
     }
-}
 
-impl<'a, I, R> GameEngineBuilder<'a, I, R> {
     pub fn input_mapper<M>(mut self, state: DisplayState, input_mapper: M) -> Self
     where
         M: InputMapper<I> + 'a,
@@ -155,44 +137,45 @@ impl<'a, I, R> GameEngineBuilder<'a, I, R> {
         self
     }
 
-    pub fn repainter<R2>(self, repainter: R2) -> GameEngineBuilder<'a, I, R2>
-    where
-        R2: Repainter,
-    {
-        GameEngineBuilder {
-            game: self.game,
-            state: self.state,
-            input_mappers: self.input_mappers,
-            repainter,
-            repaint_watchers: self.repaint_watchers,
-        }
-    }
-
-    pub fn repaint_watcher<W>(mut self, repaint_watcher: W) -> Self
-    where
-        W: RepaintWatcher + 'a,
-    {
-        self.repaint_watchers.push(Box::new(repaint_watcher));
+    pub fn output(mut self, output: O) -> Self {
+        self.output = Some(output);
         self
     }
 
-    pub fn start(mut self) -> Result<GameEngine<'a, I, R>>
-    where
-        R: Repainter,
-    {
-        self.repainter.repaint_full(&self.game, self.state)?;
+    pub fn start(self) -> Result<GameEngine<'a, I, O>> {
+        let game = self.game;
+        let mut output = self.output.context(GameEngineBuilderError {
+            message: "Required field output undefined",
+        })?;
+        let game_widget_state = GameWidgetState::default();
+
+        {
+            let widget = GameWidget {
+                area_ids: vec![],
+                bounds: terminal_bounds().context(IoError)?,
+                game: &game,
+                display_state: self.state,
+                widget_state: &game_widget_state,
+            };
+            write!(output, "{}", widget).context(IoError)?;
+            output.flush().context(IoError)?;
+        }
 
         Ok(GameEngine {
-            game: self.game,
+            game,
             state: self.state,
             input_mappers: self.input_mappers,
-            repainter: self.repainter,
-            repaint_watchers: self.repaint_watchers,
+            output,
+            game_widget_state,
         })
     }
 }
 
-impl<'a, I, R> fmt::Debug for GameEngineBuilder<'a, I, R> {
+impl<'a, I, O> fmt::Debug for GameEngineBuilder<'a, I, O>
+where
+    I: 'a,
+    O: io::Write + 'a,
+{
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.debug_struct("GameEngineBuilder")
             .field("game", &self.game)

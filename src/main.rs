@@ -6,10 +6,10 @@ use std::{convert::TryFrom, error::Error, fs::File};
 use log::LevelFilter;
 use rand::{seq::SliceRandom, thread_rng};
 use simplelog::{Config, WriteLogger};
-use termion::{event::Key, input::TermRead, terminal_size};
+use termion::{event::Key, input::TermRead};
 
 use klondike_lib::{
-    display::{DisplayState, GameDisplay},
+    display::DisplayState,
     engine::{GameEngineBuilder, Update},
     model::{game::Action, AreaId, Deck, Game, Settings, Suit},
     terminal::Terminal,
@@ -39,18 +39,10 @@ fn main() -> Result<(), Box<dyn Error>> {
         Game::new(&mut deck, &settings)
     };
 
-    let mut current_terminal_size = terminal_size()?;
-
     let mut game_engine = GameEngineBuilder::playing(game)
         .input_mapper(DisplayState::Playing, handle_playing_input)
         .input_mapper(DisplayState::HelpMessageOpen, handle_help_input)
-        .repainter(GameDisplay::new(output))
-        .repaint_watcher(|| {
-            let new_terminal_size = terminal_size()?;
-            let resized = new_terminal_size != current_terminal_size;
-            current_terminal_size = new_terminal_size;
-            Ok(resized)
-        })
+        .output(output)
         .start()?;
 
     for key in input.keys() {
