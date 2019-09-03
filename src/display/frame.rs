@@ -1,9 +1,9 @@
 use std::fmt;
 use termion::{color, cursor};
 
-use crate::utils::{bounds::Bounds, usize::BoundedSub};
+use crate::utils::{bounds::Bounds, format_str::FormattedString, usize::BoundedSub};
 
-use super::{format_str::FormattedString, Widget};
+use super::Widget;
 
 #[derive(Debug)]
 pub struct FrameStyle {

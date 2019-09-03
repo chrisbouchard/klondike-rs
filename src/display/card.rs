@@ -3,13 +3,12 @@ use termion::{color, cursor};
 
 use crate::{
     model::{Card, Color},
-    utils::{bounds::Bounds, coords::Coords},
+    utils::{bounds::Bounds, coords::Coords, format_str::FormattedString},
 };
 
 use super::{
     blank::BlankWidget,
-    format_str::FormattedString,
-    frame::{Direction, FrameStyle, FrameWidget, Title},
+    frame::{FrameStyle, FrameWidget, Title},
     Widget,
 };
 

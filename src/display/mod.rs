@@ -10,7 +10,6 @@ use crate::utils::{
 
 pub mod blank;
 pub mod card;
-pub mod format_str;
 pub mod frame;
 pub mod game;
 pub mod help;

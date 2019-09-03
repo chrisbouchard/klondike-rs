@@ -3,13 +3,10 @@ use std::{convert::TryFrom, fmt};
 use termion::{color, cursor};
 
 use crate::utils::{
-    bounds::Bounds,
-    coords::{self, Coords},
-    str::CharacterLength,
+    bounds::Bounds, coords::Coords, format_str::FormattedString, str::CharacterLength,
 };
 
 use super::{
-    format_str::FormattedString,
     frame::{self, FrameWidget, Title},
     Widget,
 };
