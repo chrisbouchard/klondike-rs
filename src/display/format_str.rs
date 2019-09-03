@@ -1,34 +1,29 @@
-use std::fmt;
+use std::{fmt, iter::FromIterator};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Default, Debug)]
 pub struct FormattedString {
     len: usize,
     string: String,
 }
 
-impl Default for FormattedString {
-    fn default() -> Self {
-        FormattedString {
-            len: 0,
-            string: String::new(),
-        }
-    }
-}
-
 impl From<String> for FormattedString {
     fn from(content: String) -> Self {
-        FormattedString::of_content(content)
+        Self::new_with_content(content)
     }
 }
 
 impl<'a> From<&'a str> for FormattedString {
     fn from(content: &'a str) -> Self {
-        FormattedString::of_content(content)
+        Self::new_with_content(content)
     }
 }
 
 impl FormattedString {
-    pub fn of_content<D>(content: D) -> Self
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn new_with_content<D>(content: D) -> Self
     where
         D: fmt::Display,
     {
@@ -38,6 +33,16 @@ impl FormattedString {
         FormattedString {
             len: content_len,
             string: content_str,
+        }
+    }
+
+    pub fn new_with_formatting<D>(formatting: D) -> Self
+    where
+        D: fmt::Display,
+    {
+        FormattedString {
+            len: 0,
+            string: format!("{}", formatting),
         }
     }
 
@@ -80,5 +85,19 @@ impl FormattedString {
 impl fmt::Display for FormattedString {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         write!(fmt, "{}", self.string)
+    }
+}
+
+impl<F> FromIterator<F> for FormattedString
+where
+    F: Into<FormattedString>,
+{
+    fn from_iter<I>(iter: I) -> Self
+    where
+        I: IntoIterator<Item = F>,
+    {
+        iter.into_iter().fold(Self::default(), |acc, s| {
+            acc.push_formatted_content(&s.into())
+        })
     }
 }

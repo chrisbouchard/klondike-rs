@@ -188,7 +188,7 @@ fn format_with_title(
     title_right: &str,
 ) -> String {
     let white = color::Fg(color::White);
-    let formatted_title = FormattedString::of_content(title_left)
+    let formatted_title = FormattedString::new_with_content(title_left)
         .push_formatted_content(text)
         .push_formatting(white)
         .push_content(title_right);

@@ -52,8 +52,12 @@ impl Bounds {
     }
 
     pub fn inset(&self, delta: i32) -> Bounds {
-        let inset_top_left = self.top_left + Coords::from_xy(delta, delta);
-        let inset_bottom_right = self.bottom_right - Coords::from_xy(delta, delta);
+        self.inset_by(Coords::from_xy(delta, delta))
+    }
+
+    pub fn inset_by(&self, size: Coords) -> Bounds {
+        let inset_top_left = self.top_left + size;
+        let inset_bottom_right = self.bottom_right - size;
 
         Bounds::new(inset_top_left, inset_bottom_right)
     }

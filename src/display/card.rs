@@ -128,8 +128,7 @@ impl<'a> fmt::Display for CardWidget<'a> {
 
                 let spacer = if rank_str.len() == 2 { " " } else { "╶╴" };
 
-                let title = FormattedString::default()
-                    .push_formatting(color)
+                let title = FormattedString::new_with_formatting(color)
                     .push_content(rank_str)
                     .push_formatting(white)
                     .push_content(spacer)
@@ -144,9 +143,8 @@ impl<'a> fmt::Display for CardWidget<'a> {
 
                 let formatted_count = format!("{}×", count);
 
-                let title = FormattedString::default()
-                    .push_formatting(gray)
-                    .push_content(formatted_count);
+                let title =
+                    FormattedString::new_with_formatting(gray).push_content(formatted_count);
 
                 self.fmt_frame(Some(title), fmt)?;
             }
