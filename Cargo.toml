@@ -12,6 +12,7 @@ readme = "README.md"
 
 [dependencies]
 derive_more = "~0.15"
+euclid = "~0.20"
 itertools = "~0.8"
 log = "~0.4"
 log-panics = "~2.0"
