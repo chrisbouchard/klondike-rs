@@ -4,7 +4,7 @@ use crate::{
         settings::Settings,
         stack::{Orientation, Stack, StackDetails, StackSelection},
     },
-    utils::{usize::BoundedSub, vec::SplitOffBounded},
+    utils::vec::SplitOffBounded,
 };
 
 use super::{
@@ -67,7 +67,7 @@ impl<'a, S> Talon<'a, S> {
 
     fn take_cards(&mut self, len: usize, source: AreaId) -> Held {
         let cards = self.cards.split_off_bounded(len);
-        self.fanned_len = self.fanned_len.bounded_sub(cards.len());
+        self.fanned_len = self.fanned_len.saturating_sub(cards.len());
 
         Held { source, cards }
     }
