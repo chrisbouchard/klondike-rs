@@ -10,7 +10,7 @@
     unused_qualifications,
     unused_results
 )]
-#![feature(const_fn, try_trait)]
+#![feature(const_fn)]
 
 #[macro_use]
 extern crate derive_more;
