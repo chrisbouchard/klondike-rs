@@ -4,33 +4,35 @@ use std::fmt;
 
 use termion::{color, cursor};
 
-use crate::utils::{bounds::Bounds, coords::Coords};
-
-use super::Widget;
+use super::{geometry, Widget};
 
 #[derive(Debug)]
 pub struct BlankWidget {
-    pub bounds: Bounds,
+    pub bounds: geometry::Rect<u16>,
 }
 
 impl Widget for BlankWidget {
-    fn bounds(&self) -> Bounds {
+    fn bounds(&self) -> geometry::Rect<u16> {
         self.bounds
     }
 }
 
 impl fmt::Display for BlankWidget {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        let goto = geometry::goto(self.bounds.origin);
         let color = color::Fg(color::Reset);
-        write!(fmt, "{}", color)?;
+        write!(fmt, "{}{}", goto, color)?;
 
-        let width = self.bounds.width();
-        let blank_line = " ".repeat(width as usize);
+        let width = self.bounds.size.width;
 
-        for y in 0..self.bounds.height() {
-            let line_coords = self.bounds.top_left + Coords::from_y(y);
-            let goto: cursor::Goto = line_coords.into();
-            write!(fmt, "{}{}", goto, blank_line)?;
+        let next = format!("{}{}", cursor::Down(1), cursor::Left(width));
+
+        for _ in 0..self.bounds.size.height {
+            for _ in 0..width {
+                write!(fmt, " ")?;
+            }
+
+            write!(fmt, "{}", next)?;
         }
 
         debug!("Blanked {:?}", self.bounds);

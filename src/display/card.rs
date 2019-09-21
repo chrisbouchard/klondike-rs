@@ -3,17 +3,19 @@ use termion::{color, cursor};
 
 use crate::{
     model::{Card, Color},
-    utils::{bounds::Bounds, coords::Coords, format_str::FormattedString},
+    utils::format_str::FormattedString,
 };
 
 use super::{
     blank::BlankWidget,
     frame::{FrameStyle, FrameWidget, Title},
-    Widget,
+    geometry, Widget,
 };
 
-pub static CARD_SIZE: Coords = Coords::from_xy(8, 4);
-pub static SLICE_SIZE: Coords = Coords::from_xy(8, 2);
+lazy_static! {
+    pub static ref CARD_SIZE: geometry::Size2D<u16> = geometry::size2(8, 4);
+    pub static ref SLICE_SIZE: geometry::Size2D<u16> = geometry::size2(8, 2);
+}
 
 pub static CARD_FRAME_STYLE: FrameStyle = FrameStyle {
     top_left: "╭",
@@ -52,7 +54,7 @@ pub enum CardWidgetMode {
 #[derive(Debug)]
 pub struct CardWidget<'a> {
     pub card: &'a Card,
-    pub coords: Coords,
+    pub origin: geometry::Point2D<u16>,
     pub mode: CardWidgetMode,
 }
 
@@ -60,9 +62,9 @@ impl<'a> CardWidget<'a> {
     fn fmt_frame(&self, title: Option<FormattedString>, fmt: &mut fmt::Formatter) -> fmt::Result {
         let bounds = self.bounds();
 
-        if bounds.height() > 2 && bounds.width() > 2 {
+        if bounds.size.height > 2 && bounds.size.width > 2 {
             let blank = BlankWidget {
-                bounds: bounds.inset(1),
+                bounds: bounds.inner_rect(geometry::SideOffsets2D::new_all_same(1)),
             };
             write!(fmt, "{}", blank)?;
         }
@@ -80,8 +82,8 @@ impl<'a> CardWidget<'a> {
 }
 
 impl<'a> Widget for CardWidget<'a> {
-    fn bounds(&self) -> Bounds {
-        Bounds::with_size(self.coords, CARD_SIZE)
+    fn bounds(&self) -> geometry::Rect<u16> {
+        geometry::Rect::new(self.origin, *CARD_SIZE)
     }
 }
 
@@ -89,10 +91,10 @@ impl<'a> fmt::Display for CardWidget<'a> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         match self.mode {
             CardWidgetMode::FullFaceUp => {
-                let interior_coords = self.coords + Coords::from_xy(2, 1);
+                let interior_coords = self.origin + geometry::vec2(2, 1);
 
                 let color = color::Fg(self.card.color());
-                let start: cursor::Goto = interior_coords.into();
+                let start = geometry::goto(interior_coords);
                 let next = format!("{}{}", cursor::Left(4), cursor::Down(1));
 
                 let rank_str = format!("{}", self.card.rank);
@@ -107,9 +109,9 @@ impl<'a> fmt::Display for CardWidget<'a> {
             }
 
             CardWidgetMode::FullFaceDown => {
-                let interior_coords = self.coords + Coords::from_xy(2, 1);
+                let interior_coords = self.origin + geometry::vec2(2, 1);
 
-                let start: cursor::Goto = interior_coords.into();
+                let start = geometry::goto(interior_coords);
                 let next = format!("{}{}", cursor::Left(4), cursor::Down(1));
 
                 self.fmt_frame(None, fmt)?;

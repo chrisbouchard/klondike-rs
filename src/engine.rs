@@ -6,7 +6,7 @@ use std::{collections::HashMap, fmt, io};
 use crate::{
     display::{
         game::{GameWidget, GameWidgetState},
-        terminal_bounds, DisplayState,
+        geometry, terminal_bounds, DisplayState,
     },
     model::game::{Action, Game},
 };
@@ -79,9 +79,11 @@ where
             });
 
             if let Some(area_ids) = area_ids {
+                let terminal_size = terminal_bounds().context(IoError)?;
+
                 let widget = GameWidget {
                     area_ids,
-                    bounds: terminal_bounds().context(IoError)?,
+                    bounds: geometry::Rect::from_size(terminal_size),
                     game: &self.game,
                     display_state: self.state,
                     widget_state: &self.game_widget_state,
@@ -150,9 +152,11 @@ where
         let game_widget_state = GameWidgetState::default();
 
         {
+            let terminal_size = terminal_bounds().context(IoError)?;
+
             let widget = GameWidget {
                 area_ids: vec![],
-                bounds: terminal_bounds().context(IoError)?,
+                bounds: geometry::Rect::from_size(terminal_size),
                 game: &game,
                 display_state: self.state,
                 widget_state: &game_widget_state,

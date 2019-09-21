@@ -4,6 +4,7 @@ extern crate log;
 use std::{convert::TryFrom, error::Error, fs::File};
 
 use log::LevelFilter;
+use num_traits::ToPrimitive;
 use rand::{seq::SliceRandom, thread_rng};
 use simplelog::{Config, WriteLogger};
 use termion::{event::Key, input::TermRead};
@@ -77,7 +78,7 @@ fn handle_playing_input(key: Key) -> Option<Update> {
 
         Key::Char(c @ '1'..='7') => {
             if let Some(index) = c.to_digit(10) {
-                let area_id = AreaId::Tableaux(index as u8 - 1);
+                let area_id = AreaId::Tableaux(index.to_u8()? - 1);
                 Some(Update::Action(Action::MoveTo(area_id)))
             } else {
                 None
@@ -85,7 +86,7 @@ fn handle_playing_input(key: Key) -> Option<Update> {
         }
 
         Key::F(i @ 1..=4) => {
-            let area_id = AreaId::Foundation(Suit::try_from(i as u8 - 1).unwrap());
+            let area_id = AreaId::Foundation(Suit::try_from(i.to_u8()? - 1).unwrap());
             Some(Update::Action(Action::MoveTo(area_id)))
         }
 
