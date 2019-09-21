@@ -1,14 +1,9 @@
 use std::{cmp::min, convert::TryFrom};
 
-use crate::{
-    display::{
-        card::{CardWidget, CardWidgetMode, CARD_SIZE},
-        selector::SelectorWidget,
-    },
-    utils::{
-        bounds::Bounds,
-        coords::{self, Coords},
-    },
+use crate::display::{
+    card::{CardWidget, CardWidgetMode, CARD_SIZE},
+    geometry,
+    selector::SelectorWidget,
 };
 
 use super::{
@@ -16,22 +11,23 @@ use super::{
     StackWidget,
 };
 
-static UNCOLLAPSED_OFFSETS: Offsets = Offsets {
-    unspread: Coords::from_y(1),
-    collapsed_spread: Coords::from_y(1),
-    uncollapsed_spread: Coords::from_y(2),
-    selected: Coords::from_x(1),
-    collapse_unspread_len: 0,
-    collapse_spread_len: 0,
-};
-
-static SELECTOR_OFFSET: Coords = Coords::from_x(-2);
+lazy_static! {
+    static ref SELECTOR_OFFSET: geometry::Vector2D<i16> = geometry::vec2(-2, 0);
+    static ref UNCOLLAPSED_OFFSETS: Offsets = Offsets {
+        unspread: geometry::vec2(0, 1),
+        collapsed_spread: geometry::vec2(0, 1),
+        uncollapsed_spread: geometry::vec2(0, 2),
+        selected: geometry::vec2(1, 0),
+        collapse_unspread_len: 0,
+        collapse_spread_len: 0,
+    };
+}
 
 pub fn offsets(widget: &StackWidget) -> Offsets {
     let ref details = widget.stack.details;
 
     let mut offsets = UNCOLLAPSED_OFFSETS.clone();
-    let mut collapse_len = collapse_len(widget, &offsets);
+    let mut collapse_len: usize = collapse_len(widget, &offsets).into();
 
     debug!("collapse_len: {}", collapse_len);
 
@@ -55,24 +51,24 @@ pub fn offsets(widget: &StackWidget) -> Offsets {
     offsets
 }
 
-fn collapse_len(widget: &StackWidget, offsets: &Offsets) -> usize {
+fn collapse_len(widget: &StackWidget, offsets: &Offsets) -> u16 {
     if widget.stack.cards.is_empty() {
         return 0;
     }
 
-    let coords = widget.bounds.top_left;
-    let maximum_y = usize::try_from(widget.bounds.bottom_right.y).unwrap();
+    let origin = widget.bounds.origin;
+    let maximum_y = widget.bounds.max_y();
 
     let last_card_coords = card_coords(
-        coords,
+        origin,
         widget.stack.cards.len() - 1,
         offsets,
         &widget.stack.details,
     )
     .unwrap_or_default();
 
-    let uncollapsed_bounds = Bounds::with_size(last_card_coords, CARD_SIZE);
-    let uncollapsed_y = usize::try_from(uncollapsed_bounds.bottom_right.y).unwrap();
+    let uncollapsed_bounds = geometry::Rect::new(last_card_coords, *CARD_SIZE);
+    let uncollapsed_y = uncollapsed_bounds.max_y();
 
     uncollapsed_y.saturating_sub(maximum_y)
 }
@@ -106,12 +102,16 @@ pub fn card_widget_iter<'a>(
             }
         };
 
-        CardWidget { card, coords, mode }
+        CardWidget {
+            card,
+            origin: coords,
+            mode,
+        }
     })
 }
 
 pub fn selector_widget(widget: &StackWidget, offsets: &Offsets) -> Option<SelectorWidget> {
-    let coords = widget.bounds.top_left;
+    let coords = widget.bounds.origin;
     let ref details = widget.stack.details;
 
     details.selection.as_ref().map(|selection| {
@@ -124,21 +124,25 @@ pub fn selector_widget(widget: &StackWidget, offsets: &Offsets) -> Option<Select
         let held_offset = if selection.held {
             -UNCOLLAPSED_OFFSETS.selected
         } else {
-            coords::ZERO
+            Default::default()
         };
 
-        let start_coords = card_coords(coords, selection_index, offsets, details).unwrap_or(coords)
-            + SELECTOR_OFFSET
+        let start_coords = card_coords(coords, selection_index, offsets, details)
+            .unwrap_or(coords)
+            .cast::<i16>()
+            + *SELECTOR_OFFSET
             + held_offset;
-        let end_coords = card_coords(coords, end_index, offsets, details).unwrap_or(coords)
-            + CARD_SIZE.to_y()
-            + SELECTOR_OFFSET
+        let end_coords = card_coords(coords, end_index, offsets, details)
+            .unwrap_or(coords)
+            .cast::<i16>()
+            + geometry::vec2(0, CARD_SIZE.height).cast::<i16>()
+            + *SELECTOR_OFFSET
             + held_offset;
 
         let len = u16::try_from(end_coords.y - start_coords.y).unwrap();
 
         SelectorWidget {
-            coords: start_coords,
+            origin: start_coords.cast::<u16>(),
             len,
             orientation: details.orientation,
         }

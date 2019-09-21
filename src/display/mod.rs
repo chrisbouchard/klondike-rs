@@ -3,15 +3,11 @@
 use std::{fmt, io};
 use termion::terminal_size;
 
-use crate::utils::{
-    bounds::Bounds,
-    coords::{self, Coords},
-};
-
 pub mod blank;
 pub mod card;
 pub mod frame;
 pub mod game;
+pub mod geometry;
 pub mod help;
 pub mod selector;
 pub mod stack;
@@ -24,10 +20,10 @@ pub enum DisplayState {
 }
 
 pub trait Widget: fmt::Display {
-    fn bounds(&self) -> Bounds;
+    fn bounds(&self) -> geometry::Rect<u16>;
 }
 
-pub fn terminal_bounds() -> io::Result<Bounds> {
-    let bottom_right: Coords = terminal_size()?.into();
-    Ok(Bounds::new(coords::ZERO, bottom_right))
+pub fn terminal_bounds() -> io::Result<geometry::Size2D<u16>> {
+    let (cols, rows) = terminal_size()?;
+    Ok(geometry::size2(cols, rows))
 }

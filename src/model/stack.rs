@@ -1,7 +1,5 @@
 use std::slice::Iter;
 
-use crate::utils::usize::BoundedSub;
-
 use super::card::Card;
 
 #[derive(Copy, Clone, Debug)]
@@ -28,25 +26,25 @@ pub struct StackDetails {
 
 impl StackDetails {
     pub fn face_up_index(&self) -> usize {
-        self.len.bounded_sub(self.face_up_len)
+        self.len.saturating_sub(self.face_up_len)
     }
 
     pub fn visible_index(&self) -> usize {
-        self.len.bounded_sub(self.visible_len)
+        self.len.saturating_sub(self.visible_len)
     }
 
     pub fn spread_index(&self) -> usize {
-        self.len.bounded_sub(self.spread_len)
+        self.len.saturating_sub(self.spread_len)
     }
 
     pub fn selection_index(&self) -> Option<usize> {
         self.selection
             .as_ref()
-            .map(|selection| self.len.bounded_sub(selection.len))
+            .map(|selection| self.len.saturating_sub(selection.len))
     }
 
     pub fn unspread_len(&self) -> usize {
-        self.visible_len.bounded_sub(self.spread_len)
+        self.visible_len.saturating_sub(self.spread_len)
     }
 
     pub fn held(&self) -> bool {

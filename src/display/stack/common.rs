@@ -1,16 +1,18 @@
+use num_traits::ToPrimitive;
+
 use crate::{
+    display::geometry,
     model::{stack::StackDetails, Card},
-    utils::coords::Coords,
 };
 
 use super::StackWidget;
 
 #[derive(Clone, Debug)]
 pub struct Offsets {
-    pub unspread: Coords,
-    pub collapsed_spread: Coords,
-    pub uncollapsed_spread: Coords,
-    pub selected: Coords,
+    pub unspread: geometry::Vector2D<i16>,
+    pub collapsed_spread: geometry::Vector2D<i16>,
+    pub uncollapsed_spread: geometry::Vector2D<i16>,
+    pub selected: geometry::Vector2D<i16>,
     pub collapse_unspread_len: usize,
     pub collapse_spread_len: usize,
 }
@@ -18,8 +20,8 @@ pub struct Offsets {
 pub fn card_iter<'a>(
     widget: &'a StackWidget<'a>,
     offsets: &'a Offsets,
-) -> impl Iterator<Item = (usize, Coords, &'a Card)> {
-    let coords = widget.bounds.top_left;
+) -> impl Iterator<Item = (usize, geometry::Point2D<u16>, &'a Card)> {
+    let coords = widget.bounds.origin;
 
     widget
         .stack
@@ -32,48 +34,57 @@ pub fn card_iter<'a>(
 }
 
 pub fn card_coords(
-    base_coords: Coords,
+    origin: geometry::Point2D<u16>,
     index: usize,
     offsets: &Offsets,
     stack_details: &StackDetails,
-) -> Option<Coords> {
+) -> Option<geometry::Point2D<u16>> {
     let visible_index = stack_details.visible_index() + offsets.collapse_unspread_len;
     let collapsed_spread_index = stack_details.spread_index();
     let uncollapsed_spread_index = collapsed_spread_index + offsets.collapse_spread_len;
 
     if index >= uncollapsed_spread_index {
-        let unspread_len = collapsed_spread_index - visible_index;
-        let collapsed_spread_len = uncollapsed_spread_index - collapsed_spread_index;
-        let uncollapsed_spread_len = index - uncollapsed_spread_index;
+        let unspread_len = (collapsed_spread_index - visible_index).to_i16().unwrap();
+        let collapsed_spread_len = (uncollapsed_spread_index - collapsed_spread_index)
+            .to_i16()
+            .unwrap();
+        let uncollapsed_spread_len = (index - uncollapsed_spread_index).to_i16().unwrap();
         Some(
-            base_coords
-                + (unspread_len as i32) * offsets.unspread
-                + (collapsed_spread_len as i32) * offsets.collapsed_spread
-                + (uncollapsed_spread_len as i32) * offsets.uncollapsed_spread
-                + card_shift(index, offsets, stack_details),
+            (origin.cast::<i16>()
+                + offsets.unspread * unspread_len
+                + offsets.collapsed_spread * collapsed_spread_len
+                + offsets.uncollapsed_spread * uncollapsed_spread_len
+                + card_shift(index, offsets, stack_details))
+            .cast::<u16>(),
         )
     } else if index >= collapsed_spread_index {
-        let unspread_len = collapsed_spread_index - visible_index;
-        let collapsed_spread_len = index - collapsed_spread_index;
+        let unspread_len = (collapsed_spread_index - visible_index).to_i16().unwrap();
+        let collapsed_spread_len = (index - collapsed_spread_index).to_i16().unwrap();
         Some(
-            base_coords
-                + (unspread_len as i32) * offsets.unspread
-                + (collapsed_spread_len as i32) * offsets.collapsed_spread
-                + card_shift(index, offsets, stack_details),
+            (origin.cast::<i16>()
+                + offsets.unspread * unspread_len
+                + offsets.collapsed_spread * collapsed_spread_len
+                + card_shift(index, offsets, stack_details))
+            .cast::<u16>(),
         )
     } else if index >= visible_index {
-        let unspread_len = index - visible_index;
+        let unspread_len = (index - visible_index).to_i16().unwrap();
         Some(
-            base_coords
-                + (unspread_len as i32) * offsets.unspread
-                + card_shift(index, offsets, stack_details),
+            (origin.cast::<i16>()
+                + offsets.unspread * unspread_len
+                + card_shift(index, offsets, stack_details))
+            .cast::<u16>(),
         )
     } else {
         None
     }
 }
 
-fn card_shift(index: usize, offsets: &Offsets, stack_details: &StackDetails) -> Coords {
+fn card_shift(
+    index: usize,
+    offsets: &Offsets,
+    stack_details: &StackDetails,
+) -> geometry::Vector2D<i16> {
     stack_details
         .selection_index()
         .filter(|_| stack_details.held())

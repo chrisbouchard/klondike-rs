@@ -1,35 +1,35 @@
 use itertools::Itertools;
 use std::{convert::TryFrom, fmt};
-use termion::{color, cursor};
+use termion::color;
 
-use crate::utils::{
-    bounds::Bounds, coords::Coords, format_str::FormattedString, str::CharacterLength,
-};
+use crate::utils::{format_str::FormattedString, str::CharacterLength};
 
 use super::{
     frame::{self, FrameWidget, Title},
-    Widget,
+    geometry, Widget,
 };
 
-static MARGIN: Coords = Coords::from_xy(2, 1);
-static BORDER: Coords = Coords::from_xy(1, 1);
-static PADDING: Coords = Coords::from_xy(2, 1);
+lazy_static! {
+    static ref MARGIN: geometry::SideOffsets2D<u16> = geometry::SideOffsets2D::new(1, 2, 1, 2);
+    static ref BORDER: geometry::SideOffsets2D<u16> = geometry::SideOffsets2D::new_all_same(1);
+    static ref PADDING: geometry::SideOffsets2D<u16> = geometry::SideOffsets2D::new(1, 2, 1, 2);
+}
 
 #[derive(Debug)]
 pub struct HelpWidget {
-    pub bounds: Bounds,
+    pub bounds: geometry::Rect<u16>,
 }
 
 impl Widget for HelpWidget {
-    fn bounds(&self) -> Bounds {
+    fn bounds(&self) -> geometry::Rect<u16> {
         self.bounds
     }
 }
 
 impl fmt::Display for HelpWidget {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        let frame_bounds = self.bounds.inset_by(MARGIN);
-        let inner_bounds = frame_bounds.inset_by(BORDER + PADDING);
+        let frame_bounds = self.bounds.inner_rect(*MARGIN);
+        let inner_bounds = frame_bounds.inner_rect(*BORDER + *PADDING);
 
         let frame_display = FrameWidget {
             bounds: frame_bounds,
@@ -40,8 +40,8 @@ impl fmt::Display for HelpWidget {
 
         write!(fmt, "{}", frame_display)?;
 
-        let inner_top_left = inner_bounds.top_left;
-        let inner_top_middle = inner_top_left + Coords::from_x(inner_bounds.width() / 2 + 1);
+        let inner_top_left = inner_bounds.origin;
+        let inner_top_middle = inner_top_left + geometry::vec2(inner_bounds.size.width / 2 + 1, 0);
 
         for item in left_column_items(inner_top_left) {
             write!(fmt, "{}", item)?;
@@ -55,83 +55,83 @@ impl fmt::Display for HelpWidget {
     }
 }
 
-fn left_column_items(coords: Coords) -> Vec<HelpItemWidget> {
-    let mut coord_iter = (0..).map(|index| coords + Coords::from_y(index));
+fn left_column_items(origin: geometry::Point2D<u16>) -> Vec<HelpItemWidget> {
+    let mut coord_iter = (0..).map(|index| origin + geometry::vec2(0, index));
 
     vec![
         HelpItemWidget::Mapping {
-            coords: coord_iter.next().unwrap(),
+            origin: coord_iter.next().unwrap(),
             keys: HelpItemKeys::List(vec!["h", "j", "k", "l"]),
             description: "Move",
         },
         HelpItemWidget::Mapping {
-            coords: coord_iter.next().unwrap(),
+            origin: coord_iter.next().unwrap(),
             keys: HelpItemKeys::List(vec!["←", "↓", "↑", "→"]),
             description: "Move",
         },
         HelpItemWidget::Skip {
-            coords: coord_iter.next().unwrap(),
+            origin: coord_iter.next().unwrap(),
         },
         HelpItemWidget::Mapping {
-            coords: coord_iter.next().unwrap(),
+            origin: coord_iter.next().unwrap(),
             keys: HelpItemKeys::Single("s"),
             description: "Go to Stock/Deck",
         },
         HelpItemWidget::Mapping {
-            coords: coord_iter.next().unwrap(),
+            origin: coord_iter.next().unwrap(),
             keys: HelpItemKeys::Single("t"),
             description: "Go to Talon/Waste",
         },
         HelpItemWidget::Mapping {
-            coords: coord_iter.next().unwrap(),
+            origin: coord_iter.next().unwrap(),
             keys: HelpItemKeys::Single("f"),
             description: "Go to next Foundation",
         },
         HelpItemWidget::Mapping {
-            coords: coord_iter.next().unwrap(),
+            origin: coord_iter.next().unwrap(),
             keys: HelpItemKeys::Single("-"),
             description: "Go back to previous area",
         },
     ]
 }
 
-fn right_column_items(coords: Coords) -> Vec<HelpItemWidget> {
-    let mut coord_iter = (0..).map(|index| coords + Coords::from_y(index));
+fn right_column_items(origin: geometry::Point2D<u16>) -> Vec<HelpItemWidget> {
+    let mut coord_iter = (0..).map(|index| origin + geometry::vec2(0, index));
 
     vec![
         HelpItemWidget::Mapping {
-            coords: coord_iter.next().unwrap(),
+            origin: coord_iter.next().unwrap(),
             keys: HelpItemKeys::Range("F1", "F4"),
             description: "Go to Foundation",
         },
         HelpItemWidget::Mapping {
-            coords: coord_iter.next().unwrap(),
+            origin: coord_iter.next().unwrap(),
             keys: HelpItemKeys::Range("1", "7"),
             description: "Go to Tableaux",
         },
         HelpItemWidget::Skip {
-            coords: coord_iter.next().unwrap(),
+            origin: coord_iter.next().unwrap(),
         },
         HelpItemWidget::Mapping {
-            coords: coord_iter.next().unwrap(),
+            origin: coord_iter.next().unwrap(),
             keys: HelpItemKeys::List(vec!["SPACE", "RETURN"]),
             description: "Pick Up/Activate",
         },
         HelpItemWidget::Mapping {
-            coords: coord_iter.next().unwrap(),
+            origin: coord_iter.next().unwrap(),
             keys: HelpItemKeys::Single("ESC"),
             description: "Return Held Cards",
         },
         HelpItemWidget::Skip {
-            coords: coord_iter.next().unwrap(),
+            origin: coord_iter.next().unwrap(),
         },
         HelpItemWidget::Mapping {
-            coords: coord_iter.next().unwrap(),
+            origin: coord_iter.next().unwrap(),
             keys: HelpItemKeys::Single("?"),
             description: "Help",
         },
         HelpItemWidget::Mapping {
-            coords: coord_iter.next().unwrap(),
+            origin: coord_iter.next().unwrap(),
             keys: HelpItemKeys::Single("q"),
             description: "Quit",
         },
@@ -192,27 +192,27 @@ impl fmt::Display for HelpItemKeys {
 #[derive(Debug)]
 enum HelpItemWidget {
     Mapping {
-        coords: Coords,
+        origin: geometry::Point2D<u16>,
         keys: HelpItemKeys,
         description: &'static str,
     },
     Skip {
-        coords: Coords,
+        origin: geometry::Point2D<u16>,
     },
 }
 
 impl Widget for HelpItemWidget {
-    fn bounds(&self) -> Bounds {
+    fn bounds(&self) -> geometry::Rect<u16> {
         match self {
             Self::Mapping {
-                coords,
+                origin,
                 keys,
                 description,
             } => {
-                let length = i32::try_from(keys.len() + description.char_len() + 4).unwrap();
-                Bounds::with_size(*coords, Coords::from_x(length))
+                let length = u16::try_from(keys.len() + description.char_len() + 4).unwrap();
+                geometry::Rect::new(*origin, geometry::size2(length, 0))
             }
-            Self::Skip { coords } => Bounds::new(*coords, *coords),
+            Self::Skip { origin } => geometry::Rect::new(*origin, geometry::Size2D::zero()),
         }
     }
 }
@@ -220,12 +220,12 @@ impl Widget for HelpItemWidget {
 impl fmt::Display for HelpItemWidget {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         if let Self::Mapping {
-            coords,
+            origin,
             keys,
             description,
         } = self
         {
-            let goto: cursor::Goto = (*coords).into();
+            let goto = geometry::goto(*origin);
 
             write!(
                 fmt,

@@ -1,15 +1,12 @@
 use std::fmt;
 use termion::{color, cursor};
 
-use crate::{
-    model::stack::Orientation,
-    utils::{bounds::Bounds, coords::Coords},
-};
+use crate::model::stack::Orientation;
 
-use super::Widget;
+use super::{geometry, Widget};
 
 mod horizontal {
-    use super::{fmt, Bounds, Coords};
+    use super::{fmt, geometry};
 
     pub fn write_start(fmt: &mut fmt::Formatter) -> fmt::Result {
         write!(fmt, "╘")
@@ -27,13 +24,13 @@ mod horizontal {
         Ok(())
     }
 
-    pub fn bounds(coords: Coords, len: u16) -> Bounds {
-        Bounds::with_size(coords, Coords::from_xy(i32::from(len), 1))
+    pub fn bounds(origin: geometry::Point2D<u16>, len: u16) -> geometry::Rect<u16> {
+        geometry::Rect::new(origin, geometry::size2(len, 1))
     }
 }
 
 mod vertical {
-    use super::{cursor, fmt, Bounds, Coords};
+    use super::{cursor, fmt, geometry};
 
     pub fn write_start(fmt: &mut fmt::Formatter) -> fmt::Result {
         write!(fmt, "╓╴")
@@ -51,30 +48,30 @@ mod vertical {
         write!(fmt, "{}{}", cursor::Left(2), cursor::Down(1))
     }
 
-    pub fn bounds(coords: Coords, len: u16) -> Bounds {
-        Bounds::with_size(coords, Coords::from_xy(2, i32::from(len)))
+    pub fn bounds(origin: geometry::Point2D<u16>, len: u16) -> geometry::Rect<u16> {
+        geometry::Rect::new(origin, geometry::size2(2, len))
     }
 }
 
 #[derive(Debug)]
 pub struct SelectorWidget {
-    pub coords: Coords,
+    pub origin: geometry::Point2D<u16>,
     pub len: u16,
     pub orientation: Orientation,
 }
 
 impl Widget for SelectorWidget {
-    fn bounds(&self) -> Bounds {
+    fn bounds(&self) -> geometry::Rect<u16> {
         match self.orientation {
-            Orientation::Horizontal => horizontal::bounds(self.coords, self.len),
-            Orientation::Vertical => vertical::bounds(self.coords, self.len),
+            Orientation::Horizontal => horizontal::bounds(self.origin, self.len),
+            Orientation::Vertical => vertical::bounds(self.origin, self.len),
         }
     }
 }
 
 impl fmt::Display for SelectorWidget {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        let start: cursor::Goto = self.coords.into();
+        let start = geometry::goto(self.origin);
         let color = color::Fg(color::LightWhite);
 
         write!(fmt, "{}{}", start, color)?;

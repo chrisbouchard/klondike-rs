@@ -1,11 +1,8 @@
 use std::fmt;
 
-use crate::{
-    model::stack::{Orientation, Stack},
-    utils::bounds::Bounds,
-};
+use crate::model::stack::{Orientation, Stack};
 
-use super::{card::CardWidget, selector::SelectorWidget, Widget};
+use super::{card::CardWidget, geometry, selector::SelectorWidget, Widget};
 
 use self::common::Offsets;
 
@@ -15,23 +12,22 @@ mod vertical;
 
 #[derive(Debug)]
 pub struct StackWidget<'a> {
-    pub bounds: Bounds,
+    pub bounds: geometry::Rect<u16>,
     pub stack: &'a Stack<'a>,
 }
 
 impl<'a> Widget for StackWidget<'a> {
-    fn bounds(&self) -> Bounds {
-        let coords = self.bounds.top_left;
+    fn bounds(&self) -> geometry::Rect<u16> {
         let offsets = self.offsets();
 
-        let mut bounds = Bounds::new(coords, coords);
+        let mut bounds = geometry::Rect::new(self.bounds.origin, geometry::Size2D::zero());
 
         for card_widget in self.card_widget_iter(&offsets) {
-            bounds += card_widget.bounds();
+            bounds = bounds.union(&card_widget.bounds());
         }
 
         if let Some(selector_widget) = self.selector_widget(&offsets) {
-            bounds += selector_widget.bounds();
+            bounds = bounds.union(&selector_widget.bounds());
         }
 
         bounds

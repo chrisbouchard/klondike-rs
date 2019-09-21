@@ -1,9 +1,9 @@
-use std::fmt;
+use std::{convert::TryInto, fmt};
 use termion::{color, cursor};
 
-use crate::utils::{bounds::Bounds, format_str::FormattedString, usize::BoundedSub};
+use crate::utils::format_str::FormattedString;
 
-use super::Widget;
+use super::{geometry, Widget};
 
 #[derive(Debug)]
 pub struct FrameStyle {
@@ -80,33 +80,39 @@ impl Title {
 
 #[derive(Debug)]
 pub struct FrameWidget<'a> {
-    pub bounds: Bounds,
+    pub bounds: geometry::Rect<u16>,
     pub top_title: Option<Title>,
     pub bottom_title: Option<Title>,
     pub frame_style: &'a FrameStyle,
 }
 
 impl<'a> Widget for FrameWidget<'a> {
-    fn bounds(&self) -> Bounds {
+    fn bounds(&self) -> geometry::Rect<u16> {
         self.bounds
     }
 }
 
 impl<'a> fmt::Display for FrameWidget<'a> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        let width = self.bounds.width() as usize;
+        let width = self.bounds.size.width;
 
-        let top_blank_width = width
-            .bounded_sub(self.frame_style.top_left.chars().count())
-            .bounded_sub(self.frame_style.top_right.chars().count());
+        let top_blank_width: u16 = usize::from(width)
+            .saturating_sub(self.frame_style.top_left.chars().count())
+            .saturating_sub(self.frame_style.top_right.chars().count())
+            .try_into()
+            .unwrap();
 
-        let middle_blank_width = width
-            .bounded_sub(self.frame_style.left.chars().count())
-            .bounded_sub(self.frame_style.right.chars().count());
+        let middle_blank_width: u16 = usize::from(width)
+            .saturating_sub(self.frame_style.left.chars().count())
+            .saturating_sub(self.frame_style.right.chars().count())
+            .try_into()
+            .unwrap();
 
-        let bottom_blank_width = width
-            .bounded_sub(self.frame_style.bottom_left.chars().count())
-            .bounded_sub(self.frame_style.bottom_right.chars().count());
+        let bottom_blank_width: u16 = usize::from(width)
+            .saturating_sub(self.frame_style.bottom_left.chars().count())
+            .saturating_sub(self.frame_style.bottom_right.chars().count())
+            .try_into()
+            .unwrap();
 
         let top = if let Some(ref title) = self.top_title {
             format_with_title(
@@ -117,7 +123,10 @@ impl<'a> fmt::Display for FrameWidget<'a> {
                 self.frame_style.title_right,
             )
         } else {
-            self.frame_style.top.to_string().repeat(top_blank_width)
+            self.frame_style
+                .top
+                .to_string()
+                .repeat(top_blank_width.into())
         };
 
         let bottom = if let Some(ref title) = self.bottom_title {
@@ -132,15 +141,11 @@ impl<'a> fmt::Display for FrameWidget<'a> {
             self.frame_style
                 .bottom
                 .to_string()
-                .repeat(bottom_blank_width)
+                .repeat(bottom_blank_width.into())
         };
 
-        let goto: cursor::Goto = self.bounds.top_left.into();
-        let step = format!(
-            "{}{}",
-            cursor::Down(1),
-            cursor::Left(self.bounds.width() as u16)
-        );
+        let goto = geometry::goto(self.bounds.origin);
+        let step = format!("{}{}", cursor::Down(1), cursor::Left(width));
         let white = color::Fg(color::White);
 
         write!(
@@ -153,14 +158,14 @@ impl<'a> fmt::Display for FrameWidget<'a> {
             top_right = self.frame_style.top_right,
         )?;
 
-        for _ in 1..(self.bounds.height() - 1) {
+        for _ in 1..(self.bounds.size.height - 1) {
             write!(
                 fmt,
                 "{step}{white}{left}{skip}{right}",
                 step = step,
                 white = white,
                 left = self.frame_style.left,
-                skip = cursor::Right(middle_blank_width as u16),
+                skip = cursor::Right(middle_blank_width),
                 right = self.frame_style.right,
             )?;
         }
@@ -182,7 +187,7 @@ impl<'a> fmt::Display for FrameWidget<'a> {
 // TODO: What to do if filler doesn't divide evenly?
 fn format_with_title(
     Title(text, direction): &Title,
-    width: usize,
+    width: u16,
     filler: &str,
     title_left: &str,
     title_right: &str,
@@ -193,7 +198,10 @@ fn format_with_title(
         .push_formatting(white)
         .push_content(title_right);
 
-    let available_len = width.bounded_sub(formatted_title.len());
+    let available_len: u16 = usize::from(width)
+        .saturating_sub(formatted_title.len())
+        .try_into()
+        .unwrap();
 
     let (left_len, right_len) = match direction {
         Direction::Left => (0, available_len),
@@ -207,8 +215,8 @@ fn format_with_title(
 
     format!(
         "{}{}{}",
-        filler.to_string().repeat(left_len),
+        filler.to_string().repeat(left_len.into()),
         formatted_title,
-        filler.to_string().repeat(right_len),
+        filler.to_string().repeat(right_len.into()),
     )
 }
