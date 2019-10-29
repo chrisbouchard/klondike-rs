@@ -1,13 +1,15 @@
 #[macro_use]
 extern crate log;
 
-use std::{convert::TryFrom, error::Error, fs::File};
+use std::{convert::TryFrom, error::Error, fs, path};
 
+use directories::ProjectDirs;
 use log::LevelFilter;
 use num_traits::ToPrimitive;
 use rand::{seq::SliceRandom, thread_rng};
 use simplelog::{Config, WriteLogger};
 use termion::{event::Key, input::TermRead};
+use toml;
 
 use klondike_lib::{
     display::DisplayState,
@@ -16,13 +18,18 @@ use klondike_lib::{
     terminal::Terminal,
 };
 
+static QUALIFIER: &'static str = "net";
+static ORGANIZATION: &'static str = "upflitinglemma";
+static APPLICATION: &'static str = "klondike-rs";
+
 static LOG_FILE: &'static str = "klondike.log";
+static CONFIG_FILE: &'static str = "config.toml";
 
 fn main() -> Result<(), Box<dyn Error>> {
     WriteLogger::init(
         LevelFilter::Debug,
         Config::default(),
-        File::create(LOG_FILE)?,
+        fs::File::create(LOG_FILE)?,
     )?;
     log_panics::init();
 
@@ -32,12 +39,26 @@ fn main() -> Result<(), Box<dyn Error>> {
     let input = terminal.input()?;
     let output = terminal.output()?;
 
-    let settings = Settings::default();
+    let project_dirs: Option<ProjectDirs> = ProjectDirs::from(QUALIFIER, ORGANIZATION, APPLICATION);
+    let config_path: Option<path::PathBuf> = project_dirs.map(|project_dirs| {
+        let mut path = project_dirs.config_dir().to_path_buf();
+        path.push(CONFIG_FILE);
+        info!("Looking for config file: {}", path.display());
+        path
+    });
+
+    // Use File to handle missing/unreadable/etc. better
+    let settings: Settings = {
+        config_path
+            .and_then(|config_path| fs::read_to_string(config_path).ok())
+            .map(|contents| toml::from_str(&contents).unwrap())
+            .unwrap_or_default()
+    };
 
     let game = {
         let mut deck = Deck::new();
         deck.cards_mut().shuffle(&mut thread_rng());
-        Game::new(&mut deck, &settings)
+        Game::new(&mut deck, &settings.game)
     };
 
     let mut game_engine = GameEngineBuilder::playing(game)
@@ -76,7 +97,7 @@ fn handle_playing_input(key: Key) -> Option<Update> {
         Key::Char('k') | Key::Up => Some(Update::Action(Action::SelectMore)),
         Key::Char('l') | Key::Right => Some(Update::Action(Action::MoveRight)),
 
-        Key::Char(c @ '1'..='7') => {
+        Key::Char(c @ '1'..='9') => {
             if let Some(index) = c.to_digit(10) {
                 let area_id = AreaId::Tableaux(index.to_u8()? - 1);
                 Some(Update::Action(Action::MoveTo(area_id)))

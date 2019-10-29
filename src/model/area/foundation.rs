@@ -1,7 +1,7 @@
 use crate::{
     model::{
         card::{Card, Rank, Suit},
-        settings::Settings,
+        settings::GameSettings,
         stack::{Orientation, Stack, StackDetails, StackSelection},
     },
     utils::vec::SplitOffBounded,
@@ -29,7 +29,7 @@ pub struct Foundation<'a, S> {
     /// The cards in this area
     cards: Vec<Card>,
     /// The game settings
-    settings: &'a Settings,
+    settings: &'a GameSettings,
     /// The current selection state of this foundation area. Expected values are either `()` for
     /// unselected, or a [`Selection`](Selection) instance for selected.
     selection: S,
@@ -143,7 +143,7 @@ impl<'a> UnselectedFoundation<'a> {
     pub fn create(
         suit: Suit,
         cards: Vec<Card>,
-        settings: &'a Settings,
+        settings: &'a GameSettings,
     ) -> Box<dyn UnselectedArea<'a> + 'a> {
         Box::new(Foundation {
             suit,

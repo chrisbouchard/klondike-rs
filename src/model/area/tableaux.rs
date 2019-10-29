@@ -2,7 +2,7 @@ use crate::{
     model::{
         area::{AlreadyHeld, MaxSelection, MinSelection, NothingHeld},
         card::{Card, Rank},
-        settings::Settings,
+        settings::GameSettings,
         stack::{Orientation, Stack, StackDetails, StackSelection},
     },
     utils::vec::SplitOffBounded,
@@ -24,7 +24,7 @@ pub struct Tableaux<'a, S> {
     index: u8,
     cards: Vec<Card>,
     revealed_len: usize,
-    settings: &'a Settings,
+    settings: &'a GameSettings,
     selection: S,
 }
 
@@ -120,7 +120,7 @@ impl<'a> UnselectedTableaux<'a> {
         index: u8,
         revealed_len: usize,
         cards: Vec<Card>,
-        settings: &'a Settings,
+        settings: &'a GameSettings,
     ) -> Box<dyn UnselectedArea<'a> + 'a> {
         Box::new(Tableaux {
             index,

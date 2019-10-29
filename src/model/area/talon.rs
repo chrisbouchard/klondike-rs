@@ -1,7 +1,7 @@
 use crate::{
     model::{
         card::Card,
-        settings::Settings,
+        settings::GameSettings,
         stack::{Orientation, Stack, StackDetails, StackSelection},
     },
     utils::vec::SplitOffBounded,
@@ -21,7 +21,7 @@ pub struct Selection {
 pub struct Talon<'a, S> {
     cards: Vec<Card>,
     fanned_len: usize,
-    settings: &'a Settings,
+    settings: &'a GameSettings,
     selection: S,
 }
 
@@ -105,7 +105,7 @@ impl<'a> UnselectedTalon<'a> {
     pub fn create(
         cards: Vec<Card>,
         fanned_len: usize,
-        settings: &'a Settings,
+        settings: &'a GameSettings,
     ) -> Box<dyn UnselectedArea<'a> + 'a> {
         Box::new(Talon {
             cards,
