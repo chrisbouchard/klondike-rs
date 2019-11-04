@@ -1,7 +1,5 @@
-use std::path;
-
 use config::{Config, ConfigError, Environment, File, FileFormat};
-use directories::ProjectDirs;
+use directories::{ProjectDirs, UserDirs};
 use serde::{Deserialize, Serialize};
 
 static QUALIFIER: &'static str = "net";
@@ -9,6 +7,7 @@ static ORGANIZATION: &'static str = "upflitinglemma";
 static APPLICATION: &'static str = "klondike-rs";
 
 static CONFIG_FILE: &'static str = "config.toml";
+static HOME_CONFIG_FILE: &'static str = ".klondike-rs.toml";
 
 static ENV_PREFIX: &'static str = "klondike_";
 static ENV_SEPARATOR: &'static str = "__";
@@ -25,20 +24,16 @@ impl Settings {
     pub fn read_config() -> Result<Settings, ConfigError> {
         let mut config = Config::new();
 
-        let config_path: Option<path::PathBuf> =
-            ProjectDirs::from(QUALIFIER, ORGANIZATION, APPLICATION).map(|project_dirs| {
-                let mut path = project_dirs.config_dir().to_path_buf();
-                path.push(CONFIG_FILE);
-                info!("Looking for config file: {}", path.display());
-                path
-            });
+        if let Some(user_dirs) = UserDirs::new() {
+            let mut path = user_dirs.home_dir().to_path_buf();
+            path.push(HOME_CONFIG_FILE);
+            config.merge(File::from(path).format(FileFormat::Toml).required(false))?;
+        }
 
-        if let Some(config_path) = config_path {
-            config.merge(
-                File::from(config_path)
-                    .format(FileFormat::Toml)
-                    .required(false),
-            )?;
+        if let Some(project_dirs) = ProjectDirs::from(QUALIFIER, ORGANIZATION, APPLICATION) {
+            let mut path = project_dirs.config_dir().to_path_buf();
+            path.push(CONFIG_FILE);
+            config.merge(File::from(path).format(FileFormat::Toml).required(false))?;
         }
 
         config.merge(Environment::with_prefix(ENV_PREFIX).separator(ENV_SEPARATOR))?;
