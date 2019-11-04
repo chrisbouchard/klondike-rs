@@ -21,7 +21,7 @@ pub struct Settings {
 
 impl Settings {
     // TODO: Return a snafu-defined error type
-    pub fn read_config() -> Result<Settings, ConfigError> {
+    pub fn read_from_system() -> Result<Settings, ConfigError> {
         let mut config = Config::new();
 
         if let Some(user_dirs) = UserDirs::new() {

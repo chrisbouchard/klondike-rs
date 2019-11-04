@@ -32,7 +32,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let input = terminal.input()?;
     let output = terminal.output()?;
 
-    let settings = Settings::read_config()?;
+    let settings = Settings::read_from_system()?;
 
     let game = {
         let mut deck = Deck::new();
