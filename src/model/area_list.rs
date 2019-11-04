@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use snafu::ResultExt;
+use snafu::{OptionExt, ResultExt};
 use std::{collections::HashMap, fmt};
 
 use crate::utils::vec::SplitOffAround;
@@ -13,6 +13,9 @@ use super::area::{
 pub enum Error {
     #[snafu(display("Duplicate area ids: {:?}", area_ids))]
     DuplicateAreaIds { area_ids: Vec<AreaId> },
+
+    #[snafu(display("Unknown area id: {:?}", area_id))]
+    UnknownAreaId { area_id: AreaId },
 
     #[snafu(display("Unable to activate area {:?}: {}", area_id, source))]
     UnableToActivate {
@@ -127,51 +130,59 @@ impl<'a> AreaList<'a> {
         self.before_areas.len() + self.after_areas.len() + 1
     }
 
-    pub fn get_by_index(&self, index: usize) -> &dyn Area<'a> {
-        let selected_index = self.selected_area.as_ref().map(|selected_area| {
-            let selected_area_id = selected_area.id();
-            self.get_index(selected_area_id)
-        });
+    pub fn get_by_index(&self, index: usize) -> Result<&dyn Area<'a>> {
+        let selected_index = self
+            .selected_area
+            .as_ref()
+            .map(|selected_area| {
+                let selected_area_id = selected_area.id();
+                self.get_index(selected_area_id)
+            })
+            .transpose()?;
 
         if Some(index) == selected_index {
-            self.selected().as_area()
+            Ok(self.selected().as_area())
         } else if selected_index.is_none() || Some(index) < selected_index {
-            self.before_areas[index].as_area()
+            Ok(self.before_areas[index].as_area())
         } else {
             // Unwrap is ok, because we handle None in the previous case.
             let effective_index = index - selected_index.unwrap() - 1;
             // Since after_areas is reversed, we have to get an index "from the end".
             let actual_index = self.after_areas.len() - effective_index - 1;
-            self.after_areas[actual_index].as_area()
+            Ok(self.after_areas[actual_index].as_area())
         }
     }
 
-    pub fn get_by_index_mut(&mut self, index: usize) -> &mut dyn Area<'a> {
-        let selected_index = self.selected_area.as_ref().map(|selected_area| {
-            let selected_area_id = selected_area.id();
-            self.get_index(selected_area_id)
-        });
+    pub fn get_by_index_mut(&mut self, index: usize) -> Result<&mut dyn Area<'a>> {
+        let selected_index = self
+            .selected_area
+            .as_ref()
+            .map(|selected_area| {
+                let selected_area_id = selected_area.id();
+                self.get_index(selected_area_id)
+            })
+            .transpose()?;
 
         if Some(index) == selected_index {
-            self.selected_mut().as_area_mut()
+            Ok(self.selected_mut().as_area_mut())
         } else if selected_index.is_none() || Some(index) < selected_index {
-            self.before_areas[index].as_area_mut()
+            Ok(self.before_areas[index].as_area_mut())
         } else {
             // Unwrap is ok, because we handle None in the previous case.
             let effective_index = index - selected_index.unwrap() - 1;
             // Since after_areas is reversed, we have to get an index "from the end".
             let actual_index = self.after_areas.len() - effective_index - 1;
-            self.after_areas[actual_index].as_area_mut()
+            Ok(self.after_areas[actual_index].as_area_mut())
         }
     }
 
-    pub fn get_by_area_id(&self, area_id: AreaId) -> &dyn Area<'a> {
-        let index = self.get_index(area_id);
+    pub fn get_by_area_id(&self, area_id: AreaId) -> Result<&dyn Area<'a>> {
+        let index = self.get_index(area_id)?;
         self.get_by_index(index)
     }
 
-    pub fn get_by_area_id_mut(&mut self, area_id: AreaId) -> &mut dyn Area<'a> {
-        let index = self.get_index(area_id);
+    pub fn get_by_area_id_mut(&mut self, area_id: AreaId) -> Result<&mut dyn Area<'a>> {
+        let index = self.get_index(area_id)?;
         self.get_by_index_mut(index)
     }
 
@@ -240,8 +251,8 @@ impl<'a> AreaList<'a> {
             return Ok(vec![]);
         }
 
-        let selected_index = self.get_index(selected_area_id);
-        let target_index = self.get_index(target_area_id);
+        let selected_index = self.get_index(selected_area_id)?;
+        let target_index = self.get_index(target_area_id)?;
 
         let target_is_before = target_index < selected_index;
 
@@ -317,12 +328,12 @@ impl<'a> AreaList<'a> {
                 // Take the next `len` cards from the stock. We reverse the held cards because they're
                 // being drawn one-by-one into the talon, so the first drawn is at the bottom of the
                 // pile.
-                let mut held = self.get_by_area_id_mut(AreaId::Stock).take_cards(len);
+                let mut held = self.get_by_area_id_mut(AreaId::Stock)?.take_cards(len);
                 held.cards.reverse();
 
                 // The talon should always accept cards from the stock, so no need to handle putting
                 // them back on failure; just blow up.
-                self.get_by_area_id_mut(AreaId::Talon)
+                self.get_by_area_id_mut(AreaId::Talon)?
                     .give_cards(held)
                     .into_result()
                     .context(SelectionError {
@@ -333,12 +344,12 @@ impl<'a> AreaList<'a> {
             }
             Some(Action::Restock) => {
                 // Flip the talon onto the stock.
-                let mut held = self.get_by_area_id_mut(AreaId::Talon).take_all_cards();
+                let mut held = self.get_by_area_id_mut(AreaId::Talon)?.take_all_cards();
                 held.cards.reverse();
 
                 // The stock should always accept cards from the talon, so no need to handle putting
                 // them back on failure; just blow up.
-                self.get_by_area_id_mut(AreaId::Stock)
+                self.get_by_area_id_mut(AreaId::Stock)?
                     .give_cards(held)
                     .into_result()
                     .context(SelectionError {
@@ -389,11 +400,11 @@ impl<'a> AreaList<'a> {
         Ok(vec![selected_area_id])
     }
 
-    fn get_index(&self, area_id: AreaId) -> usize {
-        *self
-            .area_ids
+    fn get_index(&self, area_id: AreaId) -> Result<usize> {
+        self.area_ids
             .get(&area_id)
-            .unwrap_or_else(|| panic!("Unknown area id {:?}", area_id))
+            .map(|index| *index)
+            .context(UnknownAreaId { area_id })
     }
 }
 

@@ -8,7 +8,7 @@ use super::{
     area_list::AreaList,
     card::{Rank, Suit},
     deck::Deck,
-    settings::Settings,
+    settings::GameSettings,
     stack::Stack,
 };
 
@@ -16,11 +16,11 @@ use super::{
 pub struct Game<'a> {
     areas: AreaList<'a>,
     last_area: AreaId,
-    settings: &'a Settings,
+    settings: &'a GameSettings,
 }
 
 impl<'a> Game<'a> {
-    pub fn new<'d>(deck: &'d mut Deck, settings: &'a Settings) -> Game<'a> {
+    pub fn new<'d>(deck: &'d mut Deck, settings: &'a GameSettings) -> Game<'a> {
         let mut tableaux = settings
             .tableaux_indices()
             .map(|index| {
@@ -58,6 +58,8 @@ impl<'a> Game<'a> {
         Suit::values().all(|suit| {
             self.areas
                 .get_by_area_id(AreaId::Foundation(suit))
+                // TODO: Replace unwrap with proper error
+                .unwrap()
                 .peek_top_card()
                 .map_or(false, |suit| suit.rank == Rank::King)
         })
@@ -68,7 +70,8 @@ impl<'a> Game<'a> {
     }
 
     pub fn stack(&self, area_id: AreaId) -> Stack {
-        self.areas.get_by_area_id(area_id).as_stack()
+        // TODO: Replace unwrap with proper error
+        self.areas.get_by_area_id(area_id).unwrap().as_stack()
     }
 
     pub fn apply_action(&mut self, action: Action) -> Vec<AreaId> {
