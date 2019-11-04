@@ -1,10 +1,48 @@
+use std::path;
+
+use config::{Config, ConfigError, Environment, File, FileFormat};
+use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
+
+static QUALIFIER: &'static str = "net";
+static ORGANIZATION: &'static str = "upflitinglemma";
+static APPLICATION: &'static str = "klondike-rs";
+
+static CONFIG_FILE: &'static str = "config.toml";
+static ENVIRONMENT_PREFIX: &'static str = "klondike_";
 
 #[derive(Default, Debug, Deserialize, Serialize)]
 #[serde(default)]
 pub struct Settings {
     pub display: DisplaySettings,
     pub game: GameSettings,
+}
+
+impl Settings {
+    // TODO: Return a snafu-defined error type
+    pub fn read_config() -> Result<Settings, ConfigError> {
+        let mut config = Config::new();
+
+        let config_path: Option<path::PathBuf> =
+            ProjectDirs::from(QUALIFIER, ORGANIZATION, APPLICATION).map(|project_dirs| {
+                let mut path = project_dirs.config_dir().to_path_buf();
+                path.push(CONFIG_FILE);
+                info!("Looking for config file: {}", path.display());
+                path
+            });
+
+        if let Some(config_path) = config_path {
+            config.merge(
+                File::from(config_path)
+                    .format(FileFormat::Toml)
+                    .required(false),
+            )?;
+        }
+
+        config.merge(Environment::with_prefix(ENVIRONMENT_PREFIX).separator("__"))?;
+
+        config.try_into()
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize)]

@@ -1,15 +1,13 @@
 #[macro_use]
 extern crate log;
 
-use std::{convert::TryFrom, error::Error, fs, path};
+use std::{convert::TryFrom, error::Error, fs};
 
-use directories::ProjectDirs;
 use log::LevelFilter;
 use num_traits::ToPrimitive;
 use rand::{seq::SliceRandom, thread_rng};
 use simplelog::{Config, WriteLogger};
 use termion::{event::Key, input::TermRead};
-use toml;
 
 use klondike_lib::{
     display::DisplayState,
@@ -18,12 +16,7 @@ use klondike_lib::{
     terminal::Terminal,
 };
 
-static QUALIFIER: &'static str = "net";
-static ORGANIZATION: &'static str = "upflitinglemma";
-static APPLICATION: &'static str = "klondike-rs";
-
 static LOG_FILE: &'static str = "klondike.log";
-static CONFIG_FILE: &'static str = "config.toml";
 
 fn main() -> Result<(), Box<dyn Error>> {
     WriteLogger::init(
@@ -39,21 +32,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let input = terminal.input()?;
     let output = terminal.output()?;
 
-    let project_dirs: Option<ProjectDirs> = ProjectDirs::from(QUALIFIER, ORGANIZATION, APPLICATION);
-    let config_path: Option<path::PathBuf> = project_dirs.map(|project_dirs| {
-        let mut path = project_dirs.config_dir().to_path_buf();
-        path.push(CONFIG_FILE);
-        info!("Looking for config file: {}", path.display());
-        path
-    });
-
-    // Use File to handle missing/unreadable/etc. better
-    let settings: Settings = {
-        config_path
-            .and_then(|config_path| fs::read_to_string(config_path).ok())
-            .map(|contents| toml::from_str(&contents).unwrap())
-            .unwrap_or_default()
-    };
+    let settings = Settings::read_config()?;
 
     let game = {
         let mut deck = Deck::new();
