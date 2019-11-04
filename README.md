@@ -20,14 +20,14 @@ dependencies, as well as compile this project's source, so it may take a few
 moments.
 
 
-### Controls
+## Controls
 
 You can always type `h` or `?` to get the help screen!
 
 _To be written&hellip;_
 
 
-### Configuration
+## Configuration
 
 Configuration uses [TOML](toml), a popular mark-up language among Rust
 projects. Below is a sample configuration file which sets all settings to their
@@ -68,4 +68,20 @@ Configuration files are picked up from several locations, depending on your OS:
     * E.g., `C:\Users\Chris\AppData\Roaming\upliftinglemma\klondike-rs\config\config.toml`
 
 [toml]: https://github.com/toml-lang/toml
+
+
+## TODO:
+
+This project is still _very_ alpha, but it's at least runnable. Some high-level
+things that still need to happen:
+
+* Check for win, offer to start a new game.
+* Respect configuration regarding color and Unicode.
+* Document all public structs and functions (_lots_ of warnings).
+* Offer more cosmetic configuration, e.g., card backs.
+
+
+## Contributing
+
+_To be written&hellip;_
 
