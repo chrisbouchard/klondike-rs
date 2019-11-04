@@ -9,7 +9,9 @@ static ORGANIZATION: &'static str = "upflitinglemma";
 static APPLICATION: &'static str = "klondike-rs";
 
 static CONFIG_FILE: &'static str = "config.toml";
-static ENVIRONMENT_PREFIX: &'static str = "klondike_";
+
+static ENV_PREFIX: &'static str = "klondike_";
+static ENV_SEPARATOR: &'static str = "__";
 
 #[derive(Default, Debug, Deserialize, Serialize)]
 #[serde(default)]
@@ -39,7 +41,7 @@ impl Settings {
             )?;
         }
 
-        config.merge(Environment::with_prefix(ENVIRONMENT_PREFIX).separator("__"))?;
+        config.merge(Environment::with_prefix(ENV_PREFIX).separator(ENV_SEPARATOR))?;
 
         config.try_into()
     }
