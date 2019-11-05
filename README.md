@@ -77,7 +77,7 @@ things that still need to happen:
 
 * Check for win, offer to start a new game.
 * Respect configuration regarding color and Unicode.
-* Document all public structs and functions (_lots_ of warnings).
+* Document all public structs and functions and re-enable `warn(missing_docs)`.
 * Offer more cosmetic configuration, e.g., card backs.
 
 
