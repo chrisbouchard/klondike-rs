@@ -17,6 +17,7 @@ pub enum DisplayState {
     Playing,
     HelpMessageOpen,
     Quitting,
+    WinMessageOpen,
 }
 
 pub trait Widget: fmt::Display {

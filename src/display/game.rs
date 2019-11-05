@@ -79,6 +79,9 @@ where
             DisplayState::HelpMessageOpen => {
                 self.write_help(fmt)?;
             }
+            DisplayState::WinMessageOpen => {
+                self.write_win(fmt)?;
+            }
             _ => {}
         }
 
@@ -147,6 +150,11 @@ where
 
         write!(fmt, "{}", widget)?;
 
+        Ok(())
+    }
+
+    fn write_win(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        // TODO: Display a dialog with options.
         Ok(())
     }
 }

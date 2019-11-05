@@ -71,7 +71,15 @@ where
             let update = input_mapper.map_input(input);
 
             let area_ids = update.map(|update| match update {
-                Update::Action(action) => self.game.apply_action(action),
+                Update::Action(action) => {
+                    let area_ids = self.game.apply_action(action);
+
+                    if self.game.is_win() {
+                        self.state = DisplayState::WinMessageOpen;
+                    }
+
+                    area_ids
+                }
                 Update::State(state) => {
                     self.state = state;
                     vec![]
