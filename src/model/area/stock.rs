@@ -31,11 +31,9 @@ impl<'a, S> Stock<'a, S> {
     }
 
     fn validate_cards(&self, held: &Held) -> Result {
-        if held.source == self.id() {
-            // We'll always take back our own cards.
-            Ok(())
-        } else if held.source == AreaId::Talon {
-            // We'll allow cards from the talon to be replaced onto us.
+        if held.source == self.id() || held.source == AreaId::Talon {
+            // We'll always take back our own cards, and we'll allow cards from the talon to be
+            // replaced on us.
             Ok(())
         } else {
             // But no cards from anywhere else.

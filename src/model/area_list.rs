@@ -403,7 +403,7 @@ impl<'a> AreaList<'a> {
     fn get_index(&self, area_id: AreaId) -> Result<usize> {
         self.area_ids
             .get(&area_id)
-            .map(|index| *index)
+            .copied()
             .context(UnknownAreaId { area_id })
     }
 }

@@ -24,7 +24,7 @@ lazy_static! {
 }
 
 pub fn offsets(widget: &StackWidget) -> Offsets {
-    let ref details = widget.stack.details;
+    let details = &widget.stack.details;
 
     let mut offsets = UNCOLLAPSED_OFFSETS.clone();
     let mut collapse_len: usize = collapse_len(widget, &offsets).into();
@@ -77,7 +77,7 @@ pub fn card_widget_iter<'a>(
     widget: &'a StackWidget,
     offsets: &'a Offsets,
 ) -> impl Iterator<Item = CardWidget<'a>> {
-    let ref details = widget.stack.details;
+    let details = &widget.stack.details;
 
     // Index at which the collapsed unspread cards will be represented.
     let collapsed_unspread_index = details.visible_index() + offsets.collapse_unspread_len;
@@ -112,7 +112,7 @@ pub fn card_widget_iter<'a>(
 
 pub fn selector_widget(widget: &StackWidget, offsets: &Offsets) -> Option<SelectorWidget> {
     let coords = widget.bounds.origin;
-    let ref details = widget.stack.details;
+    let details = &widget.stack.details;
 
     details.selection.as_ref().map(|selection| {
         let selection_index = details.selection_index().unwrap_or_default();

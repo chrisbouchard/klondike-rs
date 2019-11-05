@@ -2,15 +2,15 @@ use config::{Config, ConfigError, Environment, File, FileFormat};
 use directories::{ProjectDirs, UserDirs};
 use serde::{Deserialize, Serialize};
 
-static QUALIFIER: &'static str = "net";
-static ORGANIZATION: &'static str = "upflitinglemma";
-static APPLICATION: &'static str = "klondike-rs";
+static QUALIFIER: &str = "net";
+static ORGANIZATION: &str = "upflitinglemma";
+static APPLICATION: &str = "klondike-rs";
 
-static CONFIG_FILE: &'static str = "config.toml";
-static HOME_CONFIG_FILE: &'static str = ".klondike-rs.toml";
+static CONFIG_FILE: &str = "config.toml";
+static HOME_CONFIG_FILE: &str = ".klondike-rs.toml";
 
-static ENV_PREFIX: &'static str = "klondike_";
-static ENV_SEPARATOR: &'static str = "__";
+static ENV_PREFIX: &str = "klondike_";
+static ENV_SEPARATOR: &str = "__";
 
 #[derive(Default, Debug, Deserialize, Serialize)]
 #[serde(default)]

@@ -71,7 +71,7 @@ impl<'a> CardWidget<'a> {
 
         let frame = FrameWidget {
             bounds,
-            top_title: title.map(|title| Title::right(title)),
+            top_title: title.map(Title::right),
             bottom_title: None,
             frame_style: &CARD_FRAME_STYLE,
         };

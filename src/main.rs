@@ -16,7 +16,7 @@ use klondike_lib::{
     terminal::Terminal,
 };
 
-static LOG_FILE: &'static str = "klondike.log";
+static LOG_FILE: &str = "klondike.log";
 
 fn main() -> Result<(), Box<dyn Error>> {
     WriteLogger::init(

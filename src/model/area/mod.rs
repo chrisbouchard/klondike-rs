@@ -1,5 +1,5 @@
 use snafu;
-use std::error;
+use std::{error, fmt};
 
 use super::{
     card::{Card, Suit},
@@ -140,6 +140,15 @@ pub trait SelectedArea<'a>: Area<'a> {
 pub struct SelectionMove<'a> {
     pub selected: Box<dyn SelectedArea<'a> + 'a>,
     pub unselected: Box<dyn UnselectedArea<'a> + 'a>,
+}
+
+impl<'a> fmt::Debug for SelectionMove<'a> {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        fmt.debug_struct("SelectionMove")
+            .field("selected", &format_args!("<{:?}>", self.selected.id()))
+            .field("unselected", &format_args!("<{:?}>", self.unselected.id()))
+            .finish()
+    }
 }
 
 pub fn move_selection<'a>(
