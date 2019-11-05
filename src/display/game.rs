@@ -5,7 +5,7 @@ use crate::model::{AreaId, Game, Suit};
 
 use super::{
     blank::BlankWidget, card::CARD_SIZE, geometry, help::HelpWidget, stack::StackWidget,
-    DisplayState, Widget,
+    win::WinWidget, DisplayState, Widget,
 };
 
 lazy_static! {
@@ -154,7 +154,12 @@ where
     }
 
     fn write_win(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        // TODO: Display a dialog with options.
+        let widget = WinWidget {
+            bounds: self.bounds,
+        };
+
+        write!(fmt, "{}", widget)?;
+
         Ok(())
     }
 }
