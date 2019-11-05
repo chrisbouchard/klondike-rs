@@ -2,8 +2,8 @@
 
 CLI Klondike Solitaire written in Rust
 
-![Default State](img/default.png?raw=true "Default State")
-![Gameplay](img/gameplay.png?raw=true "Gameplay")
+![Default State](https://i.imgur.com/QMd6Gbw.png)
+![Gameplay](https://i.imgur.com/m6gs2F1.png)
 
 
 ## Running
