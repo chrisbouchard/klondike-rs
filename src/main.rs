@@ -43,6 +43,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut game_engine = GameEngineBuilder::playing(game)
         .input_mapper(DisplayState::Playing, handle_playing_input)
         .input_mapper(DisplayState::HelpMessageOpen, handle_help_input)
+        .input_mapper(DisplayState::WinMessageOpen, handle_win_input)
         .output(output)
         .start()?;
 
@@ -102,5 +103,12 @@ fn handle_playing_input(key: Key) -> Option<Update> {
 fn handle_help_input(key: Key) -> Option<Update> {
     match key {
         _ => Some(Update::State(DisplayState::Playing)),
+    }
+}
+
+fn handle_win_input(key: Key) -> Option<Update> {
+    match key {
+        Key::Char('n') => Some(Update::State(DisplayState::Playing)),
+        _ => None,
     }
 }
