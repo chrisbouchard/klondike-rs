@@ -58,10 +58,10 @@ impl Default for DisplaySettings {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 pub enum DealerMode {
     AutoWin,
-    Ordered,
+    InOrder,
     Random,
 }
 

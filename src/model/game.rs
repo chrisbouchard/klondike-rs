@@ -20,31 +20,7 @@ pub struct Game<'a> {
 }
 
 impl<'a> Game<'a> {
-    pub fn new<'d>(deck: &'d mut Deck, settings: &'a GameSettings) -> Game<'a> {
-        let mut tableaux = settings
-            .tableaux_indices()
-            .map(|index| {
-                let cards = deck.deal(index as usize + 1);
-                UnselectedTableaux::create(index, 1, cards, settings)
-            })
-            .collect::<Vec<_>>();
-
-        let stock = {
-            let cards = deck.deal_rest();
-            UnselectedStock::create(cards, settings)
-        };
-
-        let talon = UnselectedTalon::create(vec![], 0, settings);
-
-        let mut foundation = Suit::values()
-            .map(|index| UnselectedFoundation::create(index, vec![], settings))
-            .collect::<Vec<_>>();
-
-        let mut areas: Vec<Box<dyn UnselectedArea>> = vec![stock, talon];
-        areas.append(&mut foundation);
-        areas.append(&mut tableaux);
-
-        let areas = AreaList::new(areas).expect("Unable to create AreaList");
+    pub fn new<'d>(areas: AreaList<'a>, settings: &'a GameSettings) -> Game<'a> {
         let last_area = areas.selected().id();
 
         Game {
