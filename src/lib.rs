@@ -10,7 +10,6 @@
     unused_import_braces,
     unused_qualifications
 )]
-#![feature(const_fn)]
 
 #[macro_use]
 extern crate derive_more;
