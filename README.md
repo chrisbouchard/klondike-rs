@@ -19,6 +19,12 @@ Before it can run, `cargo` will have to download and compile all necessary
 dependencies, as well as compile this project's source, so it may take a few
 moments.
 
+If you don't have Rust, you can get it using [Rustup][rustup]. I will try to
+keep the project compiling on stable Rust, but I reserve the right to require
+nightly if there's a really nice feature I want. :)
+
+[rustup]: https://rustup.rs/
+
 
 ## Controls
 
