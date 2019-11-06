@@ -9,6 +9,7 @@ pub use self::settings::Settings;
 pub mod area;
 pub mod area_list;
 pub mod card;
+pub mod dealer;
 pub mod deck;
 pub mod game;
 pub mod settings;

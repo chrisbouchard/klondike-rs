@@ -14,9 +14,9 @@ use super::{
 
 #[derive(Debug)]
 pub struct Game<'a> {
-    areas: AreaList<'a>,
-    last_area: AreaId,
-    settings: &'a GameSettings,
+    pub areas: AreaList<'a>,
+    pub last_area: AreaId,
+    pub settings: &'a GameSettings,
 }
 
 impl<'a> Game<'a> {

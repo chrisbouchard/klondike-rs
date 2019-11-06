@@ -59,8 +59,16 @@ impl Default for DisplaySettings {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+pub enum DealerMode {
+    AutoWin,
+    Ordered,
+    Random,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(default)]
 pub struct GameSettings {
+    pub dealer: DealerMode,
     pub draw_from_stock_len: usize,
     pub tableaux_len: u8,
     pub take_from_foundation: bool,
@@ -75,6 +83,7 @@ impl GameSettings {
 impl Default for GameSettings {
     fn default() -> Self {
         GameSettings {
+            dealer: DealerMode::Random,
             draw_from_stock_len: 3,
             tableaux_len: 7,
             take_from_foundation: true,
