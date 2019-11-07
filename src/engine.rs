@@ -1,6 +1,6 @@
 //! Module tying together the Klondike model and display.
 
-use snafu::{OptionExt, ResultExt};
+use snafu::ResultExt;
 use std::{collections::HashMap, fmt, io};
 use termion::event::Key;
 
@@ -32,6 +32,7 @@ pub type Result<T, E = Error> = std::result::Result<T, E>;
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum Update {
     Action(Action),
+    NewGame,
     State(DisplayState),
 }
 
@@ -55,7 +56,7 @@ where
 {
     settings: &'a GameSettings,
     dealer: Box<dyn Dealer>,
-    game: Option<Game<'a>>,
+    game: Option<Game>,
     state: DisplayState,
     input_mappers: HashMap<DisplayState, Box<dyn InputMapper + 'a>>,
     input: I,
@@ -68,14 +69,11 @@ where
     I: Iterator<Item = Result<Key, io::Error>> + 'a,
     O: io::Write + 'a,
 {
-    pub fn tick(&'a mut self) -> Result<bool> {
-        let mut game = if let Some(game) = self.game.take() {
-            game
-        } else {
-            let game = self.dealer.deal_game(self.settings);
-            self.refresh(&game, vec![])?;
-            game
-        };
+    pub fn tick(&mut self) -> Result<bool> {
+        if self.game.is_none() {
+            self.game = Some(self.dealer.deal_game(self.settings));
+            self.refresh(vec![])?;
+        }
 
         let update = both(
             self.input.next().transpose().context(IoError)?,
@@ -86,13 +84,22 @@ where
         if let Some(update) = update {
             let area_ids = match update {
                 Update::Action(action) => {
-                    let area_ids = game.apply_action(action);
+                    if let Some(ref mut game) = self.game {
+                        let area_ids = game.apply_action(action);
 
-                    if game.is_win() {
-                        self.state = DisplayState::WinMessageOpen;
+                        if game.is_win() {
+                            self.state = DisplayState::WinMessageOpen;
+                        }
+
+                        area_ids
+                    } else {
+                        vec![]
                     }
-
-                    area_ids
+                }
+                Update::NewGame => {
+                    self.game = None;
+                    self.state = DisplayState::Playing;
+                    vec![]
                 }
                 Update::State(state) => {
                     self.state = state;
@@ -100,24 +107,26 @@ where
                 }
             };
 
-            self.refresh(&game, area_ids)?;
+            self.refresh(area_ids)?;
         }
 
         Ok(self.state != DisplayState::Quitting)
     }
 
-    fn refresh(&mut self, game: &Game, area_ids: Vec<AreaId>) -> Result<()> {
-        let terminal_size = terminal_bounds().context(IoError)?;
+    fn refresh(&mut self, area_ids: Vec<AreaId>) -> Result<()> {
+        if let Some(ref game) = self.game {
+            let terminal_size = terminal_bounds().context(IoError)?;
 
-        let widget = GameWidget {
-            area_ids,
-            bounds: geometry::Rect::from_size(terminal_size),
-            game: game,
-            display_state: self.state,
-            widget_state: &self.game_widget_state,
-        };
-        write!(self.output, "{}", widget).context(IoError)?;
-        self.output.flush().context(IoError)?;
+            let widget = GameWidget {
+                area_ids,
+                bounds: geometry::Rect::from_size(terminal_size),
+                game,
+                display_state: self.state,
+                widget_state: &self.game_widget_state,
+            };
+            write!(self.output, "{}", widget).context(IoError)?;
+            self.output.flush().context(IoError)?;
+        }
 
         Ok(())
     }

@@ -29,30 +29,21 @@ pub struct GameWidgetState {
 }
 
 #[derive(Debug)]
-pub struct GameWidget<'a, 'g>
-where
-    'g: 'a,
-{
+pub struct GameWidget<'a> {
     pub area_ids: Vec<AreaId>,
     pub bounds: geometry::Rect<u16>,
-    pub game: &'a Game<'g>,
+    pub game: &'a Game,
     pub display_state: DisplayState,
     pub widget_state: &'a GameWidgetState,
 }
 
-impl<'a, 'g> Widget for GameWidget<'a, 'g>
-where
-    'g: 'a,
-{
+impl<'a> Widget for GameWidget<'a> {
     fn bounds(&self) -> geometry::Rect<u16> {
         self.bounds
     }
 }
 
-impl<'a, 'g> fmt::Display for GameWidget<'a, 'g>
-where
-    'g: 'a,
-{
+impl<'a> fmt::Display for GameWidget<'a> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         let full_refresh_required = self.is_full_refresh_required();
 
@@ -93,10 +84,7 @@ where
     }
 }
 
-impl<'a, 'g> GameWidget<'a, 'g>
-where
-    'g: 'a,
-{
+impl<'a> GameWidget<'a> {
     fn is_full_refresh_required(&self) -> bool {
         let state = self.widget_state.cell.borrow();
 
@@ -106,10 +94,19 @@ where
             .unwrap_or(true);
         let display_state_changed = state
             .prev_display_state
-            .map(|prev_display_state| prev_display_state != self.display_state)
+            .map(|prev_display_state| {
+                prev_display_state != self.display_state && self.state_requires_refresh()
+            })
             .unwrap_or(true);
 
         bounds_changed || display_state_changed
+    }
+
+    fn state_requires_refresh(&self) -> bool {
+        match self.display_state {
+            DisplayState::WinMessageOpen => false,
+            _ => true,
+        }
     }
 
     fn write_area(&self, area_id: AreaId, fmt: &mut fmt::Formatter) -> fmt::Result {

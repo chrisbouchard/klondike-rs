@@ -18,19 +18,21 @@ pub struct WinWidget {
 
 impl Widget for WinWidget {
     fn bounds(&self) -> geometry::Rect<u16> {
-        self.bounds
+        let left_offset = self.bounds.size.width.saturating_sub(CONTENT_SIZE.width) / 2;
+        let top_offset = self.bounds.size.height.saturating_sub(CONTENT_SIZE.height) / 2;
+        let offset: geometry::Vector2D<u16> = geometry::vec2(left_offset, top_offset);
+
+        let inner_origin = self.bounds.origin + offset;
+        let inner_bounds = geometry::Rect::new(inner_origin, *CONTENT_SIZE);
+
+        inner_bounds.outer_rect(*BORDER + *PADDING)
     }
 }
 
 impl fmt::Display for WinWidget {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        let left_offset = self.bounds.size.width.saturating_sub(CONTENT_SIZE.width) / 2;
-        let top_offset = self.bounds.size.height.saturating_sub(CONTENT_SIZE.height) / 2;
-        let offset: geometry::Vector2D<u16> = geometry::vec2(left_offset, top_offset);
-        let inner_origin = self.bounds.origin + offset;
-
-        let inner_bounds = geometry::Rect::new(inner_origin, *CONTENT_SIZE);
-        let frame_bounds = inner_bounds.outer_rect(*BORDER + *PADDING);
+        let frame_bounds = self.bounds();
+        let inner_bounds = frame_bounds.inner_rect(*BORDER + *PADDING);
 
         let frame_display = FrameWidget {
             bounds: frame_bounds,
@@ -41,8 +43,8 @@ impl fmt::Display for WinWidget {
 
         write!(fmt, "{}", frame_display)?;
 
-        let goto_line1 = geometry::goto(inner_origin);
-        let goto_line2 = geometry::goto(inner_origin + geometry::vec2(0, 2));
+        let goto_line1 = geometry::goto(inner_bounds.origin);
+        let goto_line2 = geometry::goto(inner_bounds.origin + geometry::vec2(0, 2));
 
         write!(fmt, "{}Congratulations!", goto_line1)?;
         write!(fmt, "{}New Game? (Y/N)", goto_line2)?;

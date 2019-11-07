@@ -1,33 +1,23 @@
 use std::borrow::Borrow;
 
 use super::{
-    area::{
-        foundation::UnselectedFoundation, stock::UnselectedStock, tableaux::UnselectedTableaux,
-        talon::UnselectedTalon, Area, AreaId, UnselectedArea,
-    },
+    area::{Area, AreaId},
     area_list::AreaList,
     card::{Rank, Suit},
-    deck::Deck,
-    settings::GameSettings,
     stack::Stack,
 };
 
 #[derive(Debug)]
-pub struct Game<'a> {
-    pub areas: AreaList<'a>,
+pub struct Game {
+    pub areas: AreaList,
     pub last_area: AreaId,
-    pub settings: &'a GameSettings,
 }
 
-impl<'a> Game<'a> {
-    pub fn new<'d>(areas: AreaList<'a>, settings: &'a GameSettings) -> Game<'a> {
+impl Game {
+    pub fn new(areas: AreaList) -> Game {
         let last_area = areas.selected().id();
 
-        Game {
-            areas,
-            last_area,
-            settings,
-        }
+        Game { areas, last_area }
     }
 
     pub fn is_win(&self) -> bool {

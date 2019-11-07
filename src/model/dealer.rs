@@ -6,7 +6,7 @@ use super::{area, area_list, settings, Card, Game, Rank, Suit};
 use crate::utils::vec::SplitOffBounded;
 
 pub trait Dealer {
-    fn deal_game<'a>(&'a self, settings: &'a settings::GameSettings) -> Game<'a>;
+    fn deal_game(&self, settings: &settings::GameSettings) -> Game;
 }
 
 pub fn create_dealer(mode: settings::DealerMode) -> Box<dyn Dealer> {
@@ -25,13 +25,13 @@ pub fn create_dealer(mode: settings::DealerMode) -> Box<dyn Dealer> {
 struct AutoWinDealer;
 
 impl Dealer for AutoWinDealer {
-    fn deal_game<'a>(&'a self, settings: &'a settings::GameSettings) -> Game<'a> {
+    fn deal_game(&self, settings: &settings::GameSettings) -> Game {
         let stock = area::stock::UnselectedStock::create(vec![], settings);
-        let talon = area::talon::UnselectedTalon::create(vec![], 0, settings);
+        let talon = area::talon::UnselectedTalon::create(vec![], 0);
 
         let mut tableaux = settings
             .tableaux_indices()
-            .map(|index| area::tableaux::UnselectedTableaux::create(index, 0, vec![], settings))
+            .map(|index| area::tableaux::UnselectedTableaux::create(index, 0, vec![]))
             .collect::<Vec<_>>();
 
         let mut foundation = Suit::values()
@@ -48,7 +48,7 @@ impl Dealer for AutoWinDealer {
         areas.append(&mut tableaux);
 
         let areas = area_list::AreaList::new(areas).expect("Unable to create AreaList");
-        Game::new(areas, settings)
+        Game::new(areas)
     }
 }
 
@@ -64,19 +64,19 @@ impl<S> Dealer for StandardDealer<S>
 where
     S: Shuffle + fmt::Debug,
 {
-    fn deal_game<'a>(&'a self, settings: &'a settings::GameSettings) -> Game<'a> {
+    fn deal_game(&self, settings: &settings::GameSettings) -> Game {
         let mut deck = S::create_deck();
 
         let mut tableaux = settings
             .tableaux_indices()
             .map(|index| {
                 let cards = deck.split_off_bounded(usize::from(index) + 1);
-                area::tableaux::UnselectedTableaux::create(index, 1, cards, settings)
+                area::tableaux::UnselectedTableaux::create(index, 1, cards)
             })
             .collect::<Vec<_>>();
 
         let stock = area::stock::UnselectedStock::create(deck, settings);
-        let talon = area::talon::UnselectedTalon::create(vec![], 0, settings);
+        let talon = area::talon::UnselectedTalon::create(vec![], 0);
 
         let mut foundation = Suit::values()
             .map(|index| area::foundation::UnselectedFoundation::create(index, vec![], settings))
@@ -87,7 +87,7 @@ where
         areas.append(&mut tableaux);
 
         let areas = area_list::AreaList::new(areas).expect("Unable to create AreaList");
-        Game::new(areas, settings)
+        Game::new(areas)
     }
 }
 
