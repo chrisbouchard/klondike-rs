@@ -44,14 +44,14 @@ commands:
 
 jobs:
   rust-tests:
-    name: |
-      Run Cargo Tests: << parameters.toolchain >>
-    docker:
-      - image: liuchong/rustup
     parameters:
       toolchain:
         description: Rustup Toolchain Name
         type: string
+    description: |
+      Run Cargo Tests: << parameters.toolchain >>
+    docker:
+      - image: liuchong/rustup
     steps:
       - checkout
       - setup-rustup-toolchain:
