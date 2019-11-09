@@ -6,27 +6,25 @@ executors:
       - image: liuchong/rustup:1.39.0
 
 commands:
-  setup-cargo-sweep:
+  cargo-test:
+    steps:
+      - run: cargo test
+
+  cargo-version:
     steps:
       - run:
-          name: Install cargo-sweep
-          command: cargo install cargo-sweep
+          name: Version Information
+          command: |
+            echo -n "Rustup Version: "
+            rustup --version
+            echo -n "Cargo Version: "
+            cargo --version
 
-  restore-and-sweep-cargo-cache:
+  restore-cargo-cache:
     steps:
       - restore_cache:
           name: Restore Cargo Cache
-          keys:
-            - v1-cargo-deps-{{ checksum "Cargo.lock" }}
-            - v1-cargo-deps-
-      - run:
-          name: Install cargo-sweep
-          command: cargo install --force cargo-sweep
-      - run:
-          name: Sweep Dependencies
-          # Sweep dependencies older than 30 days
-          # TODO: Is this a reasonable limit?
-          command: cargo sweep -t 30
+          key: v1-cargo-deps-{{ checksum "Cargo.lock" }}
 
   save-cargo-cache:
     steps:
@@ -44,9 +42,10 @@ jobs:
       Run Cargo Tests: Stable
     executor: rustup-executor
     steps:
+      - cargo-version
       - checkout
-      - restore-and-sweep-cargo-cache
-      - run: cargo test
+      - restore-cargo-cache
+      - cargo-test
       - save-cargo-cache
 
   rust-tests-nightly:
@@ -56,9 +55,10 @@ jobs:
     environment:
       RUSTUP_TOOLCHAIN: nightly
     steps:
+      - cargo-version
       - checkout
-      - restore-and-sweep-cargo-cache
-      - run: cargo test
+      - restore-cargo-cache
+      - cargo-test
       - save-cargo-cache
 
 workflows:
