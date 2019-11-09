@@ -16,16 +16,16 @@ use super::{
 pub struct Selection;
 
 #[derive(Debug)]
-pub struct Stock<'a, S> {
+pub struct Stock<S> {
     cards: Vec<Card>,
-    settings: &'a GameSettings,
+    draw_from_stock_len: usize,
     selection: S,
 }
 
-pub type UnselectedStock<'a> = Stock<'a, ()>;
-pub type SelectedStock<'a> = Stock<'a, Selection>;
+pub type UnselectedStock = Stock<()>;
+pub type SelectedStock = Stock<Selection>;
 
-impl<'a, S> Stock<'a, S> {
+impl<S> Stock<S> {
     fn id(&self) -> AreaId {
         AreaId::Stock
     }
@@ -80,31 +80,36 @@ impl<'a, S> Stock<'a, S> {
         }
     }
 
-    fn with_selection<T>(self, selection: T) -> Stock<'a, T> {
+    fn with_selection<T>(self, selection: T) -> Stock<T> {
         Stock {
             cards: self.cards,
-            settings: self.settings,
+            draw_from_stock_len: self.draw_from_stock_len,
             selection,
         }
     }
 }
 
-impl<'a> UnselectedStock<'a> {
-    pub fn create(
-        cards: Vec<Card>,
-        settings: &'a GameSettings,
-    ) -> Box<dyn UnselectedArea<'a> + 'a> {
+impl UnselectedStock {
+    pub fn create(cards: Vec<Card>, settings: &GameSettings) -> Box<dyn UnselectedArea> {
         Box::new(Stock {
             cards,
-            settings,
+            draw_from_stock_len: settings.draw_from_stock_len,
             selection: (),
         })
     }
 }
 
-impl<'a> Area<'a> for UnselectedStock<'a> {
+impl Area for UnselectedStock {
     fn id(&self) -> AreaId {
         Stock::id(self)
+    }
+
+    fn is_selected(&self) -> bool {
+        false
+    }
+
+    fn is_held(&self) -> bool {
+        false
     }
 
     fn give_cards(&mut self, held: Held) -> MoveResult<(), Held> {
@@ -120,17 +125,33 @@ impl<'a> Area<'a> for UnselectedStock<'a> {
     }
 
     fn peek_top_card(&self) -> Option<&Card> {
-        self.cards.first()
+        self.cards.last()
     }
 
     fn as_stack(&self) -> Stack {
         self.as_stack(None)
     }
+
+    fn as_area(&self) -> &dyn Area {
+        self
+    }
+
+    fn as_area_mut(&mut self) -> &mut dyn Area {
+        self
+    }
 }
 
-impl<'a> Area<'a> for SelectedStock<'a> {
+impl Area for SelectedStock {
     fn id(&self) -> AreaId {
         Stock::id(self)
+    }
+
+    fn is_selected(&self) -> bool {
+        true
+    }
+
+    fn is_held(&self) -> bool {
+        false
     }
 
     fn give_cards(&mut self, held: Held) -> MoveResult<(), Held> {
@@ -146,48 +167,40 @@ impl<'a> Area<'a> for SelectedStock<'a> {
     }
 
     fn peek_top_card(&self) -> Option<&Card> {
-        self.cards.first()
+        self.cards.last()
     }
 
     fn as_stack(&self) -> Stack {
         self.as_stack(Some(self.selection))
     }
+
+    fn as_area(&self) -> &dyn Area {
+        self
+    }
+
+    fn as_area_mut(&mut self) -> &mut dyn Area {
+        self
+    }
 }
 
-impl<'a> UnselectedArea<'a> for UnselectedStock<'a> {
-    fn select(
-        self: Box<Self>,
-    ) -> MoveResult<Box<dyn SelectedArea<'a> + 'a>, Box<dyn UnselectedArea<'a> + 'a>> {
+impl UnselectedArea for UnselectedStock {
+    fn select(self: Box<Self>) -> MoveResult<Box<dyn SelectedArea>, Box<dyn UnselectedArea>> {
         MoveResult::Moved(Box::new(self.with_selection(Selection)))
     }
 
     fn select_with_held(
         self: Box<Self>,
         held: Held,
-    ) -> MoveResult<Box<dyn SelectedArea<'a> + 'a>, (Box<dyn UnselectedArea<'a> + 'a>, Held)> {
+    ) -> MoveResult<Box<dyn SelectedArea>, (Box<dyn UnselectedArea>, Held)> {
         NotSupported {
             message: "Cards in this area cannot be held",
         }
         .fail_move((self, held))
     }
-
-    fn as_area<'b>(&'b self) -> &'b dyn Area<'a>
-    where
-        'a: 'b,
-    {
-        self
-    }
-
-    fn as_area_mut<'b>(&'b mut self) -> &'b mut dyn Area<'a>
-    where
-        'a: 'b,
-    {
-        self
-    }
 }
 
-impl<'a> SelectedArea<'a> for SelectedStock<'a> {
-    fn deselect(self: Box<Self>) -> (Box<dyn UnselectedArea<'a> + 'a>, Option<Held>) {
+impl SelectedArea for SelectedStock {
+    fn deselect(self: Box<Self>) -> (Box<dyn UnselectedArea>, Option<Held>) {
         let unselected = Box::new(self.with_selection(()));
         (unselected, None)
     }
@@ -196,7 +209,7 @@ impl<'a> SelectedArea<'a> for SelectedStock<'a> {
         if self.cards.is_empty() {
             Ok(Some(Action::Restock))
         } else {
-            Ok(Some(Action::Draw(self.settings.draw_from_stock_len)))
+            Ok(Some(Action::Draw(self.draw_from_stock_len)))
         }
     }
 
@@ -227,19 +240,5 @@ impl<'a> SelectedArea<'a> for SelectedStock<'a> {
 
     fn held_from(&self) -> Option<AreaId> {
         None
-    }
-
-    fn as_area<'b>(&'b self) -> &'b dyn Area<'a>
-    where
-        'a: 'b,
-    {
-        self
-    }
-
-    fn as_area_mut<'b>(&'b mut self) -> &'b mut dyn Area<'a>
-    where
-        'a: 'b,
-    {
-        self
     }
 }

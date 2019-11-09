@@ -5,14 +5,13 @@ use std::{convert::TryFrom, error::Error, fs};
 
 use log::LevelFilter;
 use num_traits::ToPrimitive;
-use rand::{seq::SliceRandom, thread_rng};
 use simplelog::{Config, WriteLogger};
 use termion::{event::Key, input::TermRead};
 
 use klondike_lib::{
     display::DisplayState,
     engine::{GameEngineBuilder, Update},
-    model::{game::Action, AreaId, Deck, Game, Settings, Suit},
+    model::{game::Action, AreaId, Settings, Suit},
     terminal::Terminal,
 };
 
@@ -34,27 +33,13 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let settings = Settings::read_from_system()?;
 
-    let game = {
-        let mut deck = Deck::new();
-        deck.cards_mut().shuffle(&mut thread_rng());
-        Game::new(&mut deck, &settings.game)
-    };
-
-    let mut game_engine = GameEngineBuilder::playing(game)
+    let mut engine = GameEngineBuilder::builder(&settings.game, input.keys(), output)
         .input_mapper(DisplayState::Playing, handle_playing_input)
         .input_mapper(DisplayState::HelpMessageOpen, handle_help_input)
-        .output(output)
+        .input_mapper(DisplayState::WinMessageOpen, handle_win_input)
         .start()?;
 
-    for key in input.keys() {
-        let key = key?;
-        debug!("Read key: {:?}", key);
-        game_engine.handle_input(key)?;
-
-        if game_engine.state() == DisplayState::Quitting {
-            break;
-        }
-    }
+    while engine.tick()? {}
 
     info!("QUITTING KLONDIKE");
 
@@ -102,5 +87,13 @@ fn handle_playing_input(key: Key) -> Option<Update> {
 fn handle_help_input(key: Key) -> Option<Update> {
     match key {
         _ => Some(Update::State(DisplayState::Playing)),
+    }
+}
+
+fn handle_win_input(key: Key) -> Option<Update> {
+    match key {
+        Key::Char('y') => Some(Update::NewGame),
+        Key::Char('n') => Some(Update::State(DisplayState::Quitting)),
+        _ => None,
     }
 }

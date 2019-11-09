@@ -23,27 +23,27 @@ pub struct Selection {
 /// A foundation area in Klondike. The foundations are the areas where cards are moved to win,
 /// creating piles by suit, starting with aces and ending with kings.
 #[derive(Debug)]
-pub struct Foundation<'a, S> {
+pub struct Foundation<S> {
     /// The suit of this foundation. In Klondike there is one foundation for each suit.
     suit: Suit,
     /// The cards in this area
     cards: Vec<Card>,
-    /// The game settings
-    settings: &'a GameSettings,
+    /// Whether the player is allowed to remove cards from this area
+    take_from_foundation: bool,
     /// The current selection state of this foundation area. Expected values are either `()` for
     /// unselected, or a [`Selection`](Selection) instance for selected.
     selection: S,
 }
 
 /// A foundation area in Klondike that is currently unselected.
-pub type UnselectedFoundation<'a> = Foundation<'a, ()>;
+pub type UnselectedFoundation = Foundation<()>;
 
 /// A foundation area in Klondike that is currently selected. Only the top card of a foundation area
 /// can be selected, and that card can either be held (picked up to move) or not. Additionally,
 /// depending on settings, it may not be allowed to move cards out of a foundation area.
-pub type SelectedFoundation<'a> = Foundation<'a, Selection>;
+pub type SelectedFoundation = Foundation<Selection>;
 
-impl<'a, S> Foundation<'a, S> {
+impl<S> Foundation<S> {
     fn id(&self) -> AreaId {
         AreaId::Foundation(self.suit)
     }
@@ -129,34 +129,42 @@ impl<'a, S> Foundation<'a, S> {
         }
     }
 
-    fn with_selection<T>(self, selection: T) -> Foundation<'a, T> {
+    fn with_selection<T>(self, selection: T) -> Foundation<T> {
         Foundation {
             suit: self.suit,
             cards: self.cards,
-            settings: self.settings,
+            take_from_foundation: self.take_from_foundation,
             selection,
         }
     }
 }
 
-impl<'a> UnselectedFoundation<'a> {
+impl UnselectedFoundation {
     pub fn create(
         suit: Suit,
         cards: Vec<Card>,
-        settings: &'a GameSettings,
-    ) -> Box<dyn UnselectedArea<'a> + 'a> {
+        settings: &GameSettings,
+    ) -> Box<dyn UnselectedArea> {
         Box::new(Foundation {
             suit,
             cards,
-            settings,
+            take_from_foundation: settings.take_from_foundation,
             selection: (),
         })
     }
 }
 
-impl<'a> Area<'a> for UnselectedFoundation<'a> {
+impl<'a> Area for UnselectedFoundation {
     fn id(&self) -> AreaId {
         Foundation::id(self)
+    }
+
+    fn is_selected(&self) -> bool {
+        false
+    }
+
+    fn is_held(&self) -> bool {
+        false
     }
 
     fn give_cards(&mut self, held: Held) -> MoveResult<(), Held> {
@@ -172,17 +180,33 @@ impl<'a> Area<'a> for UnselectedFoundation<'a> {
     }
 
     fn peek_top_card(&self) -> Option<&Card> {
-        self.cards.first()
+        self.cards.last()
     }
 
     fn as_stack(&self) -> Stack {
         self.as_stack(None)
     }
+
+    fn as_area(&self) -> &dyn Area {
+        self
+    }
+
+    fn as_area_mut(&mut self) -> &mut dyn Area {
+        self
+    }
 }
 
-impl<'a> Area<'a> for SelectedFoundation<'a> {
+impl<'a> Area for SelectedFoundation {
     fn id(&self) -> AreaId {
         Foundation::id(self)
+    }
+
+    fn is_selected(&self) -> bool {
+        true
+    }
+
+    fn is_held(&self) -> bool {
+        self.selection.held_from.is_some()
     }
 
     fn give_cards(&mut self, held: Held) -> MoveResult<(), Held> {
@@ -201,18 +225,24 @@ impl<'a> Area<'a> for SelectedFoundation<'a> {
     }
 
     fn peek_top_card(&self) -> Option<&Card> {
-        self.cards.first()
+        self.cards.last()
     }
 
     fn as_stack(&self) -> Stack {
         self.as_stack(Some(self.selection))
     }
+
+    fn as_area(&self) -> &dyn Area {
+        self
+    }
+
+    fn as_area_mut(&mut self) -> &mut dyn Area {
+        self
+    }
 }
 
-impl<'a> UnselectedArea<'a> for UnselectedFoundation<'a> {
-    fn select(
-        self: Box<Self>,
-    ) -> MoveResult<Box<dyn SelectedArea<'a> + 'a>, Box<dyn UnselectedArea<'a> + 'a>> {
+impl UnselectedArea for UnselectedFoundation {
+    fn select(self: Box<Self>) -> MoveResult<Box<dyn SelectedArea>, Box<dyn UnselectedArea>> {
         if !self.cards.is_empty() {
             MoveResult::Moved(Box::new(self.with_selection(Selection { held_from: None })))
         } else {
@@ -226,7 +256,7 @@ impl<'a> UnselectedArea<'a> for UnselectedFoundation<'a> {
     fn select_with_held(
         mut self: Box<Self>,
         held: Held,
-    ) -> MoveResult<Box<dyn SelectedArea<'a> + 'a>, (Box<dyn UnselectedArea<'a> + 'a>, Held)> {
+    ) -> MoveResult<Box<dyn SelectedArea>, (Box<dyn UnselectedArea>, Held)> {
         let source = held.source;
 
         match self.give_cards(held) {
@@ -236,24 +266,10 @@ impl<'a> UnselectedArea<'a> for UnselectedFoundation<'a> {
             MoveResult::Unmoved(held, error) => MoveResult::Unmoved((self, held), error),
         }
     }
-
-    fn as_area<'b>(&'b self) -> &'b dyn Area<'a>
-    where
-        'a: 'b,
-    {
-        self
-    }
-
-    fn as_area_mut<'b>(&'b mut self) -> &'b mut dyn Area<'a>
-    where
-        'a: 'b,
-    {
-        self
-    }
 }
 
-impl<'a> SelectedArea<'a> for SelectedFoundation<'a> {
-    fn deselect(mut self: Box<Self>) -> (Box<dyn UnselectedArea<'a> + 'a>, Option<Held>) {
+impl SelectedArea for SelectedFoundation {
+    fn deselect(mut self: Box<Self>) -> (Box<dyn UnselectedArea>, Option<Held>) {
         let held = if let Some(source) = self.selection.held_from {
             // Our selection size is implicitly one
             Some(self.take_cards(1, source))
@@ -277,7 +293,7 @@ impl<'a> SelectedArea<'a> for SelectedFoundation<'a> {
     }
 
     fn pick_up(&mut self) -> Result {
-        if self.settings.take_from_foundation {
+        if self.take_from_foundation {
             self.selection.held_from = Some(self.id());
         }
 
@@ -304,19 +320,5 @@ impl<'a> SelectedArea<'a> for SelectedFoundation<'a> {
 
     fn held_from(&self) -> Option<AreaId> {
         self.selection.held_from
-    }
-
-    fn as_area<'b>(&'b self) -> &'b dyn Area<'a>
-    where
-        'a: 'b,
-    {
-        self
-    }
-
-    fn as_area_mut<'b>(&'b mut self) -> &'b mut dyn Area<'a>
-    where
-        'a: 'b,
-    {
-        self
     }
 }

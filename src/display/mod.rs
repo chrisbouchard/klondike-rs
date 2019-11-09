@@ -11,12 +11,14 @@ pub mod geometry;
 pub mod help;
 pub mod selector;
 pub mod stack;
+pub mod win;
 
 #[derive(Clone, Copy, Debug, Hash, Eq, PartialEq)]
 pub enum DisplayState {
     Playing,
     HelpMessageOpen,
     Quitting,
+    WinMessageOpen,
 }
 
 pub trait Widget: fmt::Display {

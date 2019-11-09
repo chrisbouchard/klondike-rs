@@ -39,26 +39,26 @@ pub type Result<T> = ::std::result::Result<T, Error>;
 /// Our implementation uses a zipper data structure. The selected_area is the zipper head, and the
 /// before_areas and after_areas lists function as stacks; we pop areas back and forth to move the
 /// selection back and forth.
-pub struct AreaList<'a> {
+pub struct AreaList {
     /// Map from area id to the index of the area in the list
     area_ids: HashMap<AreaId, usize>,
     /// The list of areas before the selected area
-    before_areas: Vec<Box<dyn UnselectedArea<'a> + 'a>>,
+    before_areas: Vec<Box<dyn UnselectedArea>>,
     /// The selected area and head of the zipper. Empty if either the list is empty, or we are
     /// currently moving the selection.
-    selected_area: Option<Box<dyn SelectedArea<'a> + 'a>>,
+    selected_area: Option<Box<dyn SelectedArea>>,
     /// The list of areas after the selected area. This list is kept in reverse order so we can
     /// efficiently push and pop to move left and right.
-    after_areas: Vec<Box<dyn UnselectedArea<'a> + 'a>>,
+    after_areas: Vec<Box<dyn UnselectedArea>>,
 }
 
 // This list is always non-empty
 #[allow(clippy::len_without_is_empty)]
-impl<'a> AreaList<'a> {
-    pub fn new<T, I>(areas: T) -> Result<AreaList<'a>>
+impl AreaList {
+    pub fn new<T, I>(areas: T) -> Result<AreaList>
     where
-        T: IntoIterator<Item = Box<dyn UnselectedArea<'a> + 'a>, IntoIter = I>,
-        I: Iterator<Item = Box<dyn UnselectedArea<'a> + 'a>>,
+        T: IntoIterator<Item = Box<dyn UnselectedArea>, IntoIter = I>,
+        I: Iterator<Item = Box<dyn UnselectedArea>>,
     {
         // First collect up the incoming areas into a Vec. This will become after_areas later.
         let mut areas = areas.into_iter().collect::<Vec<_>>();
@@ -130,7 +130,7 @@ impl<'a> AreaList<'a> {
         self.before_areas.len() + self.after_areas.len() + 1
     }
 
-    pub fn get_by_index(&self, index: usize) -> Result<&dyn Area<'a>> {
+    pub fn get_by_index(&self, index: usize) -> Result<&dyn Area> {
         let selected_index = self
             .selected_area
             .as_ref()
@@ -153,7 +153,7 @@ impl<'a> AreaList<'a> {
         }
     }
 
-    pub fn get_by_index_mut(&mut self, index: usize) -> Result<&mut dyn Area<'a>> {
+    pub fn get_by_index_mut(&mut self, index: usize) -> Result<&mut dyn Area> {
         let selected_index = self
             .selected_area
             .as_ref()
@@ -176,24 +176,24 @@ impl<'a> AreaList<'a> {
         }
     }
 
-    pub fn get_by_area_id(&self, area_id: AreaId) -> Result<&dyn Area<'a>> {
+    pub fn get_by_area_id(&self, area_id: AreaId) -> Result<&dyn Area> {
         let index = self.get_index(area_id)?;
         self.get_by_index(index)
     }
 
-    pub fn get_by_area_id_mut(&mut self, area_id: AreaId) -> Result<&mut dyn Area<'a>> {
+    pub fn get_by_area_id_mut(&mut self, area_id: AreaId) -> Result<&mut dyn Area> {
         let index = self.get_index(area_id)?;
         self.get_by_index_mut(index)
     }
 
-    pub fn selected(&self) -> &dyn SelectedArea<'a> {
+    pub fn selected(&self) -> &dyn SelectedArea {
         self.selected_area
             .as_ref()
             .expect("Area list currently has no selected area")
             .as_ref()
     }
 
-    pub fn selected_mut(&mut self) -> &mut dyn SelectedArea<'a> {
+    pub fn selected_mut(&mut self) -> &mut dyn SelectedArea {
         self.selected_area
             .as_mut()
             .expect("Area list currently has no selected area")
@@ -205,10 +205,7 @@ impl<'a> AreaList<'a> {
     }
 
     #[allow(clippy::redundant_closure)]
-    pub fn iter<'b>(&'b self) -> impl Iterator<Item = &'b dyn Area<'a>> + 'b
-    where
-        'a: 'b,
-    {
+    pub fn iter<'b>(&'b self) -> impl Iterator<Item = &'b dyn Area> + 'b {
         let before_iter = self.before_areas.iter().map(|area| area.as_area());
         let after_iter = self.after_areas.iter().map(|area| area.as_area()).rev();
 
@@ -218,10 +215,7 @@ impl<'a> AreaList<'a> {
     }
 
     #[allow(clippy::redundant_closure)]
-    pub fn iter_left_from_selection<'b>(&'b self) -> impl Iterator<Item = &'b dyn Area<'a>> + 'b
-    where
-        'a: 'b,
-    {
+    pub fn iter_left_from_selection<'b>(&'b self) -> impl Iterator<Item = &'b dyn Area> + 'b {
         let before_iter = self.before_areas.iter().map(|area| area.as_area()).rev();
         let after_iter = self.after_areas.iter().map(|area| area.as_area());
 
@@ -231,10 +225,7 @@ impl<'a> AreaList<'a> {
     }
 
     #[allow(clippy::redundant_closure)]
-    pub fn iter_right_from_selection<'b>(&'b self) -> impl Iterator<Item = &'b dyn Area<'a>> + 'b
-    where
-        'a: 'b,
-    {
+    pub fn iter_right_from_selection<'b>(&'b self) -> impl Iterator<Item = &'b dyn Area> + 'b {
         let before_iter = self.before_areas.iter().map(|area| area.as_area());
         let after_iter = self.after_areas.iter().map(|area| area.as_area()).rev();
 
@@ -408,7 +399,7 @@ impl<'a> AreaList<'a> {
     }
 }
 
-impl<'a> fmt::Debug for AreaList<'a> {
+impl fmt::Debug for AreaList {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         // We don't assume that Areas implement Debug, so we'll just format them as their area ids.
         #[allow(clippy::redundant_closure)]

@@ -89,8 +89,11 @@ pub enum Action {
     Restock,
 }
 
-pub trait Area<'a> {
+pub trait Area {
     fn id(&self) -> AreaId;
+
+    fn is_selected(&self) -> bool;
+    fn is_held(&self) -> bool;
 
     fn give_cards(&mut self, held: Held) -> MoveResult<(), Held>;
     fn take_cards(&mut self, len: usize) -> Held;
@@ -99,27 +102,21 @@ pub trait Area<'a> {
     fn peek_top_card(&self) -> Option<&Card>;
 
     fn as_stack(&self) -> Stack;
+
+    fn as_area(&self) -> &dyn Area;
+    fn as_area_mut(&mut self) -> &mut dyn Area;
 }
 
-pub trait UnselectedArea<'a>: Area<'a> {
-    fn select(
-        self: Box<Self>,
-    ) -> MoveResult<Box<dyn SelectedArea<'a> + 'a>, Box<dyn UnselectedArea<'a> + 'a>>;
+pub trait UnselectedArea: Area {
+    fn select(self: Box<Self>) -> MoveResult<Box<dyn SelectedArea>, Box<dyn UnselectedArea>>;
     fn select_with_held(
         self: Box<Self>,
         held: Held,
-    ) -> MoveResult<Box<dyn SelectedArea<'a> + 'a>, (Box<dyn UnselectedArea<'a> + 'a>, Held)>;
-
-    fn as_area<'b>(&'b self) -> &'b dyn Area<'a>
-    where
-        'a: 'b;
-    fn as_area_mut<'b>(&'b mut self) -> &'b mut dyn Area<'a>
-    where
-        'a: 'b;
+    ) -> MoveResult<Box<dyn SelectedArea>, (Box<dyn UnselectedArea>, Held)>;
 }
 
-pub trait SelectedArea<'a>: Area<'a> {
-    fn deselect(self: Box<Self>) -> (Box<dyn UnselectedArea<'a> + 'a>, Option<Held>);
+pub trait SelectedArea: Area {
+    fn deselect(self: Box<Self>) -> (Box<dyn UnselectedArea>, Option<Held>);
 
     fn activate(&mut self) -> Result<Option<Action>>;
     fn pick_up(&mut self) -> Result;
@@ -128,21 +125,14 @@ pub trait SelectedArea<'a>: Area<'a> {
     fn select_less(&mut self) -> Result;
 
     fn held_from(&self) -> Option<AreaId>;
-
-    fn as_area<'b>(&'b self) -> &'b dyn Area<'a>
-    where
-        'a: 'b;
-    fn as_area_mut<'b>(&'b mut self) -> &'b mut dyn Area<'a>
-    where
-        'a: 'b;
 }
 
-pub struct SelectionMove<'a> {
-    pub selected: Box<dyn SelectedArea<'a> + 'a>,
-    pub unselected: Box<dyn UnselectedArea<'a> + 'a>,
+pub struct SelectionMove {
+    pub selected: Box<dyn SelectedArea>,
+    pub unselected: Box<dyn UnselectedArea>,
 }
 
-impl<'a> fmt::Debug for SelectionMove<'a> {
+impl fmt::Debug for SelectionMove {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.debug_struct("SelectionMove")
             .field("selected", &format_args!("<{:?}>", self.selected.id()))
@@ -152,9 +142,9 @@ impl<'a> fmt::Debug for SelectionMove<'a> {
 }
 
 pub fn move_selection<'a>(
-    source: Box<dyn SelectedArea<'a> + 'a>,
-    target: Box<dyn UnselectedArea<'a> + 'a>,
-) -> MoveResult<SelectionMove<'a>, SelectionMove<'a>> {
+    source: Box<dyn SelectedArea>,
+    target: Box<dyn UnselectedArea>,
+) -> MoveResult<SelectionMove, SelectionMove> {
     let (source_unselected, held) = source.deselect();
 
     if let Some(held) = held {

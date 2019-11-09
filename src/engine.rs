@@ -1,14 +1,21 @@
 //! Module tying together the Klondike model and display.
 
-use snafu::{OptionExt, ResultExt};
+use snafu::ResultExt;
 use std::{collections::HashMap, fmt, io};
+use termion::event::Key;
 
 use crate::{
     display::{
         game::{GameWidget, GameWidgetState},
         geometry, terminal_bounds, DisplayState,
     },
-    model::game::{Action, Game},
+    model::{
+        area::AreaId,
+        dealer::{create_dealer, Dealer},
+        game::{Action, Game},
+        settings::GameSettings,
+    },
+    utils::tuple::both,
 };
 
 #[derive(Debug, Snafu)]
@@ -25,72 +32,103 @@ pub type Result<T, E = Error> = std::result::Result<T, E>;
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum Update {
     Action(Action),
+    NewGame,
     State(DisplayState),
 }
 
-pub trait InputMapper<I> {
-    fn map_input(&mut self, input: I) -> Option<Update>;
+pub trait InputMapper {
+    fn map_input(&mut self, input: Key) -> Option<Update>;
 }
 
-impl<F, I> InputMapper<I> for F
+impl<F> InputMapper for F
 where
-    F: FnMut(I) -> Option<Update>,
+    F: FnMut(Key) -> Option<Update>,
 {
-    fn map_input(&mut self, input: I) -> Option<Update> {
+    fn map_input(&mut self, input: Key) -> Option<Update> {
         self(input)
     }
 }
 
 pub struct GameEngine<'a, I, O>
 where
-    I: 'a,
+    I: Iterator<Item = Result<Key, io::Error>> + 'a,
     O: io::Write + 'a,
 {
-    game: Game<'a>,
+    settings: &'a GameSettings,
+    dealer: Box<dyn Dealer>,
+    game: Option<Game>,
     state: DisplayState,
-    input_mappers: HashMap<DisplayState, Box<dyn InputMapper<I> + 'a>>,
+    input_mappers: HashMap<DisplayState, Box<dyn InputMapper + 'a>>,
+    input: I,
     output: O,
     game_widget_state: GameWidgetState,
 }
 
 impl<'a, I, O> GameEngine<'a, I, O>
 where
-    I: 'a,
+    I: Iterator<Item = Result<Key, io::Error>> + 'a,
     O: io::Write + 'a,
 {
-    pub fn game(&self) -> &Game<'a> {
-        &self.game
-    }
+    pub fn tick(&mut self) -> Result<bool> {
+        if self.game.is_none() {
+            self.game = Some(self.dealer.deal_game(self.settings));
+            // Refresh to display the initial game state before getting input.
+            self.refresh(&[])?;
+        }
 
-    pub fn state(&self) -> DisplayState {
-        self.state
-    }
+        let update = both(
+            self.input.next().transpose().context(IoError)?,
+            self.input_mappers.get_mut(&self.state),
+        )
+        .and_then(|(input, input_mapper)| input_mapper.map_input(input));
 
-    pub fn handle_input(&mut self, input: I) -> Result<()> {
-        if let Some(input_mapper) = self.input_mappers.get_mut(&self.state) {
-            let update = input_mapper.map_input(input);
+        if let Some(update) = update {
+            let area_ids = match update {
+                Update::Action(action) => {
+                    if let Some(ref mut game) = self.game {
+                        let area_ids = game.apply_action(action);
 
-            let area_ids = update.map(|update| match update {
-                Update::Action(action) => self.game.apply_action(action),
+                        if game.is_win() {
+                            // Refresh first to display the winning game state.
+                            self.refresh(&area_ids)?;
+                            self.state = DisplayState::WinMessageOpen;
+                        }
+
+                        area_ids
+                    } else {
+                        vec![]
+                    }
+                }
+                Update::NewGame => {
+                    self.game = None;
+                    self.state = DisplayState::Playing;
+                    vec![]
+                }
                 Update::State(state) => {
                     self.state = state;
                     vec![]
                 }
-            });
+            };
 
-            if let Some(area_ids) = area_ids {
-                let terminal_size = terminal_bounds().context(IoError)?;
+            self.refresh(&area_ids)?;
+        }
 
-                let widget = GameWidget {
-                    area_ids,
-                    bounds: geometry::Rect::from_size(terminal_size),
-                    game: &self.game,
-                    display_state: self.state,
-                    widget_state: &self.game_widget_state,
-                };
-                write!(self.output, "{}", widget).context(IoError)?;
-                self.output.flush().context(IoError)?;
-            }
+        Ok(self.state != DisplayState::Quitting)
+    }
+
+    fn refresh(&mut self, area_ids: &[AreaId]) -> Result<()> {
+        if let Some(ref game) = self.game {
+            let terminal_size = terminal_bounds().context(IoError)?;
+
+            let widget = GameWidget {
+                area_ids,
+                bounds: geometry::Rect::from_size(terminal_size),
+                game,
+                display_state: self.state,
+                widget_state: &self.game_widget_state,
+            };
+            write!(self.output, "{}", widget).context(IoError)?;
+            self.output.flush().context(IoError)?;
         }
 
         Ok(())
@@ -99,7 +137,7 @@ where
 
 impl<'a, I, O> fmt::Debug for GameEngine<'a, I, O>
 where
-    I: 'a,
+    I: Iterator<Item = Result<Key, io::Error>> + 'a,
     O: io::Write + 'a,
 {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
@@ -110,66 +148,53 @@ where
     }
 }
 
-pub struct GameEngineBuilder<'a, I, O> {
-    game: Game<'a>,
+pub struct GameEngineBuilder<'a, I, O>
+where
+    I: IntoIterator<Item = Result<Key, io::Error>> + 'a,
+    O: io::Write + 'a,
+{
+    settings: &'a GameSettings,
     state: DisplayState,
-    input_mappers: HashMap<DisplayState, Box<dyn InputMapper<I> + 'a>>,
-    output: Option<O>,
+    input_mappers: HashMap<DisplayState, Box<dyn InputMapper + 'a>>,
+    input: I,
+    output: O,
 }
 
 impl<'a, I, O> GameEngineBuilder<'a, I, O>
 where
-    I: 'a,
+    I: IntoIterator<Item = Result<Key, io::Error>> + 'a,
     O: io::Write + 'a,
 {
-    pub fn playing(game: Game<'a>) -> Self {
+    pub fn builder(settings: &'a GameSettings, input: I, output: O) -> Self {
         GameEngineBuilder {
-            game,
+            settings,
             state: DisplayState::Playing,
             input_mappers: HashMap::new(),
-            output: None,
+            input,
+            output,
         }
     }
 
     pub fn input_mapper<M>(mut self, state: DisplayState, input_mapper: M) -> Self
     where
-        M: InputMapper<I> + 'a,
+        M: InputMapper + 'a,
     {
         let _ = self.input_mappers.insert(state, Box::new(input_mapper));
         self
     }
 
-    pub fn output(mut self, output: O) -> Self {
-        self.output = Some(output);
-        self
-    }
-
-    pub fn start(self) -> Result<GameEngine<'a, I, O>> {
-        let game = self.game;
-        let mut output = self.output.context(GameEngineBuilderError {
-            message: "Required field output undefined",
-        })?;
+    pub fn start(self) -> Result<GameEngine<'a, I::IntoIter, O>> {
+        let dealer = create_dealer(self.settings.dealer);
         let game_widget_state = GameWidgetState::default();
 
-        {
-            let terminal_size = terminal_bounds().context(IoError)?;
-
-            let widget = GameWidget {
-                area_ids: vec![],
-                bounds: geometry::Rect::from_size(terminal_size),
-                game: &game,
-                display_state: self.state,
-                widget_state: &game_widget_state,
-            };
-            write!(output, "{}", widget).context(IoError)?;
-            output.flush().context(IoError)?;
-        }
-
         Ok(GameEngine {
-            game,
+            settings: self.settings,
+            dealer,
+            game: None,
             state: self.state,
             input_mappers: self.input_mappers,
-            output,
+            input: self.input.into_iter(),
+            output: self.output,
             game_widget_state,
         })
     }
@@ -177,12 +202,12 @@ where
 
 impl<'a, I, O> fmt::Debug for GameEngineBuilder<'a, I, O>
 where
-    I: 'a,
+    I: IntoIterator<Item = Result<Key, io::Error>> + 'a,
     O: io::Write + 'a,
 {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.debug_struct("GameEngineBuilder")
-            .field("game", &self.game)
+            .field("settings", &self.settings)
             .field("state", &self.state)
             .finish()
     }

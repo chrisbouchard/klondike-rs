@@ -1,77 +1,45 @@
 use std::borrow::Borrow;
 
 use super::{
-    area::{
-        foundation::UnselectedFoundation, stock::UnselectedStock, tableaux::UnselectedTableaux,
-        talon::UnselectedTalon, Area, AreaId, UnselectedArea,
-    },
+    area::{Area, AreaId},
     area_list::AreaList,
     card::{Rank, Suit},
-    deck::Deck,
-    settings::GameSettings,
     stack::Stack,
 };
 
 #[derive(Debug)]
-pub struct Game<'a> {
-    areas: AreaList<'a>,
-    last_area: AreaId,
-    settings: &'a GameSettings,
+pub struct Game {
+    pub areas: AreaList,
+    pub last_area: AreaId,
 }
 
-impl<'a> Game<'a> {
-    pub fn new<'d>(deck: &'d mut Deck, settings: &'a GameSettings) -> Game<'a> {
-        let mut tableaux = settings
-            .tableaux_indices()
-            .map(|index| {
-                let cards = deck.deal(index as usize + 1);
-                UnselectedTableaux::create(index, 1, cards, settings)
-            })
-            .collect::<Vec<_>>();
-
-        let stock = {
-            let cards = deck.deal_rest();
-            UnselectedStock::create(cards, settings)
-        };
-
-        let talon = UnselectedTalon::create(vec![], 0, settings);
-
-        let mut foundation = Suit::values()
-            .map(|index| UnselectedFoundation::create(index, vec![], settings))
-            .collect::<Vec<_>>();
-
-        let mut areas: Vec<Box<dyn UnselectedArea>> = vec![stock, talon];
-        areas.append(&mut foundation);
-        areas.append(&mut tableaux);
-
-        let areas = AreaList::new(areas).expect("Unable to create AreaList");
+impl Game {
+    pub fn new(areas: AreaList) -> Game {
         let last_area = areas.selected().id();
 
-        Game {
-            areas,
-            last_area,
-            settings,
-        }
+        Game { areas, last_area }
     }
 
     pub fn is_win(&self) -> bool {
-        Suit::values().all(|suit| {
-            self.areas
-                .get_by_area_id(AreaId::Foundation(suit))
-                // TODO: Replace unwrap with proper error
-                .unwrap()
-                .peek_top_card()
-                .map_or(false, |suit| suit.rank == Rank::King)
-        })
+        Suit::values()
+            .flat_map(|suit| self.areas.get_by_area_id(AreaId::Foundation(suit)))
+            .all(|foundation| {
+                let held = foundation.is_held();
+                let complete = foundation
+                    .peek_top_card()
+                    .map(|suit| suit.rank == Rank::King)
+                    .unwrap_or_default();
+
+                !held && complete
+            })
     }
 
     pub fn area_ids(&self) -> Vec<AreaId> {
         self.areas.area_ids()
     }
 
-    pub fn stack(&self, area_id: AreaId) -> Stack {
-        // TODO: Replace unwrap with proper error
-        self.areas.get_by_area_id(area_id).unwrap().as_stack()
+    pub fn stack(&self, area_id: AreaId) -> Option<Stack> {
+        self.areas.get_by_area_id(area_id).ok().map(Area::as_stack)
     }
 
     pub fn apply_action(&mut self, action: Action) -> Vec<AreaId> {

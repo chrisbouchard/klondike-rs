@@ -2,7 +2,6 @@ use crate::{
     model::{
         area::{AlreadyHeld, MaxSelection, MinSelection, NothingHeld},
         card::{Card, Rank},
-        settings::GameSettings,
         stack::{Orientation, Stack, StackDetails, StackSelection},
     },
     utils::vec::SplitOffBounded,
@@ -20,18 +19,17 @@ pub struct Selection {
 }
 
 #[derive(Debug)]
-pub struct Tableaux<'a, S> {
+pub struct Tableaux<S> {
     index: u8,
     cards: Vec<Card>,
     revealed_len: usize,
-    settings: &'a GameSettings,
     selection: S,
 }
 
-pub type UnselectedTableaux<'a> = Tableaux<'a, ()>;
-pub type SelectedTableaux<'a> = Tableaux<'a, Selection>;
+pub type UnselectedTableaux = Tableaux<()>;
+pub type SelectedTableaux = Tableaux<Selection>;
 
-impl<'a, S> Tableaux<'a, S> {
+impl<S> Tableaux<S> {
     fn id(&self) -> AreaId {
         AreaId::Tableaux(self.index)
     }
@@ -104,37 +102,38 @@ impl<'a, S> Tableaux<'a, S> {
         }
     }
 
-    fn with_selection<T>(self, selection: T) -> Tableaux<'a, T> {
+    fn with_selection<T>(self, selection: T) -> Tableaux<T> {
         Tableaux {
             index: self.index,
             cards: self.cards,
             revealed_len: self.revealed_len,
-            settings: self.settings,
             selection,
         }
     }
 }
 
-impl<'a> UnselectedTableaux<'a> {
-    pub fn create(
-        index: u8,
-        revealed_len: usize,
-        cards: Vec<Card>,
-        settings: &'a GameSettings,
-    ) -> Box<dyn UnselectedArea<'a> + 'a> {
+impl UnselectedTableaux {
+    pub fn create(index: u8, revealed_len: usize, cards: Vec<Card>) -> Box<dyn UnselectedArea> {
         Box::new(Tableaux {
             index,
             cards,
             revealed_len,
-            settings,
             selection: (),
         })
     }
 }
 
-impl<'a> Area<'a> for UnselectedTableaux<'a> {
+impl Area for UnselectedTableaux {
     fn id(&self) -> AreaId {
         Tableaux::id(self)
+    }
+
+    fn is_selected(&self) -> bool {
+        false
+    }
+
+    fn is_held(&self) -> bool {
+        false
     }
 
     fn give_cards(&mut self, held: Held) -> MoveResult<(), Held> {
@@ -150,17 +149,33 @@ impl<'a> Area<'a> for UnselectedTableaux<'a> {
     }
 
     fn peek_top_card(&self) -> Option<&Card> {
-        self.cards.first()
+        self.cards.last()
     }
 
     fn as_stack(&self) -> Stack {
         self.as_stack(None)
     }
+
+    fn as_area(&self) -> &dyn Area {
+        self
+    }
+
+    fn as_area_mut(&mut self) -> &mut dyn Area {
+        self
+    }
 }
 
-impl<'a> Area<'a> for SelectedTableaux<'a> {
+impl Area for SelectedTableaux {
     fn id(&self) -> AreaId {
         Tableaux::id(self)
+    }
+
+    fn is_selected(&self) -> bool {
+        true
+    }
+
+    fn is_held(&self) -> bool {
+        self.selection.held_from.is_some()
     }
 
     fn give_cards(&mut self, held: Held) -> MoveResult<(), Held> {
@@ -185,18 +200,24 @@ impl<'a> Area<'a> for SelectedTableaux<'a> {
     }
 
     fn peek_top_card(&self) -> Option<&Card> {
-        self.cards.first()
+        self.cards.last()
     }
 
     fn as_stack(&self) -> Stack {
         self.as_stack(Some(self.selection))
     }
+
+    fn as_area(&self) -> &dyn Area {
+        self
+    }
+
+    fn as_area_mut(&mut self) -> &mut dyn Area {
+        self
+    }
 }
 
-impl<'a> UnselectedArea<'a> for UnselectedTableaux<'a> {
-    fn select(
-        self: Box<Self>,
-    ) -> MoveResult<Box<dyn SelectedArea<'a> + 'a>, Box<dyn UnselectedArea<'a> + 'a>> {
+impl UnselectedArea for UnselectedTableaux {
+    fn select(self: Box<Self>) -> MoveResult<Box<dyn SelectedArea>, Box<dyn UnselectedArea>> {
         if !self.cards.is_empty() {
             MoveResult::Moved(Box::new(self.with_selection(Selection {
                 held_from: None,
@@ -213,7 +234,7 @@ impl<'a> UnselectedArea<'a> for UnselectedTableaux<'a> {
     fn select_with_held(
         mut self: Box<Self>,
         held: Held,
-    ) -> MoveResult<Box<dyn SelectedArea<'a> + 'a>, (Box<dyn UnselectedArea<'a> + 'a>, Held)> {
+    ) -> MoveResult<Box<dyn SelectedArea>, (Box<dyn UnselectedArea>, Held)> {
         let source = held.source;
         let len = held.cards.len();
 
@@ -225,24 +246,10 @@ impl<'a> UnselectedArea<'a> for UnselectedTableaux<'a> {
             MoveResult::Unmoved(held, error) => MoveResult::Unmoved((self, held), error),
         }
     }
-
-    fn as_area<'b>(&'b self) -> &'b dyn Area<'a>
-    where
-        'a: 'b,
-    {
-        self
-    }
-
-    fn as_area_mut<'b>(&'b mut self) -> &'b mut dyn Area<'a>
-    where
-        'a: 'b,
-    {
-        self
-    }
 }
 
-impl<'a> SelectedArea<'a> for SelectedTableaux<'a> {
-    fn deselect(mut self: Box<Self>) -> (Box<dyn UnselectedArea<'a> + 'a>, Option<Held>) {
+impl SelectedArea for SelectedTableaux {
+    fn deselect(mut self: Box<Self>) -> (Box<dyn UnselectedArea>, Option<Held>) {
         let held = if let Some(source) = self.selection.held_from {
             Some(self.take_cards(self.selection.len, source))
         } else {
@@ -313,19 +320,5 @@ impl<'a> SelectedArea<'a> for SelectedTableaux<'a> {
 
     fn held_from(&self) -> Option<AreaId> {
         self.selection.held_from
-    }
-
-    fn as_area<'b>(&'b self) -> &'b dyn Area<'a>
-    where
-        'a: 'b,
-    {
-        self
-    }
-
-    fn as_area_mut<'b>(&'b mut self) -> &'b mut dyn Area<'a>
-    where
-        'a: 'b,
-    {
-        self
     }
 }

@@ -5,7 +5,7 @@ use crate::model::{AreaId, Game, Suit};
 
 use super::{
     blank::BlankWidget, card::CARD_SIZE, geometry, help::HelpWidget, stack::StackWidget,
-    DisplayState, Widget,
+    win::WinWidget, DisplayState, Widget,
 };
 
 lazy_static! {
@@ -29,30 +29,21 @@ pub struct GameWidgetState {
 }
 
 #[derive(Debug)]
-pub struct GameWidget<'a, 'g>
-where
-    'g: 'a,
-{
-    pub area_ids: Vec<AreaId>,
+pub struct GameWidget<'a> {
+    pub area_ids: &'a [AreaId],
     pub bounds: geometry::Rect<u16>,
-    pub game: &'a Game<'g>,
+    pub game: &'a Game,
     pub display_state: DisplayState,
     pub widget_state: &'a GameWidgetState,
 }
 
-impl<'a, 'g> Widget for GameWidget<'a, 'g>
-where
-    'g: 'a,
-{
+impl<'a> Widget for GameWidget<'a> {
     fn bounds(&self) -> geometry::Rect<u16> {
         self.bounds
     }
 }
 
-impl<'a, 'g> fmt::Display for GameWidget<'a, 'g>
-where
-    'g: 'a,
-{
+impl<'a> fmt::Display for GameWidget<'a> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         let full_refresh_required = self.is_full_refresh_required();
 
@@ -66,18 +57,23 @@ where
 
         match self.display_state {
             DisplayState::Playing => {
+                let game_area_ids = self.game.area_ids();
+
                 let area_ids = if full_refresh_required {
-                    self.game.area_ids()
+                    &game_area_ids
                 } else {
-                    self.area_ids.clone()
+                    self.area_ids
                 };
 
                 for area_id in area_ids {
-                    self.write_area(area_id, fmt)?;
+                    self.write_area(*area_id, fmt)?;
                 }
             }
             DisplayState::HelpMessageOpen => {
                 self.write_help(fmt)?;
+            }
+            DisplayState::WinMessageOpen => {
+                self.write_win(fmt)?;
             }
             _ => {}
         }
@@ -90,10 +86,7 @@ where
     }
 }
 
-impl<'a, 'g> GameWidget<'a, 'g>
-where
-    'g: 'a,
-{
+impl<'a> GameWidget<'a> {
     fn is_full_refresh_required(&self) -> bool {
         let state = self.widget_state.cell.borrow();
 
@@ -103,10 +96,19 @@ where
             .unwrap_or(true);
         let display_state_changed = state
             .prev_display_state
-            .map(|prev_display_state| prev_display_state != self.display_state)
+            .map(|prev_display_state| {
+                prev_display_state != self.display_state && self.state_requires_refresh()
+            })
             .unwrap_or(true);
 
         bounds_changed || display_state_changed
+    }
+
+    fn state_requires_refresh(&self) -> bool {
+        match self.display_state {
+            DisplayState::WinMessageOpen => false,
+            _ => true,
+        }
     }
 
     fn write_area(&self, area_id: AreaId, fmt: &mut fmt::Formatter) -> fmt::Result {
@@ -124,24 +126,36 @@ where
             write!(fmt, "{}", blank_widget)?;
         }
 
-        let stack = self.game.stack(area_id);
+        if let Some(stack) = self.game.stack(area_id) {
+            let stack_widget = StackWidget {
+                bounds,
+                stack: &stack,
+            };
 
-        let stack_widget = StackWidget {
-            bounds,
-            stack: &stack,
-        };
+            let new_bounds = stack_widget.bounds();
+            write!(fmt, "{}", stack_widget)?;
 
-        let new_bounds = stack_widget.bounds();
-        write!(fmt, "{}", stack_widget)?;
-
-        // Ignore return value, because we don't need the old value.
-        let _ = bounds_cache.insert(area_id, new_bounds);
+            // Ignore return value, because we don't need the old value.
+            bounds_cache.insert(area_id, new_bounds);
+        } else {
+            bounds_cache.remove(&area_id);
+        }
 
         Ok(())
     }
 
     fn write_help(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         let widget = HelpWidget {
+            bounds: self.bounds,
+        };
+
+        write!(fmt, "{}", widget)?;
+
+        Ok(())
+    }
+
+    fn write_win(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        let widget = WinWidget {
             bounds: self.bounds,
         };
 
