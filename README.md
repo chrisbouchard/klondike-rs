@@ -1,9 +1,14 @@
 # klondike-rs
 
+[![Crates.io][crate-badge]][crate]
+
 CLI Klondike Solitaire written in Rust
 
 ![Default State](https://i.imgur.com/QMd6Gbw.png)
 ![Gameplay](https://i.imgur.com/m6gs2F1.png)
+
+[crate-badge]: https://img.shields.io/crates/v/klondike-rs
+[crate]: https://crates.io/crates/klondike-rs
 
 
 ## Running
