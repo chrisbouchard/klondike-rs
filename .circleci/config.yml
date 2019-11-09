@@ -3,7 +3,7 @@ version: 2.1
 commands:
   rustup-nightly:
     steps:
-      -run:
+      - run:
          name: Install Rust Nightly
          command: |
            # Install nightly toolchain
