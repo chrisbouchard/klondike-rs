@@ -126,18 +126,20 @@ impl<'a> GameWidget<'a> {
             write!(fmt, "{}", blank_widget)?;
         }
 
-        let stack = self.game.stack(area_id);
+        if let Some(stack) = self.game.stack(area_id) {
+            let stack_widget = StackWidget {
+                bounds,
+                stack: &stack,
+            };
 
-        let stack_widget = StackWidget {
-            bounds,
-            stack: &stack,
-        };
+            let new_bounds = stack_widget.bounds();
+            write!(fmt, "{}", stack_widget)?;
 
-        let new_bounds = stack_widget.bounds();
-        write!(fmt, "{}", stack_widget)?;
-
-        // Ignore return value, because we don't need the old value.
-        bounds_cache.insert(area_id, new_bounds);
+            // Ignore return value, because we don't need the old value.
+            bounds_cache.insert(area_id, new_bounds);
+        } else {
+            bounds_cache.remove(&area_id);
+        }
 
         Ok(())
     }

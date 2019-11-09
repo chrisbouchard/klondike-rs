@@ -38,9 +38,8 @@ impl Game {
         self.areas.area_ids()
     }
 
-    pub fn stack(&self, area_id: AreaId) -> Stack {
-        // TODO: Replace unwrap with proper error
-        self.areas.get_by_area_id(area_id).unwrap().as_stack()
+    pub fn stack(&self, area_id: AreaId) -> Option<Stack> {
+        self.areas.get_by_area_id(area_id).ok().map(Area::as_stack)
     }
 
     pub fn apply_action(&mut self, action: Action) -> Vec<AreaId> {
