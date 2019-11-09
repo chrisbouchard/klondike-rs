@@ -6,33 +6,33 @@ executors:
       - image: liuchong/rustup:1.39.0
 
 commands:
-  setup-sccache:
+  setup-cargo-sweep:
     steps:
       - run:
-          name: Install sccache
-          command: |
-            cargo install sccache
-            # This configures Rust to use sccache.
-            echo 'export "RUSTC_WRAPPER"="sccache"' >> $BASH_ENV
-            # This is the maximum space sccache cache will use on disk.
-            echo 'export "SCCACHE_CACHE_SIZE"="1G"' >> $BASH_ENV
-            sccache --version
-  restore-sccache-cache:
+          name: Install cargo-sweep
+          command: cargo install cargo-sweep
+
+  restore-and-sweep-cargo-cache:
     steps:
       - restore_cache:
-          name: Restore sccache cache
-          key: sccache-cache-{{ .Environment.RUSTUP_TOOLCHAIN }}-{{ arch }}-{{ .Environment.CIRCLE_JOB }}
-  save-sccache-cache:
+          name: Restore Cargo Cache
+          keys:
+            - v1-cargo-deps-{{ checksum "Cargo.lock" }}
+            - v1-cargo-deps-
+      - run:
+          name: Install cargo-sweep
+          command: cargo install cargo-sweep
+      - run:
+          name: Sweep Dependencies
+          command: cargo sweep -t 30
+
+  save-cargo-cache:
     steps:
       - save_cache:
-          name: Save sccache cache
-          # We use {{ epoch }} to always upload a fresh cache:
-          # Of course, restore_cache will not find this exact key,
-          # but it will fall back to the closest key (aka the most recent).
-          # See https://discuss.circleci.com/t/add-mechanism-to-update-existing-cache-key/9014/13
-          key: sccache-cache-{{ .Environment.RUSTUP_TOOLCHAIN }}-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ epoch }}
+          key: v1-cargo-deps-{{ checksum "Cargo.lock" }}-{{ epoch }}
           paths:
-            - "~/.cache/sccache"
+            - .cargo
+            - target
 
 jobs:
   rust-tests-stable:
@@ -41,10 +41,9 @@ jobs:
     executor: rustup-executor
     steps:
       - checkout
-      - setup-sccache
-      - restore-sccache-cache
+      - restore-and-sweep-cargo-cache
       - run: cargo test
-      - save-sccache-cache
+      - save-cargo-cache
 
   rust-tests-nightly:
     description: |
@@ -54,10 +53,9 @@ jobs:
       RUSTUP_TOOLCHAIN: nightly
     steps:
       - checkout
-      - setup-sccache
-      - restore-sccache-cache
+      - restore-and-sweep-cargo-cache
       - run: cargo test
-      - save-sccache-cache
+      - save-cargo-cache
 
 workflows:
   version: 2
