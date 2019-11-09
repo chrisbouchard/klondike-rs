@@ -1,5 +1,7 @@
 use std::{cmp::min, convert::TryFrom};
 
+use log::debug;
+
 use crate::display::{
     card::{CardWidget, CardWidgetMode, CARD_SIZE},
     geometry,

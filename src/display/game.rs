@@ -1,4 +1,6 @@
 use std::{cell::RefCell, collections::HashMap, convert::TryFrom, fmt};
+
+use log::info;
 use termion::clear;
 
 use crate::model::{AreaId, Game, Suit};

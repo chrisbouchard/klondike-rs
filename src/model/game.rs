@@ -1,5 +1,7 @@
 use std::borrow::Borrow;
 
+use log::debug;
+
 use super::{
     area::{Area, AreaId},
     area_list::AreaList,

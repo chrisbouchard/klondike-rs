@@ -2,6 +2,7 @@
 
 use std::fmt;
 
+use log::debug;
 use termion::{color, cursor};
 
 use super::{geometry, Widget};
