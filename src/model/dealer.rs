@@ -4,7 +4,6 @@ use num_traits::ToPrimitive;
 use rand::{seq::SliceRandom, thread_rng};
 
 use super::{area, area_list, settings, Card, Game, Rank, Suit};
-use crate::utils::vec::SplitOffBounded;
 
 pub trait Dealer {
     fn deal_game(&self, settings: &settings::GameSettings) -> Game;
