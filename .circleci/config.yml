@@ -1,19 +1,11 @@
 version: 2.1
 
-commands:
-  setup-rustup-toolchain:
-    parameters:
-      toolchain:
-        description: Rustup Toolchain Name
-        type: string
-    steps:
-      - run:
-         name: |
-           Setup Rust Toolchain: << parameters.toolchain >>
-         command: |
-           rustup toolchain install << parameters.toolchain >>
-           echo 'export "RUSTUP_TOOLCHAIN"="<< parameters.toolchain >>"' >> $BASH_ENV
+executors:
+  rustup-executor:
+    docker:
+      - image: liuchong/rustup:1.39.0
 
+commands:
   setup-sccache:
     steps:
       - run:
@@ -43,19 +35,25 @@ commands:
             - "~/.cache/sccache"
 
 jobs:
-  rust-tests:
-    parameters:
-      toolchain:
-        description: Rustup Toolchain Name
-        type: string
+  rust-tests-stable:
     description: |
-      Run Cargo Tests: << parameters.toolchain >>
-    docker:
-      - image: liuchong/rustup
+      Run Cargo Tests: Stable
+    executor: rustup-executor
     steps:
       - checkout
-      - setup-rustup-toolchain:
-          toolchain: "<< parameters.toolchain >>"
+      - setup-sccache
+      - restore-sccache-cache
+      - run: cargo test
+      - save-sccache-cache
+
+  rust-tests-nightly:
+    description: |
+      Run Cargo Tests: Nightly
+    executor: rustup-executor
+    environment:
+      RUSTUP_TOOLCHAIN: nightly
+    steps:
+      - checkout
       - setup-sccache
       - restore-sccache-cache
       - run: cargo test
@@ -65,8 +63,6 @@ workflows:
   version: 2
   run-tests:
     jobs:
-      - rust-tests:
-          toolchain: stable
-      - rust-tests:
-          toolchain: nightly
+      - rust-tests-stable
+      - rust-tests-nightly
 
