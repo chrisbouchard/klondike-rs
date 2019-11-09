@@ -72,7 +72,8 @@ where
     pub fn tick(&mut self) -> Result<bool> {
         if self.game.is_none() {
             self.game = Some(self.dealer.deal_game(self.settings));
-            self.refresh(vec![])?;
+            // Refresh to display the initial game state before getting input.
+            self.refresh(&[])?;
         }
 
         let update = both(
@@ -88,6 +89,8 @@ where
                         let area_ids = game.apply_action(action);
 
                         if game.is_win() {
+                            // Refresh first to display the winning game state.
+                            self.refresh(&area_ids)?;
                             self.state = DisplayState::WinMessageOpen;
                         }
 
@@ -107,13 +110,13 @@ where
                 }
             };
 
-            self.refresh(area_ids)?;
+            self.refresh(&area_ids)?;
         }
 
         Ok(self.state != DisplayState::Quitting)
     }
 
-    fn refresh(&mut self, area_ids: Vec<AreaId>) -> Result<()> {
+    fn refresh(&mut self, area_ids: &[AreaId]) -> Result<()> {
         if let Some(ref game) = self.game {
             let terminal_size = terminal_bounds().context(IoError)?;
 

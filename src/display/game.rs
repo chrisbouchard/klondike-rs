@@ -30,7 +30,7 @@ pub struct GameWidgetState {
 
 #[derive(Debug)]
 pub struct GameWidget<'a> {
-    pub area_ids: Vec<AreaId>,
+    pub area_ids: &'a [AreaId],
     pub bounds: geometry::Rect<u16>,
     pub game: &'a Game,
     pub display_state: DisplayState,
@@ -57,14 +57,16 @@ impl<'a> fmt::Display for GameWidget<'a> {
 
         match self.display_state {
             DisplayState::Playing => {
+                let game_area_ids = self.game.area_ids();
+
                 let area_ids = if full_refresh_required {
-                    self.game.area_ids()
+                    &game_area_ids
                 } else {
-                    self.area_ids.clone()
+                    self.area_ids
                 };
 
                 for area_id in area_ids {
-                    self.write_area(area_id, fmt)?;
+                    self.write_area(*area_id, fmt)?;
                 }
             }
             DisplayState::HelpMessageOpen => {
