@@ -30,8 +30,7 @@ impl Dealer for AutoWinDealer {
         let stock = area::stock::UnselectedStock::create(vec![], settings);
         let talon = area::talon::UnselectedTalon::create(vec![], 0);
 
-        let mut tableaux_areas = settings
-            .tableaux_indices()
+        let mut tableaux_areas = (0..settings.tableaux_len)
             .map(|index| area::tableaux::UnselectedTableaux::create(index, 0, vec![]))
             .collect::<Vec<_>>();
 
@@ -71,23 +70,17 @@ where
         let mut tableaux_areas = {
             let len: usize = settings.tableaux_len.into();
 
-            // Sum of 1 + 2 + ... + tableaux_len
-            let card_count = len * (len + 1) / 2;
-
-            let cards = deck.split_off_bounded(card_count);
-
             let mut piles: Vec<Vec<Card>> = vec![vec![]; len];
-            let mut level = 0;
-            let mut index = 0;
+            let indexes = (0..7).flat_map(|level| level..7);
 
-            for card in cards.into_iter().rev() {
-                piles[index].push(card);
-
-                if index < len - 1 {
-                    index += 1;
+            // Reversed because we want to deal from the "top of the deck", which is actually the
+            // end of the vector. If we did our math right, these two vectors (cards and indexes)
+            // will have the same length.
+            for index in indexes {
+                if let Some(card) = deck.pop() {
+                    piles[index].push(card);
                 } else {
-                    level += 1;
-                    index = level;
+                    break;
                 }
             }
 

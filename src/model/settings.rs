@@ -74,12 +74,6 @@ pub struct GameSettings {
     pub take_from_foundation: bool,
 }
 
-impl GameSettings {
-    pub fn tableaux_indices(&self) -> impl Iterator<Item = u8> {
-        0..self.tableaux_len
-    }
-}
-
 impl Default for GameSettings {
     fn default() -> Self {
         GameSettings {
