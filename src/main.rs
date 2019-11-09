@@ -1,9 +1,6 @@
-#[macro_use]
-extern crate log;
-
 use std::{convert::TryFrom, error::Error, fs};
 
-use log::LevelFilter;
+use log::{info, LevelFilter};
 use num_traits::ToPrimitive;
 use simplelog::{Config, WriteLogger};
 use termion::{event::Key, input::TermRead};
