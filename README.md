@@ -81,7 +81,6 @@ Configuration files are picked up from several locations, depending on your OS:
 This project is still _very_ alpha, but it's at least runnable. Some high-level
 things that still need to happen:
 
-* Check for win, offer to start a new game.
 * Respect configuration regarding color and Unicode.
 * Document all public structs and functions and re-enable `warn(missing_docs)`.
 * Offer more cosmetic configuration, e.g., card backs.
