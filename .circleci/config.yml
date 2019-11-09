@@ -31,7 +31,9 @@ commands:
       - save_cache:
           key: v1-cargo-deps-{{ checksum "Cargo.lock" }}-{{ epoch }}
           paths:
-            - .cargo
+            # Global cargo cache
+            - /root/.cargo
+            # Per-project cache
             - target
 
 jobs:
