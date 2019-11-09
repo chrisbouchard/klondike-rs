@@ -11,7 +11,7 @@ commands:
          name: |
            Setup Rust Toolchain: << parameters.toolchain >>
          command: |
-           rustup toolchain install << paramters.toolchain >>
+           rustup toolchain install << parameters.toolchain >>
            echo 'export "RUSTUP_TOOLCHAIN"="<< parameters.toolchain >>"' >> $BASH_ENV
 
   setup-sccache:
