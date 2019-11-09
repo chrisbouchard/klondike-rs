@@ -21,7 +21,7 @@ commands:
             - v1-cargo-deps-
       - run:
           name: Install cargo-sweep
-          command: cargo install cargo-sweep
+          command: cargo install --force cargo-sweep
       - run:
           name: Sweep Dependencies
           # Sweep dependencies older than 30 days
