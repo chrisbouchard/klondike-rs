@@ -128,6 +128,14 @@ impl Area for UnselectedTableaux {
         Tableaux::id(self)
     }
 
+    fn is_selected(&self) -> bool {
+        false
+    }
+
+    fn is_held(&self) -> bool {
+        false
+    }
+
     fn give_cards(&mut self, held: Held) -> MoveResult<(), Held> {
         Tableaux::give_cards(self, held)
     }
@@ -160,6 +168,14 @@ impl Area for UnselectedTableaux {
 impl Area for SelectedTableaux {
     fn id(&self) -> AreaId {
         Tableaux::id(self)
+    }
+
+    fn is_selected(&self) -> bool {
+        true
+    }
+
+    fn is_held(&self) -> bool {
+        self.selection.held_from.is_some()
     }
 
     fn give_cards(&mut self, held: Held) -> MoveResult<(), Held> {

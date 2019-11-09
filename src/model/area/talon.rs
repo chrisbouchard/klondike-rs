@@ -111,6 +111,14 @@ impl<'a> Area for UnselectedTalon {
         Talon::id(self)
     }
 
+    fn is_selected(&self) -> bool {
+        false
+    }
+
+    fn is_held(&self) -> bool {
+        false
+    }
+
     fn give_cards(&mut self, held: Held) -> MoveResult<(), Held> {
         Talon::give_cards(self, held)
     }
@@ -143,6 +151,14 @@ impl<'a> Area for UnselectedTalon {
 impl Area for SelectedTalon {
     fn id(&self) -> AreaId {
         Talon::id(self)
+    }
+
+    fn is_selected(&self) -> bool {
+        true
+    }
+
+    fn is_held(&self) -> bool {
+        self.selection.held_from.is_some()
     }
 
     fn give_cards(&mut self, held: Held) -> MoveResult<(), Held> {

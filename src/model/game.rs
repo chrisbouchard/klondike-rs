@@ -21,14 +21,17 @@ impl Game {
     }
 
     pub fn is_win(&self) -> bool {
-        Suit::values().all(|suit| {
-            self.areas
-                .get_by_area_id(AreaId::Foundation(suit))
-                // TODO: Replace unwrap with proper error
-                .unwrap()
-                .peek_top_card()
-                .map_or(false, |suit| suit.rank == Rank::King)
-        })
+        Suit::values()
+            .flat_map(|suit| self.areas.get_by_area_id(AreaId::Foundation(suit)))
+            .all(|foundation| {
+                let held = foundation.is_held();
+                let complete = foundation
+                    .peek_top_card()
+                    .map(|suit| suit.rank == Rank::King)
+                    .unwrap_or_default();
+
+                !held && complete
+            })
     }
 
     pub fn area_ids(&self) -> Vec<AreaId> {

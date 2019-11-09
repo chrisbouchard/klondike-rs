@@ -137,7 +137,7 @@ impl<'a> GameWidget<'a> {
         write!(fmt, "{}", stack_widget)?;
 
         // Ignore return value, because we don't need the old value.
-        let _ = bounds_cache.insert(area_id, new_bounds);
+        bounds_cache.insert(area_id, new_bounds);
 
         Ok(())
     }

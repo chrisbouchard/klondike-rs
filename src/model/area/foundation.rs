@@ -159,6 +159,14 @@ impl<'a> Area for UnselectedFoundation {
         Foundation::id(self)
     }
 
+    fn is_selected(&self) -> bool {
+        false
+    }
+
+    fn is_held(&self) -> bool {
+        false
+    }
+
     fn give_cards(&mut self, held: Held) -> MoveResult<(), Held> {
         Foundation::give_cards(self, held)
     }
@@ -191,6 +199,14 @@ impl<'a> Area for UnselectedFoundation {
 impl<'a> Area for SelectedFoundation {
     fn id(&self) -> AreaId {
         Foundation::id(self)
+    }
+
+    fn is_selected(&self) -> bool {
+        true
+    }
+
+    fn is_held(&self) -> bool {
+        self.selection.held_from.is_some()
     }
 
     fn give_cards(&mut self, held: Held) -> MoveResult<(), Held> {

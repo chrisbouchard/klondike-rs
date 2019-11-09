@@ -92,6 +92,9 @@ pub enum Action {
 pub trait Area {
     fn id(&self) -> AreaId;
 
+    fn is_selected(&self) -> bool;
+    fn is_held(&self) -> bool;
+
     fn give_cards(&mut self, held: Held) -> MoveResult<(), Held>;
     fn take_cards(&mut self, len: usize) -> Held;
     fn take_all_cards(&mut self) -> Held;

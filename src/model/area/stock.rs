@@ -104,6 +104,14 @@ impl Area for UnselectedStock {
         Stock::id(self)
     }
 
+    fn is_selected(&self) -> bool {
+        false
+    }
+
+    fn is_held(&self) -> bool {
+        false
+    }
+
     fn give_cards(&mut self, held: Held) -> MoveResult<(), Held> {
         Stock::give_cards(self, held)
     }
@@ -136,6 +144,14 @@ impl Area for UnselectedStock {
 impl Area for SelectedStock {
     fn id(&self) -> AreaId {
         Stock::id(self)
+    }
+
+    fn is_selected(&self) -> bool {
+        true
+    }
+
+    fn is_held(&self) -> bool {
+        false
     }
 
     fn give_cards(&mut self, held: Held) -> MoveResult<(), Held> {
