@@ -24,6 +24,8 @@ commands:
           command: cargo install cargo-sweep
       - run:
           name: Sweep Dependencies
+          # Sweep dependencies older than 30 days
+          # TODO: Is this a reasonable limit?
           command: cargo sweep -t 30
 
   save-cargo-cache:
