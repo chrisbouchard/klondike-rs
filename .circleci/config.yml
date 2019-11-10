@@ -1,40 +1,7 @@
 version: 2.1
 
-executors:
-  rustup-executor:
-    docker:
-      - image: liuchong/rustup:1.39.0
-
-commands:
-  cargo-test:
-    steps:
-      - run: cargo test
-
-  cargo-version:
-    steps:
-      - run:
-          name: Version Information
-          command: |
-            echo -n "Rustup Version: "
-            rustup --version
-            echo -n "Cargo Version: "
-            cargo --version
-
-  restore-cargo-cache:
-    steps:
-      - restore_cache:
-          name: Restore Cargo Cache
-          key: v1-cargo-deps-{{ checksum "Cargo.lock" }}
-
-  save-cargo-cache:
-    steps:
-      - save_cache:
-          key: v1-cargo-deps-{{ checksum "Cargo.lock" }}-{{ epoch }}
-          paths:
-            # Global cargo cache
-            - /root/.cargo
-            # Per-project cache
-            - target
+orbs:
+  rust: glotrade/rust@0.1.3
 
 jobs:
   rust-tests-stable:
@@ -42,24 +9,22 @@ jobs:
       Run Cargo Tests: Stable
     executor: rustup-executor
     steps:
-      - cargo-version
       - checkout
-      - restore-cargo-cache
-      - cargo-test
-      - save-cargo-cache
+      - rust/update_toolchain:
+          toolchain: stable
+      - rust/clippy
+      - rust/test
 
   rust-tests-nightly:
     description: |
       Run Cargo Tests: Nightly
     executor: rustup-executor
-    environment:
-      RUSTUP_TOOLCHAIN: nightly
     steps:
-      - cargo-version
       - checkout
-      - restore-cargo-cache
-      - cargo-test
-      - save-cargo-cache
+      - rust/update_toolchain:
+          toolchain: nightly
+      - rust/clippy
+      - rust/test
 
 workflows:
   version: 2
