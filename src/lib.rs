@@ -1,16 +1,17 @@
 //! Library to implement the Klondike solitaire game
 
 #![warn(
+    clippy::all,
     missing_debug_implementations,
     // TODO: Turn this back on
     // missing_docs,
+    rust_2018_idioms,
     trivial_casts,
     trivial_numeric_casts,
     unused_extern_crates,
     unused_import_braces,
     unused_qualifications
 )]
-#![warn(clippy::all)]
 
 #[macro_use]
 extern crate derive_more;
