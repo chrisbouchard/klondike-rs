@@ -83,7 +83,7 @@ impl FormattedString {
 }
 
 impl fmt::Display for FormattedString {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(fmt, "{}", self.string)
     }
 }

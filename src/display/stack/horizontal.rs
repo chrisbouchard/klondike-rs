@@ -29,7 +29,7 @@ pub fn offsets(_widget: &StackWidget<'_>) -> Offsets {
 }
 
 pub fn card_widget_iter<'a>(
-    widget: &'a StackWidget,
+    widget: &'a StackWidget<'a>,
     offsets: &'a Offsets,
 ) -> impl Iterator<Item = CardWidget<'a>> {
     let face_up_index = widget.stack.details.face_up_index();
@@ -51,7 +51,7 @@ pub fn card_widget_iter<'a>(
     })
 }
 
-pub fn selector_widget(widget: &StackWidget, offsets: &Offsets) -> Option<SelectorWidget> {
+pub fn selector_widget(widget: &StackWidget<'_>, offsets: &Offsets) -> Option<SelectorWidget> {
     let coords = widget.bounds.origin;
     let details = &widget.stack.details;
 
