@@ -10,6 +10,7 @@
     unused_import_braces,
     unused_qualifications
 )]
+#![warn(clippy::all)]
 
 #[macro_use]
 extern crate derive_more;
