@@ -47,7 +47,8 @@ would like to check out the code and mess around with it, you can do so using
 
 ```
 $ git clone https://github.com/chrisbouchard/klondike-rs.git
-  . . .
+...
+
 $ cd klondike-rs
 $ cargo run  
 ```
