@@ -2,7 +2,7 @@ use std::{convert::TryFrom, error::Error, fs};
 
 use log::{info, LevelFilter};
 use num_traits::ToPrimitive;
-use simplelog::{Config, WriteLogger};
+use simplelog::{ConfigBuilder, WriteLogger};
 use termion::{event::Key, input::TermRead};
 
 use klondike_lib::{
@@ -17,7 +17,7 @@ static LOG_FILE: &str = "klondike.log";
 fn main() -> Result<(), Box<dyn Error>> {
     WriteLogger::init(
         LevelFilter::Debug,
-        Config::default(),
+        ConfigBuilder::new().set_time_to_local(true).build(),
         fs::File::create(LOG_FILE)?,
     )?;
     log_panics::init();
