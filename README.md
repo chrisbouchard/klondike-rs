@@ -8,7 +8,7 @@ CLI Klondike Solitaire written in Rust
 ![Default State](https://i.imgur.com/QMd6Gbw.png)
 ![Gameplay](https://i.imgur.com/m6gs2F1.png)
 
-[ci-badge]: https://circleci.com/gh/chrisbouchard/klondike-rs.svg?style=svg
+[ci-badge]: https://circleci.com/gh/chrisbouchard/klondike-rs.svg?style=shield
 [ci]: https://circleci.com/gh/chrisbouchard/klondike-rs
 [crate-badge]: https://img.shields.io/crates/v/klondike-rs
 [crate]: https://crates.io/crates/klondike-rs
