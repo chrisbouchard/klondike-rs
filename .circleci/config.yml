@@ -7,7 +7,7 @@ jobs:
   rust-tests-stable:
     description: |
       Run Cargo Tests: Stable
-    executor: rustup-executor
+    executor: rust/default
     steps:
       - checkout
       - rust/update_toolchain:
@@ -18,7 +18,7 @@ jobs:
   rust-tests-nightly:
     description: |
       Run Cargo Tests: Nightly
-    executor: rustup-executor
+    executor: rust/default
     steps:
       - checkout
       - rust/update_toolchain:
