@@ -25,7 +25,7 @@ lazy_static! {
     };
 }
 
-pub fn offsets(widget: &StackWidget) -> Offsets {
+pub fn offsets(widget: &StackWidget<'_>) -> Offsets {
     let details = &widget.stack.details;
 
     let mut offsets = UNCOLLAPSED_OFFSETS.clone();
@@ -53,7 +53,7 @@ pub fn offsets(widget: &StackWidget) -> Offsets {
     offsets
 }
 
-fn collapse_len(widget: &StackWidget, offsets: &Offsets) -> u16 {
+fn collapse_len(widget: &StackWidget<'_>, offsets: &Offsets) -> u16 {
     if widget.stack.cards.is_empty() {
         return 0;
     }
@@ -76,7 +76,7 @@ fn collapse_len(widget: &StackWidget, offsets: &Offsets) -> u16 {
 }
 
 pub fn card_widget_iter<'a>(
-    widget: &'a StackWidget,
+    widget: &'a StackWidget<'_>,
     offsets: &'a Offsets,
 ) -> impl Iterator<Item = CardWidget<'a>> {
     let details = &widget.stack.details;
@@ -112,7 +112,7 @@ pub fn card_widget_iter<'a>(
     })
 }
 
-pub fn selector_widget(widget: &StackWidget, offsets: &Offsets) -> Option<SelectorWidget> {
+pub fn selector_widget(widget: &StackWidget<'_>, offsets: &Offsets) -> Option<SelectorWidget> {
     let coords = widget.bounds.origin;
     let details = &widget.stack.details;
 

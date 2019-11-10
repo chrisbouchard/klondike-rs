@@ -30,7 +30,7 @@ impl Widget for WinWidget {
 }
 
 impl fmt::Display for WinWidget {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         let frame_bounds = self.bounds();
         let inner_bounds = frame_bounds.inner_rect(*BORDER + *PADDING);
 

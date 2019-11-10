@@ -31,14 +31,14 @@ pub static CARD_FRAME_STYLE: FrameStyle = FrameStyle {
 };
 
 impl color::Color for Color {
-    fn write_fg(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn write_fg(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Color::Black => color::Reset.write_fg(fmt),
             Color::Red => color::Red.write_fg(fmt),
         }
     }
 
-    fn write_bg(&self, _fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn write_bg(&self, _fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         Ok(())
     }
 }
@@ -59,7 +59,11 @@ pub struct CardWidget<'a> {
 }
 
 impl<'a> CardWidget<'a> {
-    fn fmt_frame(&self, title: Option<FormattedString>, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt_frame(
+        &self,
+        title: Option<FormattedString>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> fmt::Result {
         let bounds = self.bounds();
 
         if bounds.size.height > 2 && bounds.size.width > 2 {
@@ -88,7 +92,7 @@ impl<'a> Widget for CardWidget<'a> {
 }
 
 impl<'a> fmt::Display for CardWidget<'a> {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.mode {
             CardWidgetMode::FullFaceUp => {
                 let interior_coords = self.origin + geometry::vec2(2, 1);

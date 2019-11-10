@@ -85,7 +85,7 @@ impl<S> Tableaux<S> {
         Held { source, cards }
     }
 
-    fn as_stack(&self, mode: Option<Selection>) -> Stack {
+    fn as_stack(&self, mode: Option<Selection>) -> Stack<'_> {
         Stack {
             cards: &self.cards,
             details: StackDetails {
@@ -152,7 +152,7 @@ impl Area for UnselectedTableaux {
         self.cards.last()
     }
 
-    fn as_stack(&self) -> Stack {
+    fn as_stack(&self) -> Stack<'_> {
         self.as_stack(None)
     }
 
@@ -203,7 +203,7 @@ impl Area for SelectedTableaux {
         self.cards.last()
     }
 
-    fn as_stack(&self) -> Stack {
+    fn as_stack(&self) -> Stack<'_> {
         self.as_stack(Some(self.selection))
     }
 

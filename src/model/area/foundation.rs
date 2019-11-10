@@ -110,7 +110,7 @@ impl<S> Foundation<S> {
         Held { source, cards }
     }
 
-    fn as_stack(&self, selection: Option<Selection>) -> Stack {
+    fn as_stack(&self, selection: Option<Selection>) -> Stack<'_> {
         let cards_len = self.cards.len();
 
         Stack {
@@ -183,7 +183,7 @@ impl<'a> Area for UnselectedFoundation {
         self.cards.last()
     }
 
-    fn as_stack(&self) -> Stack {
+    fn as_stack(&self) -> Stack<'_> {
         self.as_stack(None)
     }
 
@@ -228,7 +228,7 @@ impl<'a> Area for SelectedFoundation {
         self.cards.last()
     }
 
-    fn as_stack(&self) -> Stack {
+    fn as_stack(&self) -> Stack<'_> {
         self.as_stack(Some(self.selection))
     }
 

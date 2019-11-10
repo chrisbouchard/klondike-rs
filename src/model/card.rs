@@ -35,7 +35,7 @@ impl Rank {
 }
 
 impl fmt::Display for Rank {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Rank::Ace => write!(fmt, "A"),
             Rank::Jack => write!(fmt, "J"),

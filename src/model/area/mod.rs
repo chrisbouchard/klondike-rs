@@ -101,7 +101,7 @@ pub trait Area {
 
     fn peek_top_card(&self) -> Option<&Card>;
 
-    fn as_stack(&self) -> Stack;
+    fn as_stack(&self) -> Stack<'_>;
 
     fn as_area(&self) -> &dyn Area;
     fn as_area_mut(&mut self) -> &mut dyn Area;
@@ -133,7 +133,7 @@ pub struct SelectionMove {
 }
 
 impl fmt::Debug for SelectionMove {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt.debug_struct("SelectionMove")
             .field("selected", &format_args!("<{:?}>", self.selected.id()))
             .field("unselected", &format_args!("<{:?}>", self.unselected.id()))
@@ -141,7 +141,7 @@ impl fmt::Debug for SelectionMove {
     }
 }
 
-pub fn move_selection<'a>(
+pub fn move_selection(
     source: Box<dyn SelectedArea>,
     target: Box<dyn UnselectedArea>,
 ) -> MoveResult<SelectionMove, SelectionMove> {

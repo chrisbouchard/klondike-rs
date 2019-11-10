@@ -35,7 +35,7 @@ impl<'a> Widget for StackWidget<'a> {
 }
 
 impl<'a> fmt::Display for StackWidget<'a> {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         let offsets = self.offsets();
 
         for card_widget in self.card_widget_iter(&offsets) {

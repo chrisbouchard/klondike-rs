@@ -24,7 +24,7 @@ lazy_static! {
     };
 }
 
-pub fn offsets(_widget: &StackWidget) -> Offsets {
+pub fn offsets(_widget: &StackWidget<'_>) -> Offsets {
     OFFSETS.clone()
 }
 

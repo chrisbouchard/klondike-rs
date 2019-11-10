@@ -62,7 +62,7 @@ impl Drop for Terminal {
 }
 
 impl fmt::Debug for Terminal {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt.debug_struct("Terminal")
             .field("input", &self.input)
             .field("output", &"...")

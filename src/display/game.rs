@@ -46,7 +46,7 @@ impl<'a> Widget for GameWidget<'a> {
 }
 
 impl<'a> fmt::Display for GameWidget<'a> {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         let full_refresh_required = self.is_full_refresh_required();
 
         if full_refresh_required {
@@ -113,7 +113,7 @@ impl<'a> GameWidget<'a> {
         }
     }
 
-    fn write_area(&self, area_id: AreaId, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn write_area(&self, area_id: AreaId, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         let bounds = bounds_for_area(area_id, self.bounds);
 
         info!("Printing {:?} at {:?}", area_id, bounds.origin);
@@ -146,7 +146,7 @@ impl<'a> GameWidget<'a> {
         Ok(())
     }
 
-    fn write_help(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn write_help(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         let widget = HelpWidget {
             bounds: self.bounds,
         };
@@ -156,7 +156,7 @@ impl<'a> GameWidget<'a> {
         Ok(())
     }
 
-    fn write_win(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn write_win(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         let widget = WinWidget {
             bounds: self.bounds,
         };

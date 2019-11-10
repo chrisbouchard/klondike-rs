@@ -40,7 +40,7 @@ impl Game {
         self.areas.area_ids()
     }
 
-    pub fn stack(&self, area_id: AreaId) -> Option<Stack> {
+    pub fn stack(&self, area_id: AreaId) -> Option<Stack<'_>> {
         self.areas.get_by_area_id(area_id).ok().map(Area::as_stack)
     }
 

@@ -400,7 +400,7 @@ impl AreaList {
 }
 
 impl fmt::Debug for AreaList {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         // We don't assume that Areas implement Debug, so we'll just format them as their area ids.
         #[allow(clippy::redundant_closure)]
         let before_area_ids = self

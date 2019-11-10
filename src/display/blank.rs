@@ -19,7 +19,7 @@ impl Widget for BlankWidget {
 }
 
 impl fmt::Display for BlankWidget {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         let goto = geometry::goto(self.bounds.origin);
         let color = color::Fg(color::Reset);
         write!(fmt, "{}{}", goto, color)?;

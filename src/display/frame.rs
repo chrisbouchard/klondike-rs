@@ -93,7 +93,7 @@ impl<'a> Widget for FrameWidget<'a> {
 }
 
 impl<'a> fmt::Display for FrameWidget<'a> {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         let width = self.bounds.size.width;
 
         let top_blank_width: u16 = usize::from(width)

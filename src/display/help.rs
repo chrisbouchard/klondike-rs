@@ -27,7 +27,7 @@ impl Widget for HelpWidget {
 }
 
 impl fmt::Display for HelpWidget {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         let frame_bounds = self.bounds.inner_rect(*MARGIN);
         let inner_bounds = frame_bounds.inner_rect(*BORDER + *PADDING);
 
@@ -156,7 +156,7 @@ impl HelpItemKeys {
 }
 
 impl fmt::Display for HelpItemKeys {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Single(key) => {
                 write!(fmt, "{key_style}{key}", key_style = key_style(), key = key)?;
@@ -218,7 +218,7 @@ impl Widget for HelpItemWidget {
 }
 
 impl fmt::Display for HelpItemWidget {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         if let Self::Mapping {
             origin,
             keys,

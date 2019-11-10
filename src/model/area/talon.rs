@@ -68,7 +68,7 @@ impl<S> Talon<S> {
         Held { source, cards }
     }
 
-    fn as_stack(&self, mode: Option<Selection>) -> Stack {
+    fn as_stack(&self, mode: Option<Selection>) -> Stack<'_> {
         let cards_len = self.cards.len();
 
         Stack {
@@ -135,7 +135,7 @@ impl<'a> Area for UnselectedTalon {
         self.cards.last()
     }
 
-    fn as_stack(&self) -> Stack {
+    fn as_stack(&self) -> Stack<'_> {
         self.as_stack(None)
     }
 
@@ -180,7 +180,7 @@ impl Area for SelectedTalon {
         self.cards.last()
     }
 
-    fn as_stack(&self) -> Stack {
+    fn as_stack(&self) -> Stack<'_> {
         self.as_stack(Some(self.selection))
     }
 

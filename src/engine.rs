@@ -140,7 +140,7 @@ where
     I: Iterator<Item = Result<Key, io::Error>> + 'a,
     O: io::Write + 'a,
 {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt.debug_struct("GameEngine")
             .field("game", &self.game)
             .field("state", &self.state)
@@ -205,7 +205,7 @@ where
     I: IntoIterator<Item = Result<Key, io::Error>> + 'a,
     O: io::Write + 'a,
 {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt.debug_struct("GameEngineBuilder")
             .field("settings", &self.settings)
             .field("state", &self.state)
