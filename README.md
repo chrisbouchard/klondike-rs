@@ -14,24 +14,47 @@ CLI Klondike Solitaire written in Rust
 [crate]: https://crates.io/crates/klondike-rs
 
 
-## Running
+## Installing from Crates.io
 
-This project is built using standard `cargo` commands. To run it, check out the
-repository and run
+The simplest way to run `klondike-rs` is to install it from [crates.io][crate]
+using Cargo.
 
 ```
-$ cargo run
+$ cargo install klondike-rs
 ```
 
-Before it can run, `cargo` will have to download and compile all necessary
-dependencies, as well as compile this project's source, so it may take a few
-moments.
+Cargo will have to download and compile all necessary dependencies, as well as
+compile this project's source, so it may take a few moments.
 
-If you don't have Rust, you can get it using [Rustup][rustup]. I will try to
-keep the project compiling on stable Rust, but I reserve the right to require
-nightly if there's a really nice feature I want. :)
+Then, assuming Cargo is set up on your path, you can run it using
+
+```
+$ klondike-rs
+```
+
+If you don't have Rust (or Cargo, its build tool), you can get it using
+[Rustup][rustup]. I will try to keep the project compiling on stable Rust, but
+I reserve the right to require nightly if there's a really nice feature I want.
+:)
 
 [rustup]: https://rustup.rs/
+
+
+### Compiling from Source
+
+Technically installing from crates.io _is_ compiling from source, but if you
+would like to check out the code and mess around with it, you can do so using
+
+```
+$ git clone https://github.com/chrisbouchard/klondike-rs.git
+...
+
+$ cargo run  
+```
+
+To find out more about Cargo, you can check out [The Cargo Book][cargo-book].
+
+[cargo-book]: https://doc.rust-lang.org/cargo/index.html
 
 
 ## Controls
@@ -70,7 +93,7 @@ draw_from_stock_len = 3
 take_from_foundation = true
 ```
 
-Configuration files are picked up from several locations, depending on your OS:
+Configuration files are picked up from several locations, depending on your OS.
 
 * `$HOME/.klondike-rs.toml` &mdash; _Any OS_
     * E.g., `/home/chris/.klondkie-rs.toml`
