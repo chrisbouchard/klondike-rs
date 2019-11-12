@@ -3,7 +3,7 @@
 use snafu::ResultExt;
 use std::{
     fmt, fs,
-    io::{self, Write},
+    io::{self, Write as _},
 };
 
 use termion::{
@@ -26,46 +26,65 @@ pub enum Error {
 
 pub type Result<T, E = Error> = ::std::result::Result<T, E>;
 
-pub struct Terminal {
-    input: fs::File,
-    output: AlternateScreen<RawTerminal<fs::File>>,
+pub struct TtyInput {
+    tty: fs::File,
 }
 
-impl Terminal {
+impl TtyInput {
     pub fn new() -> Result<Self> {
-        let input = termion::get_tty().context(TtyError)?;
-        let mut output = AlternateScreen::from(
+        let tty = termion::get_tty().context(TtyError)?;
+        Ok(TtyInput { tty })
+    }
+}
+
+impl io::Read for TtyInput {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        self.tty.read(buf)
+    }
+}
+
+impl fmt::Debug for TtyInput {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt.debug_struct("TtyInput").field("tty", &"...").finish()
+    }
+}
+
+pub struct TtyOutput {
+    tty: AlternateScreen<RawTerminal<fs::File>>,
+}
+
+impl TtyOutput {
+    pub fn new() -> Result<Self> {
+        let mut tty = AlternateScreen::from(
             termion::get_tty()
                 .context(TtyError)?
                 .into_raw_mode()
                 .context(RawModeError)?,
         );
 
-        write!(output, "{}", cursor::Hide).context(WriteError)?;
-
-        Ok(Terminal { input, output })
-    }
-
-    pub fn input(&self) -> Result<fs::File> {
-        self.input.try_clone().context(TtyError)
-    }
-
-    pub fn output(&self) -> Result<fs::File> {
-        self.output.try_clone().context(TtyError)
+        write!(tty, "{}", cursor::Hide).context(WriteError)?;
+        Ok(TtyOutput { tty })
     }
 }
 
-impl Drop for Terminal {
+impl io::Write for TtyOutput {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        self.tty.write(buf)
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        self.tty.flush()
+    }
+}
+
+impl Drop for TtyOutput {
     fn drop(&mut self) {
-        write!(self.output, "{}", cursor::Show).unwrap();
+        write!(self.tty, "{}", cursor::Show).unwrap();
     }
 }
 
-impl fmt::Debug for Terminal {
+impl fmt::Debug for TtyOutput {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt.debug_struct("Terminal")
-            .field("input", &self.input)
-            .field("output", &"...")
-            .finish()
+        fmt.debug_struct("TtyOutput").field("tty", &"...").finish()
     }
 }
