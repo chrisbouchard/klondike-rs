@@ -9,7 +9,7 @@ use klondike_lib::{
     display::DisplayState,
     engine::{GameEngineBuilder, Update},
     model::{game::Action, AreaId, Settings, Suit},
-    terminal::Terminal,
+    terminal::{TtyInput, TtyOutput},
 };
 
 static LOG_FILE: &str = "klondike.log";
@@ -24,9 +24,8 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     info!("STARTING KLONDIKE");
 
-    let terminal = Terminal::new()?;
-    let input = terminal.input()?;
-    let output = terminal.output()?;
+    let input = TtyInput::new()?;
+    let output = TtyOutput::new()?;
 
     let settings = Settings::read_from_system()?;
 
