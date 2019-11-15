@@ -12,7 +12,7 @@ readme = "README.md"
 
 [dependencies]
 config = "~0.9"
-derive_more = "~0.15"
+derive_more = "~0.99"
 directories = "~2.0"
 euclid = "~0.20"
 itertools = "~0.8"
